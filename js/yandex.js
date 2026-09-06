@@ -9,6 +9,10 @@ class YandexManager {
         this.isInitialized = false;
         this.isFallbackMode = false;
         this.leaderboardName = 'gigachad_leaderboard';
+        this.pendingScore = 0;
+        this.scoreFlushTimer = null;
+
+        this.gameReadyRequested = false;
         
         // Локальное кэширование рекордов для оффлайн/тестового режима
         this.localLeaderboard = this.loadLocalLeaderboard();
@@ -66,87 +70,194 @@ class YandexManager {
     }
 
     async init() {
-        if (typeof YaGames !== 'undefined') {
+        if (typeof YaGames === 'undefined') {
+            console.log(
+                'ℹ️ YaGames SDK отсутствует — локальный fallback'
+            );
+
+            this.isFallbackMode = true;
+            return;
+        }
+
+        try {
+            this.ysdk =
+                await YaGames.init();
+
+            this.isInitialized = true;
+
+            console.log(
+                '✅ Yandex Games SDK инициализирован'
+            );
+
             try {
-                this.ysdk = await YaGames.init();
-                this.isInitialized = true;
-                console.log('✅ Yandex Games SDK успешно инициализирован');
-
-                // Инициализация игрока
-                try {
-                    this.player = await this.ysdk.getPlayer({ scopes: false });
-                } catch (e) {
-                    console.log('Игрок не авторизован в Яндекс Играх, гостевой режим');
-                }
-
-                // Инициализация лидербордов
-                try {
-                    this.leaderboards = await this.ysdk.getLeaderboards();
-                    console.log('✅ Yandex Leaderboards подключены');
-                } catch (e) {
-                    console.warn('Не удалось загрузить лидерборд Яндекса:', e);
-                }
-            } catch (err) {
-                console.warn('Ошибка инициализации YaGames, переключение на локальный режим:', err);
-                this.isFallbackMode = true;
+                this.player =
+                    await this.ysdk.getPlayer({
+                        scopes: false
+                    });
+            } catch (e) {
+                console.log(
+                    'Гостевой режим Яндекс Игр'
+                );
             }
-        } else {
-            console.log('ℹ️ Режим автономной работы (YaGames SDK отсутствует)');
+
+            // Новый API
+            this.leaderboards =
+                this.ysdk.leaderboards || null;
+
+            this.flushGameReady();
+
+        } catch (err) {
+            console.warn(
+                'Ошибка YaGames.init():',
+                err
+            );
+
             this.isFallbackMode = true;
         }
     }
 
     // --- ЛИДЕРБОРД ---
-    async submitScore(score, extraData = '') {
-        const numericScore = Math.floor(score);
-        if (numericScore <= 0) return;
+    async submitScore(
+        score,
+        extraData = ''
+    ) {
+        const numericScore =
+            Math.floor(score);
 
-        // Обновляем локальный рекорд
-        this.updateLocalScore(numericScore);
+        if (numericScore <= 0) {
+            return;
+        }
 
-        if (this.leaderboards && this.isInitialized) {
-            try {
-                await this.leaderboards.setLeaderboardScore(this.leaderboardName, numericScore, extraData);
-                console.log(`🏆 Рекорд ${numericScore} отправлен в Яндекс Лидерборд`);
-            } catch (err) {
-                console.warn('Ошибка отправки счёта в Яндекс Лидерборд:', err);
+        this.updateLocalScore(
+            numericScore
+        );
+
+        if (
+            !this.isInitialized ||
+            !this.ysdk?.leaderboards
+        ) {
+            return;
+        }
+
+        try {
+            if (
+                typeof this.ysdk
+                    .isAvailableMethod ===
+                'function'
+            ) {
+                const available =
+                    await this.ysdk
+                        .isAvailableMethod(
+                            'leaderboards.setScore'
+                        );
+
+                if (!available) {
+                    return;
+                }
             }
+
+            await this.ysdk
+                .leaderboards
+                .setScore(
+                    this.leaderboardName,
+                    numericScore,
+                    extraData
+                );
+
+            console.log(
+                `🏆 Score ${numericScore} отправлен`
+            );
+
+        } catch (err) {
+            console.warn(
+                'Leaderboard setScore error:',
+                err
+            );
         }
     }
 
-    async getLeaderboard(quantityTop = 10, quantityAround = 3) {
-        if (this.leaderboards && this.isInitialized) {
+    async getLeaderboard(
+        quantityTop = 10,
+        quantityAround = 3
+    ) {
+        if (
+            this.isInitialized &&
+            this.ysdk?.leaderboards
+        ) {
             try {
-                const res = await this.leaderboards.getLeaderboardEntries(this.leaderboardName, {
-                    quantityTop: quantityTop,
-                    includeUser: true,
-                    quantityAround: quantityAround
-                });
+                const res =
+                    await this.ysdk
+                        .leaderboards
+                        .getEntries(
+                            this.leaderboardName,
+                            {
+                                quantityTop,
+                                includeUser: true,
+                                quantityAround
+                            }
+                        );
 
-                const entries = (res.entries || []).map(entry => {
-                    const isCurrentUser = entry.player.uniqueID === (this.player ? this.player.getUniqueID() : null);
-                    return {
-                        rank: entry.rank,
-                        name: entry.player.publicName || 'Анонимный Гигачад',
-                        score: entry.score,
-                        avatar: entry.player.getAvatarSrc('small') || '',
-                        isUser: isCurrentUser,
-                        isCurrentUser: isCurrentUser,
-                        title: entry.extraData || 'Кибер-Скуф'
-                    };
-                });
+                const playerId =
+                    this.player?.getUniqueID?.() ||
+                    null;
 
-                const userRank = res.userRank || 1;
-                return { entries, userRank };
+                const entries =
+                    (res.entries || []).map(
+                        entry => {
+                            const isCurrentUser =
+                                entry.player
+                                    ?.uniqueID ===
+                                playerId;
+
+                            return {
+                                rank: entry.rank,
+
+                                name:
+                                    entry.player
+                                        ?.publicName ||
+                                    'Анонимный Гигачад',
+
+                                score:
+                                    entry.score,
+
+                                avatar:
+                                    entry.player
+                                        ?.getAvatarSrc?.(
+                                            'small'
+                                        ) || '',
+
+                                isUser:
+                                    isCurrentUser,
+
+                                isCurrentUser,
+
+                                title:
+                                    entry.extraData ||
+                                    'Кибер-Скуф'
+                            };
+                        }
+                    );
+
+                return {
+                    entries,
+                    userRank:
+                        res.userRank || 0
+                };
+
             } catch (err) {
-                console.warn('Ошибка получения Яндекс Лидерборда, возврат локального:', err);
+                console.warn(
+                    'Leaderboard getEntries error:',
+                    err
+                );
             }
         }
 
-        // Возврат локального лидерборда
         return {
-            entries: this.getLocalEntries(),
-            userRank: this.getUserLocalRank()
+            entries:
+                this.getLocalEntries(),
+
+            userRank:
+                this.getUserLocalRank()
         };
     }
 
@@ -159,6 +270,100 @@ class YandexManager {
             onRewarded: onRewarded,
             onClose: onClose
         });
+    }
+
+    gameplayStart() {
+        if (!this.isInitialized) return;
+
+        try {
+            this.ysdk?.features
+                ?.GameplayAPI
+                ?.start();
+        } catch (e) {
+            console.warn(
+                'GameplayAPI.start error:',
+                e
+            );
+        }
+    }
+
+    gameplayStop() {
+        if (!this.isInitialized) return;
+
+        try {
+            this.ysdk?.features
+                ?.GameplayAPI
+                ?.stop();
+        } catch (e) {
+            console.warn(
+                'GameplayAPI.stop error:',
+                e
+            );
+        }
+    }
+
+    queueScore(score) {
+        const numericScore =
+            Math.max(
+                0,
+                Math.floor(score)
+            );
+
+        this.updateLocalScore(
+            numericScore
+        );
+
+        this.pendingScore =
+            Math.max(
+                this.pendingScore,
+                numericScore
+            );
+
+        if (this.scoreFlushTimer) {
+            return;
+        }
+
+        // Запас относительно лимита Яндекса 1 req/sec
+        this.scoreFlushTimer =
+            setTimeout(async () => {
+                this.scoreFlushTimer = null;
+
+                const scoreToSend =
+                    this.pendingScore;
+
+                this.pendingScore = 0;
+
+                await this.submitScore(
+                    scoreToSend
+                );
+            }, 1500);
+    }
+
+    markGameReady() {
+        this.gameReadyRequested = true;
+
+        this.flushGameReady();
+    }
+
+    flushGameReady() {
+        if (
+            !this.gameReadyRequested ||
+            !this.isInitialized ||
+            !this.ysdk
+        ) {
+            return;
+        }
+
+        try {
+            this.ysdk.features
+                ?.LoadingAPI
+                ?.ready();
+        } catch (e) {
+            console.warn(
+                'LoadingAPI.ready error:',
+                e
+            );
+        }
     }
 
     // --- ЛОКАЛЬНЫЙ ЛИДЕРБОРД (Fallback) ---

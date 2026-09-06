@@ -21,6 +21,22 @@ class SoundSystem {
         return this.isMuted;
     }
 
+    suspend() {
+        if (this.ctx && this.ctx.state === 'running') {
+            this.ctx.suspend().catch(() => {});
+        }
+    }
+
+    resume() {
+        if (this.isMuted) return;
+
+        this.init();
+
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+        }
+    }
+
     playDrop() {
         if (this.isMuted) return;
         this.init();

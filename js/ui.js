@@ -4,6 +4,42 @@ class UIManager {
         this.activeTab = 'hero';
         this.initDOMElements();
         this.bindEvents();
+        this.installModalPauseObserver();
+    }
+
+    installModalPauseObserver() {
+        const overlays = Array.from(
+            document.querySelectorAll('.modal-backdrop')
+        );
+
+        const syncPauseState = () => {
+            const hasBlockingModal = overlays.some(overlay => {
+                if (overlay.id === 'start-menu-overlay') {
+                    return false;
+                }
+
+                return overlay.classList.contains('active');
+            });
+
+            if (hasBlockingModal) {
+                this.game.pause('modal');
+            } else {
+                this.game.resume('modal');
+            }
+        };
+
+        const observer = new MutationObserver(syncPauseState);
+
+        overlays.forEach(overlay => {
+            observer.observe(overlay, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
+        });
+
+        this.modalObserver = observer;
+
+        syncPauseState();
     }
 
     initDOMElements() {
@@ -502,6 +538,25 @@ class UIManager {
     openPrestige() {
         document.getElementById('golden-couches-count').textContent = `${CONFIG.formatNumber(this.game.prestigeCouches)} 🛋️`;
         const estimate = this.game.calculatePrestigeGain();
+        const estimateEl =
+            document.getElementById('prestige-estimate');
+
+        const prestigeBtn =
+            document.getElementById('btn-do-prestige');
+
+        if (estimate <= 0) {
+            estimateEl.textContent =
+                'Победите хотя бы одного босса для Перерождения';
+
+            prestigeBtn.disabled = true;
+            prestigeBtn.classList.add('disabled');
+        } else {
+            estimateEl.textContent =
+                `При сбросе получите: +${CONFIG.formatNumber(estimate)} 🛋️ Золотых Диванов`;
+
+            prestigeBtn.disabled = false;
+            prestigeBtn.classList.remove('disabled');
+        }
         document.getElementById('prestige-estimate').textContent = `При сбросе получите: +${CONFIG.formatNumber(estimate)} 🛋️ Золотых Диванов`;
 
         const container = document.getElementById('prestige-perks-container');
@@ -639,6 +694,7 @@ class UIManager {
                 btn.textContent = 'ЗАГРУЗКА...';
 
                 if (window.YandexBridge && typeof window.YandexBridge.showRewardedVideo === 'function') {
+                    this.game.pause('rewarded-ad');
                     window.YandexBridge.showRewardedVideo(
                         b.id,
                         (rewardId) => {
@@ -646,6 +702,7 @@ class UIManager {
                             this.boostsOverlay?.classList.remove('active');
                         },
                         () => {
+                            this.game.resume('rewarded-ad');
                             const left = window.YandexBridge ? window.YandexBridge.getBoostCooldownLeft(b.id) : 0;
                             if (left > 0) {
                                 btn.classList.add('disabled');
@@ -917,18 +974,43 @@ class UIManager {
     }
 
     // --- ХАЙП / FEVER MODE ---
-    updateFever(charge, isFeverActive, timeLeft) {
-        if (!this.feverFill || !this.feverLabel) return;
-        const pct = Math.min(100, Math.max(0, charge));
-        this.feverFill.style.width = `${pct}%`;
-        const viewport = document.getElementById('app-viewport');
-        
+    updateFever(
+        charge,
+        isFeverActive,
+        timeLeft,
+        scoreMultiplier = 2
+    ) {
+        if (!this.feverFill || !this.feverLabel) {
+            return;
+        }
+
+        const pct =
+            Math.min(
+                100,
+                Math.max(0, charge)
+            );
+
+        this.feverFill.style.width =
+            `${pct}%`;
+
+        const viewport =
+            document.getElementById('app-viewport');
+
         if (isFeverActive) {
-            this.feverLabel.textContent = `🔥 ХАЙП АКТИВЕН! ${Math.ceil(timeLeft)}с (x3 ОЧКИ)`;
+            this.feverLabel.textContent =
+                `🔥 ХАЙП АКТИВЕН! ${Math.ceil(timeLeft)}с (x${scoreMultiplier} МОТИВАЦИЯ)`;
+
+            if (this.feverBanner) {
+                this.feverBanner.textContent =
+                    `РЕЖИМ ЛИХОРАДКИ! МОТИВАЦИЯ x${scoreMultiplier}!`;
+            }
+
             this.feverBanner?.classList.add('active');
             viewport?.classList.add('fever-mode-active');
         } else {
-            this.feverLabel.textContent = `🔥 ХАЙП ${Math.floor(pct)}%`;
+            this.feverLabel.textContent =
+                `🔥 ХАЙП ${Math.floor(pct)}%`;
+
             this.feverBanner?.classList.remove('active');
             viewport?.classList.remove('fever-mode-active');
         }
