@@ -6,34 +6,34 @@ const CONFIG = {
     
     // 10 УРОВНЕЙ ЭВОЛЮЦИИ МЫСЛЕЙ (Экспоненциальная шкала наград для глубокого геймплея)
     TIERS: {
-        1:  { name: "Квадробер", radius: 14, color: "#4ade80", emoji: "🐱", score: 5,      mappedImg: 1, glow: "#22c55e" },
-        2:  { name: "Симп",       radius: 18, color: "#38bdf8", emoji: "🥺", score: 18,     mappedImg: 2, glow: "#0ea5e9" },
-        3:  { name: "Тюбик",      radius: 23, color: "#818cf8", emoji: "🧪", score: 55,     mappedImg: 3, glow: "#6366f1" },
-        4:  { name: "Зумер",      radius: 29, color: "#c084fc", emoji: "🧢", score: 165,    mappedImg: 4, glow: "#a855f7" },
-        5:  { name: "Альтушка",   radius: 36, color: "#f472b6", emoji: "🎀", score: 480,    mappedImg: 5, glow: "#ec4899" },
-        6:  { name: "Масик",      radius: 44, color: "#fb7185", emoji: "🧸", score: 1450,   mappedImg: 6, glow: "#f43f5e" },
-        7:  { name: "Дед",        radius: 53, color: "#fb923c", emoji: "👴", score: 4400,   mappedImg: 7, glow: "#f97316" },
-        8:  { name: "Скуф",       radius: 63, color: "#facc15", emoji: "🛋️", score: 13500,  mappedImg: 8, glow: "#eab308" },
-        9:  { name: "Сигма",      radius: 74, color: "#a78bfa", emoji: "🗿", score: 42000,  mappedImg: 9, glow: "#8b5cf6" },
-        10: { name: "ГИГАЧАД",    radius: 86, color: "#ffd700", emoji: "👑", score: 135000, mappedImg: 10, glow: "#ffbf00" }
+        1:  { name: "Квадробер", radius: 14, color: "#4ade80", score: 5,      mappedImg: 1, glow: "#22c55e" },
+        2:  { name: "Симп",       radius: 18, color: "#38bdf8", score: 18,     mappedImg: 2, glow: "#0ea5e9" },
+        3:  { name: "Тюбик",      radius: 23, color: "#818cf8", score: 55,     mappedImg: 3, glow: "#6366f1" },
+        4:  { name: "Зумер",      radius: 29, color: "#c084fc", score: 165,    mappedImg: 4, glow: "#a855f7" },
+        5:  { name: "Альтушка",   radius: 36, color: "#f472b6", score: 480,    mappedImg: 5, glow: "#ec4899" },
+        6:  { name: "Масик",      radius: 44, color: "#fb7185", score: 1450,   mappedImg: 6, glow: "#f43f5e" },
+        7:  { name: "Дед",        radius: 53, color: "#fb923c", score: 4400,   mappedImg: 7, glow: "#f97316" },
+        8:  { name: "Скуф",       radius: 63, color: "#facc15", score: 13500,  mappedImg: 8, glow: "#eab308" },
+        9:  { name: "Сигма",      radius: 74, color: "#a78bfa", score: 42000,  mappedImg: 9, glow: "#8b5cf6" },
+        10: { name: "ГИГАЧАД",    radius: 86, color: "#ffd700", score: 135000, mappedImg: 10, glow: "#ffbf00" }
     },
 
     // ТЕЛЕКАНАЛЫ В КОМНАТЕ (Интерактивное переключение по клику)
     TV_CHANNELS: [
-        { id: 0, title: "⚽ МАТЧ ТВ: СПАРТАК", quote: "«Судью на мыло! Гол был чистый!»", icon: "⚽", buff: "tap" },
-        { id: 1, title: "📺 УЛИЦЫ ФОНАРЕЙ", quote: "«У нас труп, возможно криминал... По коням!»", icon: "🚓", buff: "boss" },
-        { id: 2, title: "📈 КРИПТО-ПАМП 1000X", quote: "«Зеленая свеча! Закупаем на хаях!»", icon: "📉", buff: "income" },
-        { id: 3, title: "🎀 СТРИМ АЛЬТУШКИ", quote: "«Спасибо за донат в 50 рублей, чмок!»", icon: "🎀", buff: "stamina" },
-        { id: 4, title: "🛋️ МАГАЗИН НА ДИВАНЕ", quote: "«Купите массажер для поясницы со скидкой 90%!»", icon: "🛋️", buff: "fever" }
+        { id: 0, title: "МАТЧ ТВ: СПАРТАК", quote: "«Судью на мыло! Гол был чистый!»", icon: "⚽", buff: "tap" },
+        { id: 1, title: "УЛИЦЫ ФОНАРЕЙ", quote: "«У нас труп, возможно криминал... По коням!»", icon: "🚓", buff: "boss" },
+        { id: 2, title: "КРИПТО-ПАМП 1000X", quote: "«Зеленая свеча! Закупаем на хаях!»", icon: "📈", buff: "income" },
+        { id: 3, title: "СТРИМ АЛЬТУШКИ", quote: "«Спасибо за донат в 50 рублей, чмок!»", icon: "🎀", buff: "stamina" },
+        { id: 4, title: "МАГАЗИН НА ДИВАНЕ", quote: "«Купите массажер для поясницы со скидкой 90%!»", icon: "🛋️", buff: "fever" }
     ],
 
     // ЛЕТАЮЩИЕ ИНСАЙТ-ПУЗЫРИ (Интерактивные клики по экрану)
     INSIGHT_BUBBLES: [
-        { type: "insight", emoji: "💡", title: "Инсайт!", color: "#ffd700" },
-        { type: "pizza", emoji: "🍕", title: "Доставка!", color: "#fb923c" },
-        { type: "energy", emoji: "⚡", title: "Хайп-Энергетик!", color: "#00f0ff" },
-        { type: "bomb", emoji: "💣", title: "Петарда!", color: "#ef4444" },
-        { type: "spin", emoji: "🎡", title: "Фриспин!", color: "#a855f7" }
+        { type: "insight", title: "Инсайт!", color: "#ffd700" },
+        { type: "pizza", title: "Доставка!", color: "#fb923c" },
+        { type: "energy", title: "Хайп-Энергетик!", color: "#00f0ff" },
+        { type: "bomb", title: "Петарда!", color: "#ef4444" },
+        { type: "spin", title: "Фриспин!", color: "#a855f7" }
     ],
 
     // ФАЗЫ ПРОГРЕССИИ (смена окружения каждые 4 дня)
@@ -47,38 +47,38 @@ const CONFIG = {
 
     // 20 МАСШТАБНЫХ БОССОВ (Глубокая многоуровневая экономика)
     BOSSES: {
-        1:  { name: "Хозяйка Тамара 👵",       hp: 3000,           quote: "«Аренда сама себя не заплатит, вставай!»", color: "#f87171" },
-        2:  { name: "Коллектор Валера 🕶️",     hp: 12000,          quote: "«За телефончик платить будем или как?»", color: "#fb923c" },
-        3:  { name: "Начальник Михалыч 🏭",     hp: 45000,          quote: "«Выходи в субботу за отгул (нет)!»", color: "#facc15" },
-        4:  { name: "Бывшая 💔",                hp: 160000,         quote: "«Ты совсем не изменился...»", color: "#f472b6" },
-        5:  { name: "Алкоголь и Фастфуд 🍾",    hp: 550000,         quote: "«Ещё баночку и пиццу, поспишь потом!»", color: "#c084fc" },
-        6:  { name: "Депрессия 🌧️",            hp: 1800000,        quote: "«Всё тлен, оставайся под одеялом...»", color: "#60a5fa" },
-        7:  { name: "Инфоцыган Артём 📱",       hp: 5500000,        quote: "«Купи курс успешного успеха за 99к!»", color: "#34d399" },
-        8:  { name: "Крипто-Скамер 📉",         hp: 18000000,       quote: "«Вложи всё в мемкоин SkufCoin, 1000x завтра!»", color: "#fbbf24" },
-        9:  { name: "Синдром Самозванца 🎭",    hp: 55000000,       quote: "«Ты ничего не добился, тебе просто повезло!»", color: "#a78bfa" },
-        10: { name: "Ипотека на 30 лет 🏦",     hp: 160000000,      quote: "«Каждый месяц 70% зарплаты — мне!»", color: "#f87171" },
-        11: { name: "Служба Доставки 🍕",       hp: 450000000,      quote: "«Курьер уже у двери. Не вставай, он принесет!»", color: "#fb923c" },
-        12: { name: "Нейросеть GPT-6 🤖",       hp: 1300000000,     quote: "«Я делаю твою работу за 0.2 секунды бесплатно.»", color: "#38bdf8" },
-        13: { name: "Выгорание 🔥",             hp: 3800000000,     quote: "«У тебя нет энергии даже открыть глаза...»", color: "#ef4444" },
-        14: { name: "Военком в дверях 🪖",      hp: 11000000000,    quote: "«Распишитесь в получении повесточки!»", color: "#4ade80" },
-        15: { name: "Кризис Среднего Возраста 🏎️", hp: 32000000000,  quote: "«Пора купить мотоцикл и грустить под дождём.»", color: "#e879f9" },
-        16: { name: "Государственная Бюрократия 🏛️", hp: 95000000000, quote: "«Принесите справку о том, что вам нужна справка.»", color: "#94a3b8" },
-        17: { name: "Гравитация Дивана 🕳️",     hp: 280000000000,   quote: "«Диван стал чёрной дырой. Ты не встанешь никогда.»", color: "#6366f1" },
-        18: { name: "Неумолимое Время ⏰",       hp: 850000000000,   quote: "«Тик-так. Ещё один год прошёл впустую...»", color: "#f59e0b" },
-        19: { name: "СМЕРТЬ БЫТИЯ 💀",          hp: 2500000000000,  quote: "«Конец близко. Покажи, на что способен Гигачад!»", color: "#dc2626" },
-        20: { name: "АБСОЛЮТНЫЙ ВЛАДЫКА СУДЬБЫ 👑", hp: 8000000000000, quote: "«Ты прошёл сквозь огонь, ленивый воин. ПРЕВОЗМОГИ!»", color: "#ffd700" }
+        1:  { name: "Хозяйка Тамара",       hp: 3000,           quote: "«Аренда сама себя не заплатит, вставай!»", color: "#f87171" },
+        2:  { name: "Коллектор Валера",     hp: 12000,          quote: "«За телефончик платить будем или как?»", color: "#fb923c" },
+        3:  { name: "Начальник Михалыч",    hp: 45000,          quote: "«Выходи в субботу за отгул (нет)!»", color: "#facc15" },
+        4:  { name: "Бывшая",               hp: 160000,         quote: "«Ты совсем не изменился...»", color: "#f472b6" },
+        5:  { name: "Алкоголь и Фастфуд",   hp: 550000,         quote: "«Ещё баночку и пиццу, поспишь потом!»", color: "#c084fc" },
+        6:  { name: "Депрессия",           hp: 1800000,        quote: "«Всё тлен, оставайся под одеялом...»", color: "#60a5fa" },
+        7:  { name: "Инфоцыган Артём",      hp: 5500000,        quote: "«Купи курс успешного успеха за 99к!»", color: "#34d399" },
+        8:  { name: "Крипто-Скамер",        hp: 18000000,       quote: "«Вложи всё в мемкоин SkufCoin, 1000x завтра!»", color: "#fbbf24" },
+        9:  { name: "Синдром Самозванца",   hp: 55000000,       quote: "«Ты ничего не добился, тебе просто повезло!»", color: "#a78bfa" },
+        10: { name: "Ипотека на 30 лет",    hp: 160000000,      quote: "«Каждый месяц 70% зарплаты — мне!»", color: "#f87171" },
+        11: { name: "Служба Доставки",      hp: 450000000,      quote: "«Курьер уже у двери. Не вставай, он принесет!»", color: "#fb923c" },
+        12: { name: "Нейросеть GPT-6",      hp: 1300000000,     quote: "«Я делаю твою работу за 0.2 секунды бесплатно.»", color: "#38bdf8" },
+        13: { name: "Выгорание",            hp: 3800000000,     quote: "«У тебя нет энергии даже открыть глаза...»", color: "#ef4444" },
+        14: { name: "Военком в дверях",     hp: 11000000000,    quote: "«Распишитесь в получении повесточки!»", color: "#4ade80" },
+        15: { name: "Кризис Возраста",      hp: 32000000000,    quote: "«Пора купить мотоцикл и грустить под дождём.»", color: "#e879f9" },
+        16: { name: "Бюрократия",           hp: 95000000000,    quote: "«Принесите справку о том, что вам нужна справка.»", color: "#94a3b8" },
+        17: { name: "Гравитация Дивана",    hp: 280000000000,   quote: "«Диван стал чёрной дырой. Ты не встанешь никогда.»", color: "#6366f1" },
+        18: { name: "Неумолимое Время",     hp: 850000000000,   quote: "«Тик-так. Ещё один год прошёл впустую...»", color: "#f59e0b" },
+        19: { name: "СМЕРТЬ БЫТИЯ",         hp: 2500000000000,  quote: "«Конец близко. Покажи, на что способен Гигачад!»", color: "#dc2626" },
+        20: { name: "ВЛАДЫКА СУДЬБЫ",       hp: 8000000000000,  quote: "«Ты прошёл сквозь огонь, ленивый воин. ПРЕВОЗМОГИ!»", color: "#ffd700" }
     },
 
-    // МУСОРНЫЕ МЫСЛИ (не сливаются, взрываются слияниями)
+    // МУСОРНЫЕ ТРЕВОЖНЫЕ МЫСЛИ (не сливаются, взрываются слияниями)
     GARBAGE_TYPES: [
-        { name: "Кредит 💳",    color: "#475569", radius: 20 },
-        { name: "Бывшая 💔",    color: "#4a1525", radius: 21 },
-        { name: "Лень 🦥",      color: "#1e293b", radius: 20 },
-        { name: "Дедлайн ⏰",   color: "#7c2d12", radius: 19 },
-        { name: "Бессонница 🌙", color: "#1e1b4b", radius: 20 },
-        { name: "Тревога ⚡",   color: "#581c87", radius: 20 },
-        { name: "Похмелье 🤢",  color: "#14532d", radius: 21 },
-        { name: "Прокрастинация 💤", color: "#312e81", radius: 20 }
+        { id: "credit", name: "Кредит", color: "#1e293b", highlight: "#334155", hazardColor: "#f59e0b", glow: "#f59e0b", radius: 21 },
+        { id: "ex", name: "Бывшая", color: "#3b0764", highlight: "#4a044e", hazardColor: "#ec4899", glow: "#ec4899", radius: 21 },
+        { id: "lazy", name: "Лень", color: "#0f172a", highlight: "#1e293b", hazardColor: "#38bdf8", glow: "#0284c7", radius: 21 },
+        { id: "deadline", name: "Дедлайн", color: "#450a0a", highlight: "#7f1d1d", hazardColor: "#ef4444", glow: "#ef4444", radius: 21 },
+        { id: "insomnia", name: "Бессонница", color: "#09090b", highlight: "#18181b", hazardColor: "#38bdf8", glow: "#0ea5e9", radius: 21 },
+        { id: "anxiety", name: "Тревога", color: "#2e1065", highlight: "#581c87", hazardColor: "#a855f7", glow: "#c084fc", radius: 21 },
+        { id: "hangover", name: "Похмелье", color: "#052e16", highlight: "#14532d", hazardColor: "#22c55e", glow: "#22c55e", radius: 21 },
+        { id: "procrastination", name: "Прокрастинация", color: "#172554", highlight: "#1e3a8a", hazardColor: "#818cf8", glow: "#6366f1", radius: 21 }
     ],
 
     // РЕЛИКВИИ ЗАБЕГА (выбираются при победе над боссом)
@@ -202,7 +202,7 @@ const CONFIG = {
             { id: "b6", name: "Комбо-Стрик Мастер", desc: "Время жизни комбо +3.5 сек. Множитель комбо х2", cost: 5500000, bought: false, level: 6 },
             { id: "b7", name: "Третий Глаз Сигмы", desc: "Все слияния наносят тройной урон боссам", cost: 45000000, bought: false, level: 7 },
             { id: "b8", name: "Квантовый Резонанс", desc: "Слияния T6+ мгновенно сжигают весь мусор на поле", cost: 350000000, bought: false, level: 8 },
-            { id: "b9", name: "Абсолютный Фокус", desc: "Лихорадка (Fever) длится в 2 раза дольше и дает x5 очков", cost: 2800000000, bought: false, level: 9 }
+            { id: "b9", name: "Абсолютный Фокус", desc: "Лихорадка (Fever) длится дольше (+5.5 сек) и дает x3 Мотивации", cost: 2800000000, bought: false, level: 9 }
         ],
         career: [
             { id: "c1", name: "Стрим на Твиче", desc: "Донаты зрителей. Доход +25/сек", cost: 500, bought: false, level: 1 },
@@ -1015,6 +1015,369 @@ const CONFIG = {
         try {
             const url = canvas.toDataURL('image/png');
             this._charCache[key] = url;
+            return url;
+        } catch (e) {
+            return '';
+        }
+    },
+
+    // ВЕКТОРНАЯ ОТРИСОВКА ТРЕВОЖНЫХ (МУСОРНЫХ) МЫСЛЕЙ
+    drawGarbageVector(ctx, garbageIndexOrId, radius, options = {}) {
+        const fx = options.fx !== false;
+        const isAim = !!options.isAim;
+        
+        let index = 0;
+        if (typeof garbageIndexOrId === 'number') {
+            index = Math.abs(garbageIndexOrId) % 8;
+        } else if (typeof garbageIndexOrId === 'string') {
+            const found = this.GARBAGE_TYPES.findIndex(g => g.name === garbageIndexOrId || g.id === garbageIndexOrId);
+            index = found !== -1 ? found : 0;
+        }
+        
+        const gConf = this.GARBAGE_TYPES[index] || this.GARBAGE_TYPES[0];
+        const r = radius || 20;
+
+        ctx.save();
+        const scale = r / 20;
+        ctx.scale(scale, scale);
+
+        // 1. Опасная тёмная пульсирующая аура (при включенном FX)
+        if (fx) {
+            ctx.shadowColor = gConf.glow || '#ef4444';
+            ctx.shadowBlur = isAim ? 14 : 8;
+        }
+
+        // 2. Базовый фон шара (Тёмный градиент с опасным оттенком)
+        const bgGrad = ctx.createRadialGradient(-5, -5, 2, 0, 0, 20);
+        bgGrad.addColorStop(0, gConf.highlight || '#334155');
+        bgGrad.addColorStop(0.7, gConf.color || '#0f172a');
+        bgGrad.addColorStop(1, '#020617');
+        ctx.fillStyle = bgGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3. Предупреждающая зубчатая / опасная окантовка (Hazard border)
+        ctx.strokeStyle = gConf.hazardColor || '#ef4444';
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 19, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 4. Уникальная детализированная векторная графика для каждого типа
+        ctx.shadowBlur = 0;
+        switch (index) {
+            case 0: {
+                // КРЕДИТ / ДОЛГИ (Банковская карта с золотым чипом и предупреждением)
+                ctx.fillStyle = '#0f172a';
+                ctx.strokeStyle = '#f59e0b';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(-12, -8, 24, 16, 2.5) : ctx.rect(-12, -8, 24, 16);
+                ctx.fill();
+                ctx.stroke();
+
+                // Золотой чип
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillRect(-9, -4, 6, 5);
+                ctx.strokeStyle = '#78350f';
+                ctx.lineWidth = 0.6;
+                ctx.strokeRect(-9, -4, 6, 5);
+
+                // Полоса
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(0, -4, 9, 2);
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillRect(0, 0, 9, 1.5);
+                
+                // Знак процента %
+                ctx.font = 'bold 8px system-ui, sans-serif';
+                ctx.fillStyle = '#ef4444';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('%', 5, 3);
+                break;
+            }
+            case 1: {
+                // БЫВШАЯ / РАЗБИТОЕ СЕРДЦЕ (Неоновое расколотое сердце со швами)
+                ctx.fillStyle = '#ec4899';
+                ctx.beginPath();
+                ctx.moveTo(0, 7);
+                ctx.bezierCurveTo(-11, 2, -13, -7, -6, -9);
+                ctx.bezierCurveTo(-2, -9, -1, -6, 0, -4);
+                ctx.lineTo(-2, -1);
+                ctx.lineTo(2, 2);
+                ctx.lineTo(0, 7);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#db2777';
+                ctx.beginPath();
+                ctx.moveTo(0, 7);
+                ctx.bezierCurveTo(11, 2, 13, -7, 6, -9);
+                ctx.bezierCurveTo(2, -9, 1, -6, 0, -4);
+                ctx.lineTo(-2, -1);
+                ctx.lineTo(2, 2);
+                ctx.lineTo(0, 7);
+                ctx.closePath();
+                ctx.fill();
+
+                // Трещина / шов
+                ctx.strokeStyle = '#020617';
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(0, -4);
+                ctx.lineTo(-2, -1);
+                ctx.lineTo(2, 2);
+                ctx.lineTo(0, 7);
+                ctx.stroke();
+
+                // Швы
+                ctx.strokeStyle = '#fbcfe8';
+                ctx.lineWidth = 0.9;
+                ctx.beginPath();
+                ctx.moveTo(-3, -2); ctx.lineTo(1, 0);
+                ctx.moveTo(0, 1); ctx.lineTo(4, 3);
+                ctx.stroke();
+                break;
+            }
+            case 2: {
+                // ЛЕНЬ / АМБАРНЫЙ ЗАМОК (Тяжёлый висячий замок)
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 2.2;
+                ctx.beginPath();
+                ctx.arc(0, -4, 6.5, Math.PI, 0);
+                ctx.stroke();
+
+                const lockGrad = ctx.createLinearGradient(0, -3, 0, 10);
+                lockGrad.addColorStop(0, '#64748b');
+                lockGrad.addColorStop(1, '#1e293b');
+                ctx.fillStyle = lockGrad;
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(-9, -3, 18, 14, 3) : ctx.rect(-9, -3, 18, 14);
+                ctx.fill();
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Скважина
+                ctx.fillStyle = '#020617';
+                ctx.beginPath();
+                ctx.arc(0, 2, 2, 0, Math.PI * 2);
+                ctx.moveTo(-1.2, 2);
+                ctx.lineTo(1.2, 2);
+                ctx.lineTo(0.8, 7);
+                ctx.lineTo(-0.8, 7);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            }
+            case 3: {
+                // ДЕДЛАЙН / СЕКУНДОМЕР В ОГНЕ
+                ctx.fillStyle = '#1e1b4b';
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 1, 9, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-2, -11, 4, 3);
+
+                // Огонь
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.moveTo(-5, -8);
+                ctx.lineTo(0, -14);
+                ctx.lineTo(3, -9);
+                ctx.lineTo(6, -13);
+                ctx.lineTo(4, -7);
+                ctx.closePath();
+                ctx.fill();
+
+                // Стрелки
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(0, 1); ctx.lineTo(0, -5);
+                ctx.moveTo(0, 1); ctx.lineTo(4, 1);
+                ctx.stroke();
+
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(0, 1, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 4: {
+                // БЕССОННИЦА / СМАРТФОН В ТЕМНОТЕ
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.arc(-2, -2, 8, 0.4, Math.PI * 1.5);
+                ctx.arc(-5, -4, 6, Math.PI * 1.4, 0.6, true);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#0f172a';
+                ctx.strokeStyle = '#00f0ff';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.roundRect ? ctx.roundRect(1, -2, 9, 13, 1.5) : ctx.rect(1, -2, 9, 13);
+                ctx.fill();
+                ctx.stroke();
+
+                const screenLight = ctx.createLinearGradient(5, 0, 5, 8);
+                screenLight.addColorStop(0, '#38bdf8');
+                screenLight.addColorStop(1, '#0284c7');
+                ctx.fillStyle = screenLight;
+                ctx.fillRect(2, 0, 7, 8);
+
+                ctx.fillStyle = '#ef4444';
+                ctx.beginPath();
+                ctx.arc(8, -1, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 5: {
+                // ТРЕВОГА / ПАНИЧЕСКАЯ АТАКА (Молния и электричество)
+                ctx.strokeStyle = 'rgba(192, 132, 252, 0.4)';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(0, 0, 10, 0, Math.PI * 1.8);
+                ctx.stroke();
+
+                ctx.fillStyle = '#fde047';
+                ctx.strokeStyle = '#a855f7';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(1, -11);
+                ctx.lineTo(-6, -1);
+                ctx.lineTo(-1, -1);
+                ctx.lineTo(-4, 11);
+                ctx.lineTo(6, 0);
+                ctx.lineTo(1, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+            }
+            case 6: {
+                // ПОХМЕЛЬЕ / ТОКСИЧНАЯ КОЛБА
+                ctx.fillStyle = '#14532d';
+                ctx.strokeStyle = '#22c55e';
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.rect(-3, -11, 6, 4);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(-3, -7);
+                ctx.lineTo(-10, 7);
+                ctx.quadraticCurveTo(0, 11, 10, 7);
+                ctx.lineTo(3, -7);
+                ctx.closePath();
+                ctx.fillStyle = '#052e16';
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#22c55e';
+                ctx.beginPath();
+                ctx.moveTo(-7, 2);
+                ctx.quadraticCurveTo(0, 0, 7, 2);
+                ctx.lineTo(9, 6.5);
+                ctx.quadraticCurveTo(0, 10, -9, 6.5);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#86efac';
+                ctx.beginPath();
+                ctx.arc(-2, 3, 1.3, 0, Math.PI * 2);
+                ctx.arc(3, 4, 1.6, 0, Math.PI * 2);
+                ctx.arc(0, -3, 1, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            }
+            case 7: {
+                // ПРОКРАСТИНАЦИЯ / СПИРАЛЬ ВРЕМЕНИ
+                ctx.strokeStyle = '#818cf8';
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                for (let a = 0; a < Math.PI * 3.5; a += 0.2) {
+                    const rad = 2 + a * 2.2;
+                    const px = Math.cos(a) * rad;
+                    const py = Math.sin(a) * rad;
+                    if (a === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.stroke();
+
+                ctx.fillStyle = '#fde047';
+                ctx.strokeStyle = '#312e81';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(-5, -6); ctx.lineTo(5, -6); ctx.lineTo(0, 0); ctx.lineTo(5, 6); ctx.lineTo(-5, 6); ctx.lineTo(0, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                break;
+            }
+        }
+
+        // 5. Тёмная плашка с аккуратным названием мысли снизу
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.94)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-16, 9.5, 32, 8.5, 3);
+        } else {
+            ctx.rect(-16, 9.5, 32, 8.5);
+        }
+        ctx.fill();
+        ctx.strokeStyle = gConf.hazardColor || '#ef4444';
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        ctx.font = 'bold 7px system-ui, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(gConf.name || 'ТРЕВОГА', 0, 13.8);
+
+        // 6. Сферический 3D-блик
+        if (fx) {
+            const shine = ctx.createRadialGradient(-7, -7, 1, 0, 0, 20);
+            shine.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
+            shine.addColorStop(0.3, 'rgba(255, 255, 255, 0.05)');
+            shine.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
+            shine.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+            ctx.fillStyle = shine;
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        ctx.restore();
+    },
+
+    _garbageCache: {},
+    getGarbageDataURL(typeIndex, size = 64) {
+        const key = `${typeIndex}_${size}`;
+        if (this._garbageCache[key]) return this._garbageCache[key];
+        if (typeof document === 'undefined') return '';
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+        ctx.translate(size / 2, size / 2);
+        this.drawGarbageVector(ctx, typeIndex, size / 2 - 2, { fx: true, isAim: false });
+        try {
+            const url = canvas.toDataURL('image/png');
+            this._garbageCache[key] = url;
             return url;
         } catch (e) {
             return '';

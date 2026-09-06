@@ -16,7 +16,7 @@ class BrainPhysics {
         const { Engine } = Matter;
         this.engine = Engine.create({ 
             enableSleeping: true,
-            gravity: { x: 0, y: 1.35, scale: 0.001 },
+            gravity: { x: 0, y: 0.95, scale: 0.001 },
             positionIterations: 10,
             velocityIterations: 8
         });
@@ -95,20 +95,20 @@ class BrainPhysics {
 
         this.floorBody = Bodies.rectangle(w / 2, floorY + thick / 2, w + 300, thick, { 
             isStatic: true, 
-            friction: 0.55,
-            restitution: 0.12
+            friction: 0.38,
+            restitution: 0.28
         });
 
         this.leftWall = Bodies.rectangle(leftX - thick / 2, topY + wallH / 2 - 10, thick, wallH, { 
             isStatic: true, 
-            friction: 0.25,
-            restitution: 0.18
+            friction: 0.20,
+            restitution: 0.32
         });
 
         this.rightWall = Bodies.rectangle(rightX + thick / 2, topY + wallH / 2 - 10, thick, wallH, { 
             isStatic: true, 
-            friction: 0.25,
-            restitution: 0.18
+            friction: 0.20,
+            restitution: 0.32
         });
 
         this.walls = [this.floorBody, this.leftWall, this.rightWall];
@@ -157,12 +157,12 @@ class BrainPhysics {
         const clampedX = Math.max(bounds.leftX + r + 2, Math.min(bounds.rightX - r - 2, x));
         const clampedY = Math.min(y, bounds.bottomY - r);
 
-        // Создание сферического тела с оптимизацией сна (sleepThreshold: 45) и реалистичной упругостью
+        // Создание сферического тела с оптимизацией сна (sleepThreshold: 45) и высокой упругостью/пружинистостью
         const body = Matter.Bodies.circle(clampedX, clampedY, r, {
-            restitution: 0.16,
-            friction: 0.35,
-            frictionAir: 0.006,
-            density: 0.0025 + (tier * 0.0003),
+            restitution: 0.38,
+            friction: 0.25,
+            frictionAir: 0.007,
+            density: 0.0022 + (tier * 0.0002),
             sleepThreshold: 45
         });
         
@@ -175,20 +175,24 @@ class BrainPhysics {
 
     createGarbage(x, y, garbageData) {
         const bounds = this.getCupBounds();
-        const r = garbageData.radius || 20;
+        const r = garbageData.radius || 21;
         const clampedX = Math.max(bounds.leftX + r + 2, Math.min(bounds.rightX - r - 2, x));
         const clampedY = Math.min(y, bounds.bottomY - r);
 
         const body = Matter.Bodies.circle(clampedX, clampedY, r, {
-            restitution: 0.10,
-            friction: 0.60,
-            density: 0.005,
+            restitution: 0.28,
+            friction: 0.35,
+            frictionAir: 0.007,
+            density: 0.0035,
             sleepThreshold: 45
         });
         
         body.isGarbage = true;
         body.garbageName = garbageData.name;
         body.garbageColor = garbageData.color;
+        body.garbageId = garbageData.id || garbageData.name;
+        body.garbageIndex = CONFIG.GARBAGE_TYPES.findIndex(g => g.name === garbageData.name || g.id === garbageData.id);
+        if (body.garbageIndex === -1) body.garbageIndex = 0;
         body.isDead = false;
         
         Matter.Composite.add(this.world, body);

@@ -14,6 +14,8 @@ class UIManager {
         this.questsOverlay = document.getElementById('quests-overlay');
         this.prestigeOverlay = document.getElementById('prestige-overlay');
         this.statsOverlay = document.getElementById('stats-overlay');
+        this.boostsOverlay = document.getElementById('boosts-overlay');
+        this.leaderboardOverlay = document.getElementById('leaderboard-overlay');
         this.perkOverlay = document.getElementById('perk-overlay');
         this.offlineOverlay = document.getElementById('offline-overlay');
         this.gameOverOverlay = document.getElementById('gameover-overlay');
@@ -158,6 +160,28 @@ class UIManager {
 
         document.getElementById('btn-close-stats')?.addEventListener('click', () => {
             this.statsOverlay.classList.remove('active');
+        });
+
+        // Бусты (Рекламные усиления)
+        document.getElementById('btn-open-boosts')?.addEventListener('click', () => {
+            this.openBoosts();
+        });
+        document.getElementById('btn-close-boosts')?.addEventListener('click', () => {
+            this.boostsOverlay?.classList.remove('active');
+        });
+        document.getElementById('btn-side-boosts')?.addEventListener('click', () => {
+            this.openBoosts();
+        });
+
+        // Таблица лидеров (Яндекс Игры)
+        document.getElementById('btn-open-leaderboard')?.addEventListener('click', () => {
+            this.openLeaderboard();
+        });
+        document.getElementById('btn-close-leaderboard')?.addEventListener('click', () => {
+            this.leaderboardOverlay?.classList.remove('active');
+        });
+        document.getElementById('btn-side-leaderboard')?.addEventListener('click', () => {
+            this.openLeaderboard();
         });
 
         // Боковая панель для ПК
@@ -525,6 +549,138 @@ class UIManager {
         }
 
         this.statsOverlay.classList.add('active');
+    }
+
+    // --- МОДАЛКА РЕКЛАМНЫХ БУСТОВ (YANDEX ADS) ---
+    openBoosts() {
+        const container = document.getElementById('boosts-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const boosts = [
+            {
+                id: 'turbo',
+                title: '⚡ Турбо-Хайп',
+                desc: 'Мгновенно активирует Лихорадку (Fever Mode x3) на 16 сек и восполняет 100% Дыхалки.',
+                btnText: 'СМОТРЕТЬ [ADS]'
+            },
+            {
+                id: 'cleaning',
+                title: '🧹 Генеральный Клининг',
+                desc: 'Сжигает все тревожные мысли и завалы мусора на поле + начисляет щедрую награду Мотивации.',
+                btnText: 'СМОТРЕТЬ [ADS]'
+            },
+            {
+                id: 'crypto',
+                title: '💎 Крипто-Дроп',
+                desc: 'Мгновенно начисляет Мотивацию за 30 минут пассивного дохода (минимум +15 000 🗿).',
+                btnText: 'СМОТРЕТЬ [ADS]'
+            },
+            {
+                id: 'nuke',
+                title: '💥 Ядерная Петарда',
+                desc: 'Сносит сразу 28% максимального здоровья текущего босса и разбрасывает мысли в стакане.',
+                btnText: 'СМОТРЕТЬ [ADS]'
+            }
+        ];
+
+        boosts.forEach(b => {
+            const card = document.createElement('div');
+            card.className = 'boost-card';
+
+            const info = document.createElement('div');
+            info.className = 'boost-card-info';
+            info.innerHTML = `
+                <div class="boost-title">${b.title}</div>
+                <div class="boost-desc">${b.desc}</div>
+            `;
+
+            const btn = document.createElement('button');
+            btn.className = 'boost-btn';
+            btn.textContent = b.btnText;
+
+            btn.addEventListener('click', () => {
+                if (btn.classList.contains('disabled')) return;
+                btn.classList.add('disabled');
+                btn.textContent = 'ЗАГРУЗКА...';
+
+                if (window.YandexBridge && typeof window.YandexBridge.showRewardedVideo === 'function') {
+                    window.YandexBridge.showRewardedVideo(
+                        b.id,
+                        (rewardId) => {
+                            this.game.applyBoost(rewardId);
+                            this.boostsOverlay?.classList.remove('active');
+                        },
+                        () => {
+                            btn.classList.remove('disabled');
+                            btn.textContent = b.btnText;
+                        }
+                    );
+                } else {
+                    // Локальный режим/резервный фоллбек
+                    this.game.applyBoost(b.id);
+                    this.boostsOverlay?.classList.remove('active');
+                }
+            });
+
+            card.appendChild(info);
+            card.appendChild(btn);
+            container.appendChild(card);
+        });
+
+        this.boostsOverlay?.classList.add('active');
+    }
+
+    // --- МОДАЛКА ТАБЛИЦЫ ЛИДЕРОВ (ЯНДЕКС ИГРЫ) ---
+    async openLeaderboard() {
+        if (!this.leaderboardOverlay) return;
+        this.leaderboardOverlay.classList.add('active');
+
+        const userScoreEl = document.getElementById('lb-user-score');
+        const userRankEl = document.getElementById('lb-user-rank');
+        const listEl = document.getElementById('leaderboard-list');
+
+        if (userScoreEl) {
+            userScoreEl.textContent = CONFIG.formatNumber(Math.floor(this.game.totalMotivationEarned));
+        }
+
+        if (listEl) {
+            listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px; font-size: 11px;">Загрузка таблицы лидеров...</div>';
+        }
+
+        if (window.YandexBridge && typeof window.YandexBridge.getLeaderboardEntries === 'function') {
+            const data = await window.YandexBridge.getLeaderboardEntries(15);
+            if (!listEl) return;
+            listEl.innerHTML = '';
+
+            if (userRankEl) {
+                userRankEl.textContent = data.userRank ? `#${data.userRank}` : 'Вне рейтинга';
+            }
+
+            if (data.entries && data.entries.length > 0) {
+                data.entries.forEach(entry => {
+                    const row = document.createElement('div');
+                    row.className = `leaderboard-row ${entry.isCurrentUser ? 'is-current-user' : ''}`;
+
+                    let rankClass = '';
+                    if (entry.rank === 1) rankClass = 'rank-1';
+                    else if (entry.rank === 2) rankClass = 'rank-2';
+                    else if (entry.rank === 3) rankClass = 'rank-3';
+
+                    row.innerHTML = `
+                        <div class="lb-rank-num ${rankClass}">#${entry.rank}</div>
+                        <div class="lb-player-cell">
+                            <span class="lb-player-name">${entry.name} ${entry.isCurrentUser ? ' (Вы)' : ''}</span>
+                            <span class="lb-player-title">${entry.title || 'Скуф на диване'}</span>
+                        </div>
+                        <div class="lb-player-score">${CONFIG.formatNumber(entry.score)} 🗿</div>
+                    `;
+                    listEl.appendChild(row);
+                });
+            } else {
+                listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px; font-size: 11px;">Нет данных рейтинга. Начните копить мотивацию!</div>';
+            }
+        }
     }
 
     // --- МОДАЛКА ВЫБОРА РЕЛИКВИЙ (ПОСЛЕ БОССА С ЗАЩИТОЙ ОТ СЛУЧАЙНОГО НАЖАТИЯ) ---

@@ -747,21 +747,25 @@ class SkufLifeGame {
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
         this.ui.showCombo(this.combo);
 
-        // Начисление заряда Хайпа (Fever)
-        this.addFeverCharge(8 + this.combo * 1.5);
+        // Начисление заряда Хайпа (Fever): требует цепочек слияний и мастерства
+        this.addFeverCharge(3.0 + Math.min(8, tier * 0.8 + this.combo * 0.5));
 
         // Награда Мотивации
         const tierConfig = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
-        const feverMult = this.isFeverActive ? (CONFIG.UPGRADES.brain[8]?.bought ? 5 : 3) : 1;
-        let reward = tierConfig.score * Math.max(1, this.combo * 0.4) * this.comboMultiplier * this.globalIncomeMultiplier * feverMult;
+        const feverScoreMult = this.isFeverActive ? (CONFIG.UPGRADES.brain[8]?.bought ? 3.0 : 2.0) : 1.0;
+        let reward = tierConfig.score * Math.max(1, this.combo * 0.4) * this.comboMultiplier * this.globalIncomeMultiplier * feverScoreMult;
         
         if (this.hasGoldenCat && tier === 1) reward += 1500;
         this.addMotivation(reward);
 
         // Урон по боссу от слияния
         let bossDmg = tierConfig.score * 2.5 * Math.max(1, this.combo * 0.35);
-        if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 3; // Третий глаз Сигмы: x3 урон
-        bossDmg *= feverMult;
+        if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 2.5; // Третий глаз Сигмы
+        
+        // В режиме Лихорадки урон по боссу получает тактический бонус (+35%),
+        // сохраняя босса крепким испытанием вместо мгновенного уничтожения
+        const feverBossDmgMult = this.isFeverActive ? 1.35 : 1.0;
+        bossDmg *= feverBossDmgMult;
         
         const bossHunterBonus = 1.0 + (CONFIG.PRESTIGE_PERKS[6]?.level || 0) * 0.5;
         bossDmg *= this.bossDamageMultiplier * bossHunterBonus;
@@ -923,6 +927,11 @@ class SkufLifeGame {
         this.motivation += finalAmount;
         this.totalMotivationEarned += finalAmount;
         this.updateHUD();
+
+        // Синхронизация рекорда с Яндекс Лидербордом
+        if (window.YandexBridge && typeof window.YandexBridge.setScore === 'function') {
+            window.YandexBridge.setScore(Math.floor(this.totalMotivationEarned));
+        }
     }
 
     // --- ПОКУПКА УЛУЧШЕНИЙ ---
@@ -1131,13 +1140,13 @@ class SkufLifeGame {
     // --- ХАЙП / FEVER MODE ---
     triggerFeverMode() {
         this.isFeverActive = true;
-        this.feverTimer = CONFIG.UPGRADES.brain[8]?.bought ? 22 : 12;
+        this.feverTimer = CONFIG.UPGRADES.brain[8]?.bought ? 14 : 8.5;
         this.feverCharge = 100;
         AudioCtrl.playFever();
         this.ui.triggerScreenShake();
-        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, "🔥 ЛИХОРАДКА! ХАЙП x3!", "#ec4899");
-        this.spawnParticles(this.canvas.width / 2, this.roomHeight + 40, "#ec4899", 35);
-        this.ui.setQuote("«ХАЙП ПОШЁЛ! СКУФ НА ПИКЕ ФОРМЫ!»");
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, "🔥 ЛИХОРАДКА! МОТИВАЦИЯ x2!", "#ec4899");
+        this.spawnParticles(this.canvas.width / 2, this.roomHeight + 40, "#ec4899", 30);
+        this.ui.setQuote("«ХАЙП ПОШЁЛ! МОЗГ РАБОТАЕТ НА ПИКЕ!»");
     }
 
     addFeverCharge(amount) {
@@ -1217,6 +1226,48 @@ class SkufLifeGame {
         this.ui.updateRank(currentRank.title, currentRank.desc, currentRank.badge);
     }
 
+    // --- РЕКЛАМНЫЕ БУСТЫ (YANDEX REWARDED ADS) ---
+    applyBoost(boostType) {
+        AudioCtrl.playLevelUp();
+        this.ui.triggerScreenShake();
+
+        switch (boostType) {
+            case 'turbo':
+                this.isFeverActive = true;
+                this.feverTimer = 16.0;
+                this.feverCharge = 100;
+                this.stamina = this.maxStamina;
+                this.isExhausted = false;
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, "ТУРБО-ХАЙП НА 16 СЕКУНД!", "#ec4899");
+                this.ui.setQuote("«ЭНЕРГИЯ ЗАШКАЛИВАЕТ! МОЗГ РАБОТАЕТ НА 200%!»");
+                break;
+            case 'cleaning':
+                this.physics.cleanseNearbyGarbage(this.canvas.width / 2, this.canvas.height / 2, 1200);
+                const bonusReward = 5000 + this.day * 2000;
+                this.addMotivation(bonusReward);
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `КЛИНИНГ! +${CONFIG.formatNumber(bonusReward)}`, "#10b981");
+                this.ui.setQuote("«РОБОТ-ПЫЛЕСОС СОЖГЁГ ВЕСЬ МУСОР В ГОЛОВЕ!»");
+                break;
+            case 'crypto':
+                const minutes30Income = Math.max(15000, this.passiveIncome * 1800);
+                this.addMotivation(minutes30Income);
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `+${CONFIG.formatNumber(minutes30Income)} МОТИВАЦИИ!`, "#ffd700");
+                this.ui.setQuote("«КРИПТО-ДРОП ПРИШЁЛ НА КОШЕЛЁК СКУФА!»");
+                break;
+            case 'nuke':
+                const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
+                const nukeDamage = Math.max(200, Math.floor(currentBoss.hp * 0.28));
+                this.dealBossDamage(nukeDamage);
+                this.physics.explode(this.canvas.width / 2, this.canvas.height - 100, 160, 0.35);
+                AudioCtrl.playExplosion();
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight - 20, `ЯДЕРНЫЙ УДАР -${CONFIG.formatNumber(nukeDamage)} HP!`, "#ef4444");
+                this.ui.setQuote("«ЯДЕРНАЯ ПЕТАРДА РАЗНЕСЛА ЗДОРОВЬЕ БОССА!»");
+                break;
+        }
+
+        this.saveGame();
+    }
+
     // --- ЦИКЛ ИГРЫ ---
     gameLoop(now) {
         if (this.isGameOver) return;
@@ -1253,16 +1304,17 @@ class SkufLifeGame {
             // Хайп / Лихорадка (Fever)
             if (this.isFeverActive) {
                 this.feverTimer -= dt;
-                this.dropCooldownMs = 120; // Турбо-скорость спама мыслей!
+                const baseDropMs = CONFIG.UPGRADES.brain[1]?.bought ? 240 : 380;
+                this.dropCooldownMs = Math.max(180, Math.floor(baseDropMs * 0.75));
                 if (this.feverTimer <= 0) {
                     this.isFeverActive = false;
                     this.feverCharge = 0;
-                    this.dropCooldownMs = 380;
+                    this.dropCooldownMs = baseDropMs;
                     this.ui.setQuote("«Хайп утих... Но синапсы горят!»");
                 }
             } else {
                 // Медленное остывание хайпа если нет слияний
-                this.feverCharge = Math.max(0, this.feverCharge - dt * 2.5);
+                this.feverCharge = Math.max(0, this.feverCharge - dt * 2.2);
             }
             this.ui.updateFever(this.feverCharge, this.isFeverActive, this.feverTimer);
 
@@ -1557,21 +1609,10 @@ class SkufLifeGame {
                 this.ctx.save();
                 this.ctx.translate(x, y);
                 this.ctx.rotate(b.angle);
-
-                this.ctx.fillStyle = b.garbageColor || '#334155';
-                this.ctx.beginPath();
-                this.ctx.arc(0, 0, r, 0, Math.PI * 2);
-                this.ctx.fill();
-
-                this.ctx.strokeStyle = '#ef4444';
-                this.ctx.lineWidth = 1.5;
-                this.ctx.stroke();
-
-                this.ctx.font = "bold 9px 'Segoe UI', sans-serif";
-                this.ctx.fillStyle = '#ffffff';
-                this.ctx.textAlign = 'center';
-                this.ctx.textBaseline = 'middle';
-                this.ctx.fillText(b.garbageName || 'Мусор', 0, 0);
+                CONFIG.drawGarbageVector(this.ctx, b.garbageIndex !== undefined ? b.garbageIndex : b.garbageName, r, {
+                    fx: this.fxEnabled,
+                    isAim: false
+                });
                 this.ctx.restore();
             } else if (b.tier) {
                 this.ctx.save();

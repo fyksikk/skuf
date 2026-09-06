@@ -632,45 +632,45 @@ class RoomRenderer {
         ctx.translate(x, y);
 
         // Прорезиненный спортивный коврик под снаряды
-        ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
-        this.drawRoundedRect(ctx, -4, -4, 46, 20, 3);
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        this.drawRoundedRect(ctx, -6, -6, 52, 24, 4);
         ctx.fill();
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.3)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
         // Задняя гантель (под легким углом)
         ctx.save();
-        ctx.translate(14, -1);
-        ctx.rotate(-0.12);
+        ctx.translate(12, -2);
+        ctx.rotate(-0.15);
         // Задний гриф
         ctx.fillStyle = "#64748b";
-        ctx.fillRect(4, 3, 16, 3);
+        ctx.fillRect(5, 3, 18, 3);
         // Задние диски
         ctx.fillStyle = "#1e293b";
-        ctx.fillRect(0, 0, 5, 9);
-        ctx.fillRect(19, 0, 5, 9);
+        ctx.fillRect(0, 0, 6, 9);
+        ctx.fillRect(21, 0, 6, 9);
         ctx.restore();
 
         // Передняя основная чугунная гантель
         // Тень
-        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
         ctx.beginPath();
-        ctx.ellipse(20, 11, 18, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(20, 13, 20, 3.5, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Хромированный рифленый гриф со стальным градиентом
-        const barGrad = ctx.createLinearGradient(0, 3, 0, 8);
+        const barGrad = ctx.createLinearGradient(0, 2, 0, 9);
         barGrad.addColorStop(0, "#cbd5e1");
         barGrad.addColorStop(0.5, "#ffffff");
         barGrad.addColorStop(1, "#475569");
         ctx.fillStyle = barGrad;
-        ctx.fillRect(7, 4, 18, 4);
+        ctx.fillRect(6, 4, 20, 4);
 
         // Насечка на грифе
-        ctx.strokeStyle = "rgba(30, 41, 59, 0.5)";
+        ctx.strokeStyle = "rgba(30, 41, 59, 0.6)";
         ctx.lineWidth = 0.8;
-        for (let gx = 9; gx <= 23; gx += 2.5) {
+        for (let gx = 9; gx <= 23; gx += 3) {
             ctx.beginPath();
             ctx.moveTo(gx, 4);
             ctx.lineTo(gx, 8);
@@ -678,17 +678,24 @@ class RoomRenderer {
         }
 
         // Левый шестигранный чугунный диск
-        this.drawHexPlate(ctx, 1, 1, 7, 11);
+        this.drawHexPlate(ctx, 0, 0, 8, 13);
         // Правый шестигранный чугунный диск
-        this.drawHexPlate(ctx, 24, 1, 7, 11);
+        this.drawHexPlate(ctx, 24, 0, 8, 13);
 
-        // Маркировка веса "16 KG"
-        ctx.font = "bold 6.5px system-ui, sans-serif";
-        ctx.fillStyle = "#e2e8f0";
+        // Аккуратная плашка с весом под ковриком
+        ctx.fillStyle = "rgba(2, 6, 23, 0.9)";
+        this.drawRoundedRect(ctx, 6, 11, 20, 6.5, 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
+        ctx.lineWidth = 0.6;
+        ctx.stroke();
+
+        // Четкая надпись веса
+        ctx.font = "bold 5.5px 'Segoe UI', system-ui, sans-serif";
+        ctx.fillStyle = "#ffd700";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("16", 4.5, 6.5);
-        ctx.fillText("KG", 27.5, 6.5);
+        ctx.fillText("16 KG", 16, 14.5);
 
         ctx.restore();
     }
