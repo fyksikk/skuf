@@ -15,10 +15,19 @@ class YandexManager {
         
         // Бусты рекламы
         this.boosts = {
+            turbo: {
+                id: 'turbo',
+                title: 'Турбо-Хайп',
+                desc: 'Мгновенный вход в Лихорадку (16с) + 100% Дыхалка',
+                cooldown: 45, // сек
+                lastUsed: 0,
+                color: '#ec4899',
+                icon: '⚡'
+            },
             energy: {
                 id: 'energy',
                 title: 'Турбо-Энергетик',
-                desc: 'Мгновенный вход в Лихорадку (15с) + 100% Дыхалка',
+                desc: 'Мгновенный вход в Лихорадку (16с) + 100% Дыхалка',
                 cooldown: 45, // сек
                 lastUsed: 0,
                 color: '#ec4899',

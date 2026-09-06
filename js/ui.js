@@ -326,12 +326,13 @@ class UIManager {
     }
 
     updateShake(cooldown) {
+        if (!this.btnShake || !this.btnShakeLabel) return;
         if (cooldown > 0) {
             this.btnShake.classList.add('disabled');
-            this.btnShakeLabel.textContent = `Встряска (${Math.ceil(cooldown)}с)`;
+            this.btnShakeLabel.textContent = `⏳ ${Math.ceil(cooldown)}с`;
         } else {
             this.btnShake.classList.remove('disabled');
-            this.btnShakeLabel.textContent = 'Встряска мозга';
+            this.btnShakeLabel.textContent = 'Встряска';
         }
     }
 
@@ -579,7 +580,7 @@ class UIManager {
 
     // --- МОДАЛКА РЕКЛАМНЫХ БУСТОВ (YANDEX ADS) ---
     openBoosts() {
-        const container = document.getElementById('boosts-container');
+        const container = document.getElementById('boosts-cards-container') || document.getElementById('boosts-container');
         if (!container) return;
         container.innerHTML = '';
 
@@ -623,7 +624,14 @@ class UIManager {
 
             const btn = document.createElement('button');
             btn.className = 'boost-btn';
-            btn.textContent = b.btnText;
+            
+            const cooldownLeft = window.YandexBridge ? window.YandexBridge.getBoostCooldownLeft(b.id) : 0;
+            if (cooldownLeft > 0) {
+                btn.classList.add('disabled');
+                btn.textContent = `⏳ ${cooldownLeft}с`;
+            } else {
+                btn.textContent = b.btnText;
+            }
 
             btn.addEventListener('click', () => {
                 if (btn.classList.contains('disabled')) return;
@@ -638,8 +646,14 @@ class UIManager {
                             this.boostsOverlay?.classList.remove('active');
                         },
                         () => {
-                            btn.classList.remove('disabled');
-                            btn.textContent = b.btnText;
+                            const left = window.YandexBridge ? window.YandexBridge.getBoostCooldownLeft(b.id) : 0;
+                            if (left > 0) {
+                                btn.classList.add('disabled');
+                                btn.textContent = `⏳ ${left}с`;
+                            } else {
+                                btn.classList.remove('disabled');
+                                btn.textContent = b.btnText;
+                            }
                         }
                     );
                 } else {
@@ -662,31 +676,34 @@ class UIManager {
         if (!this.leaderboardOverlay) return;
         this.leaderboardOverlay.classList.add('active');
 
-        const userScoreEl = document.getElementById('lb-user-score');
-        const userRankEl = document.getElementById('lb-user-rank');
-        const listEl = document.getElementById('leaderboard-list');
+        const userScoreEl = document.getElementById('lb-user-score-val') || document.getElementById('lb-user-score');
+        const userRankEl = document.getElementById('lb-user-rank-val') || document.getElementById('lb-user-rank');
+        const listEl = document.getElementById('leaderboard-entries-container') || document.getElementById('leaderboard-list');
 
+        const currentScore = Math.floor(this.game.totalMotivationEarned);
         if (userScoreEl) {
-            userScoreEl.textContent = CONFIG.formatNumber(Math.floor(this.game.totalMotivationEarned));
+            userScoreEl.textContent = `${CONFIG.formatNumber(currentScore)} 🗿`;
         }
 
         if (listEl) {
             listEl.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 20px; font-size: 11px;">Загрузка таблицы лидеров...</div>';
         }
 
-        if (window.YandexBridge && typeof window.YandexBridge.getLeaderboardEntries === 'function') {
+        if (window.YandexBridge) {
+            // Передаем актуальный счет игрока
+            window.YandexBridge.updateLocalScore(currentScore);
             const data = await window.YandexBridge.getLeaderboardEntries(15);
             if (!listEl) return;
             listEl.innerHTML = '';
 
             if (userRankEl) {
-                userRankEl.textContent = data.userRank ? `#${data.userRank}` : 'Вне рейтинга';
+                userRankEl.textContent = data.userRank ? `#${data.userRank} в рейтинге` : 'Вне рейтинга';
             }
 
             if (data.entries && data.entries.length > 0) {
                 data.entries.forEach(entry => {
                     const row = document.createElement('div');
-                    row.className = `leaderboard-row ${entry.isCurrentUser ? 'is-current-user' : ''}`;
+                    row.className = `leaderboard-row ${entry.isCurrentUser || entry.isUser ? 'is-current-user' : ''}`;
 
                     let rankClass = '';
                     if (entry.rank === 1) rankClass = 'rank-1';
@@ -696,8 +713,8 @@ class UIManager {
                     row.innerHTML = `
                         <div class="lb-rank-num ${rankClass}">#${entry.rank}</div>
                         <div class="lb-player-cell">
-                            <span class="lb-player-name">${entry.name} ${entry.isCurrentUser ? ' (Вы)' : ''}</span>
-                            <span class="lb-player-title">${entry.title || 'Скуф на диване'}</span>
+                            <span class="lb-player-name">${entry.name} ${(entry.isCurrentUser || entry.isUser) ? ' (Вы)' : ''}</span>
+                            <span class="lb-player-title">${entry.title || 'Кибер-Скуф'}</span>
                         </div>
                         <div class="lb-player-score">${CONFIG.formatNumber(entry.score)} 🗿</div>
                     `;
