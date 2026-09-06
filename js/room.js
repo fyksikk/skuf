@@ -542,7 +542,7 @@ class RoomRenderer {
 
         skufGlow.addColorStop(
             0,
-            "rgba(0,229,255,0.075)"
+            "rgba(0,229,255,0.11)"
         );
 
         skufGlow.addColorStop(
@@ -581,6 +581,43 @@ class RoomRenderer {
                 this.skufBounce
         );
         ctx.translate(0, 18);
+
+        const rugGlow =
+            ctx.createRadialGradient(
+                0,
+                4,
+                5,
+                0,
+                4,
+                90
+            );
+
+        rugGlow.addColorStop(
+            0,
+            "rgba(255,120,40,0.10)"
+        );
+
+        rugGlow.addColorStop(
+            1,
+            "rgba(255,120,40,0)"
+        );
+
+        ctx.fillStyle =
+            rugGlow;
+
+        ctx.beginPath();
+
+        ctx.ellipse(
+            0,
+            5,
+            95,
+            30,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
 
         // Золотая аура Гигачада
         if (hasGigachadAura) {
@@ -649,10 +686,10 @@ class RoomRenderer {
         const divY = roomHeight + 5;
 
         // Неоновая светящаяся линия
-        ctx.strokeStyle = "#00f0ff";
-        ctx.shadowColor = "#00f0ff";
-        ctx.shadowBlur = 8;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(0,229,255,0.32)";
+        ctx.shadowColor = "rgba(0,229,255,0.30)";
+        ctx.shadowBlur = 3;
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(14, divY);
         ctx.lineTo(width - 14, divY);
@@ -666,12 +703,12 @@ class RoomRenderer {
         ctx.fillStyle = "rgba(8, 12, 24, 0.92)";
         this.drawRoundedRect(ctx, centerX - badgeW / 2, badgeY, badgeW, badgeH, 4);
         ctx.fill();
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.35)";
+        ctx.strokeStyle = "rgba(0, 229, 255, 0.18)";
         ctx.lineWidth = 1;
         ctx.stroke();
 
         ctx.font = "bold 8.5px 'Segoe UI', sans-serif";
-        ctx.fillStyle = "#67e8f9";
+        ctx.fillStyle = "rgba(103,232,249,0.65)";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("🧠 ЧЕРТОГИ РАЗУМА 🧠", centerX, badgeY + badgeH / 2 + 0.5);

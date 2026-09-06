@@ -442,6 +442,15 @@ class SkufLifeGame {
             this.physics
                 .getCupBounds();
 
+        const rightFreeSpace =
+            this.canvas.width -
+            bounds.rightX;
+
+        this.container.style.setProperty(
+            '--cup-right-space',
+            `${rightFreeSpace}px`
+        );
+        
         if (
             !this.aimX ||
             this.aimX <= 0 ||
@@ -2788,6 +2797,7 @@ class SkufLifeGame {
         this.ui.showGameOver(reason, this.day);
     }
 
+    
     // --- ОТРИСОВКА СТАКАНА МЫСЛЕЙ (КИБЕР-КОЛБА) ---
     drawCup(ctx, w, h) {
         const bounds =
@@ -2844,6 +2854,82 @@ class SkufLifeGame {
 
             ctx.closePath();
         };
+
+        const railOffset = 18;
+        const railWidth = 8;
+
+        const drawRail = (x) => {
+            const railGradient =
+                ctx.createLinearGradient(
+                    x,
+                    0,
+                    x + railWidth,
+                    0
+                );
+
+            railGradient.addColorStop(
+                0,
+                "rgba(5,10,20,0.15)"
+            );
+
+            railGradient.addColorStop(
+                0.5,
+                "rgba(28,40,60,0.75)"
+            );
+
+            railGradient.addColorStop(
+                1,
+                "rgba(0,229,255,0.10)"
+            );
+
+            ctx.fillStyle =
+                railGradient;
+
+            ctx.fillRect(
+                x,
+                topY + 8,
+                railWidth,
+                bottomY - topY - 16
+            );
+
+            for (let i = 1; i <= 4; i++) {
+                const ledY =
+                    topY +
+                    (
+                        bottomY -
+                        topY
+                    ) *
+                    (
+                        i / 5
+                    );
+
+                ctx.fillStyle =
+                    "rgba(0,229,255,0.35)";
+
+                ctx.beginPath();
+
+                ctx.arc(
+                    x + railWidth / 2,
+                    ledY,
+                    1.5,
+                    0,
+                    Math.PI * 2
+                );
+
+                ctx.fill();
+            }
+        };
+
+        drawRail(
+            leftX -
+            railOffset
+        );
+
+        drawRail(
+            rightX +
+            railOffset -
+            railWidth
+        );
 
         // -----------------------------
         // ОСНОВНОЙ ФОН КОЛБЫ
@@ -3019,10 +3105,10 @@ class SkufLifeGame {
         ctx.shadowColor =
             "rgba(0, 229, 255, 0.38)";
 
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 6;
 
         ctx.strokeStyle =
-            "rgba(0, 229, 255, 0.58)";
+            "rgba(0, 229, 255, 0.42)";
 
         ctx.lineWidth = 2;
 

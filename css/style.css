@@ -774,14 +774,38 @@ body {
     transform: scale(0.92);
 }
 
+.hud-nav-btn,
+.hud-nav-btn.highlight,
+.hud-nav-btn.prestige-btn {
+    background:
+        rgba(255,255,255,0.055);
+
+    border:
+        1px solid
+        rgba(255,255,255,0.11);
+
+    color:
+        var(--text-secondary);
+}
+
+.hud-nav-btn:hover {
+    background:
+        rgba(0,229,255,0.08);
+
+    border-color:
+        rgba(0,229,255,0.30);
+}
+
 .hud-nav-btn.highlight {
-    background: rgba(255, 215, 0, 0.15);
-    border-color: rgba(255, 215, 0, 0.6);
+    box-shadow:
+        inset 2px 0 0
+        var(--gold-neon);
 }
 
 .hud-nav-btn.prestige-btn {
-    background: rgba(168, 85, 247, 0.18);
-    border-color: rgba(168, 85, 247, 0.6);
+    box-shadow:
+        inset 2px 0 0
+        #a855f7;
 }
 
 .hud-icon {
@@ -870,16 +894,6 @@ body {
     gap: 6px;
 }
 
-#boss-name {
-    font-size: 10.5px;
-    font-weight: 800;
-    color: #fda4af;
-    letter-spacing: 0.2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 .day-pill {
     background: rgba(255, 42, 133, 0.2);
     border: 1px solid rgba(255, 42, 133, 0.4);
@@ -897,15 +911,6 @@ body {
     color: var(--text-muted);
     white-space: nowrap;
     flex-shrink: 0;
-}
-
-#boss-hp-track {
-    width: 100%;
-    height: 6px;
-    background: rgba(0, 0, 0, 0.6);
-    border-radius: 99px;
-    overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #boss-hp-fill {
@@ -1038,6 +1043,14 @@ body {
     box-shadow:
         0 5px 20px
         rgba(0,0,0,0.28);
+}
+
+#next-thought-indicator {
+    right:
+        calc(
+            var(--cup-right-space, 10px)
+            + 8px
+        );
 }
 
 .next-copy {
@@ -2061,19 +2074,43 @@ body {
    --------------------------------------------------------- */
 #fever-bar {
     position: absolute;
-    top: 6px;
-    left: 10px;
-    right: 10px;
-    height: 14px;
-    background: rgba(10, 8, 20, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 99px;
+
+    top: 7px;
+    left: 50%;
+    right: auto;
+
+    transform:
+        translateX(-50%);
+
+    width:
+        min(
+            320px,
+            calc(100% - 180px)
+        );
+
+    height: 12px;
+
+    background:
+        rgba(5,8,16,0.78);
+
+    border:
+        1px solid
+        rgba(255,255,255,0.10);
+
+    border-radius: 999px;
+
     overflow: hidden;
+
     z-index: 12;
-    display: flex;
-    align-items: center;
+
     padding: 1px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 520px) {
+    #fever-bar {
+        width:
+            calc(100% - 20px);
+    }
 }
 
 .fever-track {
@@ -2778,5 +2815,62 @@ body {
     #next-thought-circle {
         width: 30px;
         height: 30px;
+    }
+}
+@media (min-width: 900px) {
+
+    .motivation-box .label {
+        font-size: 9px;
+    }
+
+    .stamina-box .label {
+        font-size: 9px;
+    }
+
+    .btn-text {
+        font-size: 10px;
+    }
+
+    .hud-mini-btn .hud-btn-caption {
+        font-size: 9.5px;
+    }
+
+    .side-metric-lbl {
+        font-size: 10px;
+    }
+
+    .side-metric-val {
+        font-size: 12.5px;
+    }
+
+    .sidebar-title {
+        font-size: 11.5px;
+    }
+
+    .skuf-status-desc {
+        font-size: 10.5px;
+    }
+}
+@media (min-width: 520px)
+and (orientation: landscape) {
+
+    #btn-tilt-left span:not(.action-icon),
+    #btn-tilt-right span:not(.action-icon),
+    #btn-toggle-gyro span:not(.action-icon) {
+        display: none;
+    }
+
+    .action-btn.tilt-btn,
+    .action-btn.gyro-btn {
+        flex:
+            0 0 38px;
+    }
+
+    .action-btn.shake-btn {
+        flex: 1;
+    }
+
+    .action-icon {
+        font-size: 14px;
     }
 }
