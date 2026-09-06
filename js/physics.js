@@ -27,15 +27,23 @@ class BrainPhysics {
 
     getCupBounds() {
         const w = this.canvas.width;
-        // Базовый комфортный отступ стакана от краев экрана
-        const baseMargin = 28;
-        // Максимальное расширение оставляет не менее 6px безопасного отступа от краев холста
-        const maxExpand = Math.max(0, baseMargin - 6);
+        // Базовый просторный отступ стакана от краев экрана
+        const baseMargin = 14;
+        // Максимальное расширение оставляет не менее 4px безопасного отступа от краев холста
+        const maxExpand = Math.max(0, baseMargin - 4);
         // Масштабируем offset так, чтобы даже большие значения перков не вылезали за экран
         const expansion = Math.min(maxExpand, Math.max(0, (this.cupWidthOffset || 0) * 0.5));
         
-        const leftX = Math.max(6, baseMargin - expansion);
-        const rightX = Math.min(w - 6, w - (baseMargin - expansion));
+        let leftX = Math.max(8, baseMargin - expansion);
+        let rightX = Math.min(w - 8, w - (baseMargin - expansion));
+
+        // На широком экране ПК центрируем стакан и задаем комфортную ширину
+        const maxCupW = 600 + (this.cupWidthOffset || 0);
+        if (w > maxCupW + 40) {
+            const extra = Math.floor((w - maxCupW) / 2);
+            leftX = extra;
+            rightX = w - extra;
+        }
 
         return {
             leftX,
@@ -44,6 +52,17 @@ class BrainPhysics {
             topY: this.cupTopY,
             bottomY: this.canvas.height - 6
         };
+    }
+
+    clearAllBodies() {
+        const bodies = Matter.Composite.allBodies(this.world);
+        bodies.forEach(b => {
+            if (!b.isStatic) {
+                b.isDead = true;
+                Matter.World.remove(this.world, b);
+            }
+        });
+        this.mergeQueue = [];
     }
 
     buildCupWalls() {
@@ -308,6 +327,20 @@ class BrainPhysics {
                 Matter.Body.setPosition(b, { x: nx, y: ny });
             }
         }
+    }
+
+    setGravityTilt(tiltX) {
+        const clamped = Math.max(-0.65, Math.min(0.65, tiltX));
+        this.engine.gravity.x = clamped;
+    }
+
+    microBounce(centerX) {
+        const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic);
+        bodies.forEach(b => {
+            const dx = (centerX - b.position.x) * 0.00003;
+            const forceY = -0.008 * (b.mass || 1);
+            Matter.Body.applyForce(b, b.position, { x: dx, y: forceY });
+        });
     }
 
     update() {

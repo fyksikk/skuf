@@ -8,7 +8,7 @@
     <meta property="og:title" content="Встань с дивана: Эволюция Скуфа">
     <meta property="og:description" content="Аркадный физический дроп-мердж и симулятор превозмогания бытия.">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <script src="js/matter.min.js"></script>
 </head>
 <body>
 
@@ -204,12 +204,78 @@
         </button>
     </div>
 
+    <!-- Боковая инфо-панель Скуфа (активна в landscape/десктоп режиме) -->
+    <aside id="desktop-sidebar" class="glass-panel desktop-sidebar">
+        <!-- Блок профиля и ранга -->
+        <div class="sidebar-section profile-section">
+            <div class="sidebar-header-row">
+                <span class="sidebar-title">🛋️ ДОСЬЕ СКУФА</span>
+                <span id="side-rank-badge" class="crisis-tag">РАНГ 1</span>
+            </div>
+            <div class="sidebar-skuf-status">
+                <div class="skuf-status-title" id="side-rank-title">🛋️ Тюбик с дивана</div>
+                <div class="skuf-status-desc" id="side-rank-desc">До повышения: 1,500 🗿</div>
+            </div>
+        </div>
+
+        <!-- Боевые характеристики -->
+        <div class="sidebar-section metrics-section">
+            <div class="side-metric-item">
+                <span class="side-metric-lbl">⚡ Урон тапа:</span>
+                <span class="side-metric-val" id="side-tap-power">+15</span>
+            </div>
+            <div class="side-metric-item">
+                <span class="side-metric-lbl">💰 Доход/сек:</span>
+                <span class="side-metric-val" id="side-passive-inc">+0/с</span>
+            </div>
+            <div class="side-metric-item">
+                <span class="side-metric-lbl">🔥 Комбо-бонус:</span>
+                <span class="side-metric-val" id="side-combo-stat">x1</span>
+            </div>
+            <div class="side-metric-item">
+                <span class="side-metric-lbl">🧹 Мусора сбито:</span>
+                <span class="side-metric-val" id="side-trash-stat">0</span>
+            </div>
+        </div>
+
+        <!-- Линейка эволюции мыслей -->
+        <div class="sidebar-section evo-section">
+            <div class="sidebar-header-row">
+                <span class="sidebar-title">🧬 ЭВОЛЮЦИЯ МЫСЛЕЙ</span>
+                <span class="evo-count" id="side-evo-count">1/10</span>
+            </div>
+            <div class="evo-icons-row" id="side-evo-row">
+                <!-- Заполняется динамически из CONFIG.TIERS -->
+            </div>
+        </div>
+
+        <!-- Быстрые действия и Сброс -->
+        <div class="sidebar-section actions-section">
+            <div class="sidebar-actions-grid">
+                <button id="btn-side-guide" class="side-btn" title="Справка и правила игры">
+                    <span>📖 Правила</span>
+                </button>
+                <button id="btn-side-stats" class="side-btn" title="Достижения и рекорды">
+                    <span>🎖️ Ачивки</span>
+                </button>
+            </div>
+            <button id="btn-reset-game" class="btn-danger-reset" title="Сбросить все сохранения и начать игру с чистого листа">
+                <span>⚠️ Начать игру с нуля</span>
+            </button>
+        </div>
+    </aside>
+
     <!-- Нижняя панель действий -->
     <footer id="action-panel" class="glass-panel">
-        <button id="btn-brain-shake">
-            <img src="item_shake.png" alt="Встряска" class="shake-icon">
-            <span id="btn-shake-label">Встряска мозга</span>
-        </button>
+        <div class="action-buttons-group">
+            <button id="btn-brain-shake" title="Встряска мозга: растолкать мысли">
+                <img src="item_shake.png" alt="Встряска" class="shake-icon">
+                <span id="btn-shake-label">Встряска</span>
+            </button>
+            <button id="btn-tilt-left" class="btn-tilt" title="Наклонить стакан влево (A / ←)">⤹</button>
+            <button id="btn-tilt-right" class="btn-tilt" title="Наклонить стакан вправо (D / →)">⤸</button>
+            <button id="btn-toggle-gyro" class="btn-tilt" title="Гироскоп / Наклон телефона (Вкл/Выкл)">🧭</button>
+        </div>
         <span id="hero-quote">«Надо бы прибраться...»</span>
     </footer>
 

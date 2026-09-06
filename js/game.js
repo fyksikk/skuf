@@ -94,10 +94,18 @@ class SkufLifeGame {
         this.fxEnabled = savedFx !== null ? savedFx === 'true' : true;
 
         // Размеры
-        this.roomHeight = 175;
-        this.brainTopY = 195;
-        this.dropY = 215;
-        this.dangerLineY = 245;
+        this.roomHeight = 160;
+        this.brainTopY = 175;
+        this.dropY = 195;
+        this.dangerLineY = 225;
+
+        // Интерактивные фичи (Инсайты, Тилт, Двойной тап)
+        this.insightBubbles = [];
+        this.bubbleSpawnTimer = 8;
+        this.tiltTimer = 0;
+        this.gyroEnabled = false;
+        this.lastTapTime = 0;
+        this.lastTapPos = { x: 0, y: 0 };
 
         // Загрузка спрайтов
         this.charImages = {};
@@ -153,19 +161,32 @@ class SkufLifeGame {
             this.canvas.width = w;
             this.canvas.height = h;
 
-            // Адаптивная высота комнаты Скуфа:
-            // Чтобы при прокачивании экрана/предметов стакан мыслей не сжимался
-            const maxRoomAllowed = Math.floor(h * 0.30);
-            this.roomHeight = Math.max(105, Math.min(160, maxRoomAllowed));
-            this.brainTopY = this.roomHeight + 14;
-            this.dropY = this.brainTopY + 18;
-            this.dangerLineY = this.brainTopY + 44;
+            // Определение ориентации (горизонтальная/пейзаж при перевороте телефона или на широком экране)
+            const isLandscape = (w > h) || (w / h > 1.12) || (h <= 500);
+
+            if (isLandscape) {
+                // На широком экране/ПК комната Скуфа увеличена вниз, чтобы персонаж и комната были отлично видны
+                const targetRoomH = Math.floor(h * 0.35);
+                this.roomHeight = Math.max(190, Math.min(265, targetRoomH));
+                this.brainTopY = this.roomHeight + 24;
+                this.dropY = this.brainTopY + 22;
+                this.dangerLineY = this.brainTopY + 48;
+            } else {
+                // Портретный режим
+                const maxRoomAllowed = Math.floor(h * 0.28);
+                this.roomHeight = Math.max(120, Math.min(170, maxRoomAllowed));
+                this.brainTopY = this.roomHeight + 20;
+                this.dropY = this.brainTopY + 20;
+                this.dangerLineY = this.brainTopY + 44;
+            }
 
             this.physics.setDimensions(this.roomHeight);
+            const bounds = this.physics.getCupBounds();
+
             if (!this.aimX || this.aimX <= 0 || this.aimX > w) {
                 this.aimX = w / 2;
             } else {
-                this.aimX = Math.max(30, Math.min(w - 30, this.aimX));
+                this.aimX = Math.max(bounds.leftX + 16, Math.min(bounds.rightX - 16, this.aimX));
             }
         }
     }
@@ -208,11 +229,25 @@ class SkufLifeGame {
             const y = clientY - rect.top;
 
             if (y < this.roomHeight) {
-                // Клик по Скуфу / Комнате
-                this.handleSkufTap(clientX, clientY);
+                // Интерактивный клик по предметам комнаты (Кот, ТВ, ПК, Пивоварня, Майнинг, Скуф)
+                this.handleRoomInteraction(x, y, clientX, clientY);
             } else {
+                // Проверка на двойной быстрый тап (подброс мыслей в стакане)
+                const now = performance.now();
+                if (now - this.lastTapTime < 280 && Math.hypot(x - this.lastTapPos.x, y - this.lastTapPos.y) < 45) {
+                    this.physics.microBounce(this.canvas.width / 2);
+                    AudioCtrl.playShake();
+                    this.ui.triggerScreenShake();
+                    this.spawnFloatingText(x, y - 20, "💫 ПОДБРОС!", "#00f0ff");
+                    this.lastTapTime = 0;
+                    return;
+                }
+                this.lastTapTime = now;
+                this.lastTapPos = { x, y };
+
                 // Прицеливание и сброс в стакан
-                this.aimX = Math.max(26, Math.min(this.canvas.width - 26, x));
+                const bounds = this.physics.getCupBounds();
+                this.aimX = Math.max(bounds.leftX + 16, Math.min(bounds.rightX - 16, x));
                 
                 if (this.activeConsumableMode) {
                     this.handleConsumableClick(x, y);
@@ -231,7 +266,8 @@ class SkufLifeGame {
             const x = e.clientX - rect.left;
             const y = e.clientY - rect.top;
             if (y >= this.roomHeight) {
-                this.aimX = Math.max(26, Math.min(this.canvas.width - 26, x));
+                const bounds = this.physics.getCupBounds();
+                this.aimX = Math.max(bounds.leftX + 16, Math.min(bounds.rightX - 16, x));
             }
         });
 
@@ -244,6 +280,43 @@ class SkufLifeGame {
                 this.shakeCooldown = this.shakeCooldownMax;
                 this.ui.updateShake(this.shakeCooldown);
                 this.ui.setQuote("«Мозги встали на место!»");
+            }
+        });
+
+        // Кнопки Наклона (Тилт стакана влево/вправо)
+        document.getElementById('btn-tilt-left')?.addEventListener('click', () => {
+            this.physics.setGravityTilt(-0.5);
+            this.tiltTimer = 1.2;
+            AudioCtrl.playTilt();
+            this.spawnFloatingText(this.canvas.width * 0.35, this.roomHeight + 35, "⤹ НАКЛОН ВЛЕВО", "#00f0ff");
+        });
+
+        document.getElementById('btn-tilt-right')?.addEventListener('click', () => {
+            this.physics.setGravityTilt(0.5);
+            this.tiltTimer = 1.2;
+            AudioCtrl.playTilt();
+            this.spawnFloatingText(this.canvas.width * 0.65, this.roomHeight + 35, "НАКЛОН ВПРАВО ⤸", "#00f0ff");
+        });
+
+        // Кнопка переключения Гироскопа
+        document.getElementById('btn-toggle-gyro')?.addEventListener('click', () => {
+            this.toggleGyroscope();
+        });
+
+        // Управление с клавиатуры (Стрелки / A / D / Пробел)
+        window.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+                this.physics.setGravityTilt(-0.5);
+                this.tiltTimer = 1.2;
+                AudioCtrl.playTilt();
+            } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+                this.physics.setGravityTilt(0.5);
+                this.tiltTimer = 1.2;
+                AudioCtrl.playTilt();
+            } else if (e.code === 'Space') {
+                e.preventDefault();
+                this.dropThought();
             }
         });
 
@@ -302,6 +375,218 @@ class SkufLifeGame {
         document.getElementById('btn-spin-wheel')?.addEventListener('click', () => {
             this.spinRoulette();
         });
+    }
+
+    // --- ИНТЕРАКТИВНЫЕ КЛИКИ ПО КОМНАТЕ (Кот, ТВ, ПК, Пивоварня, Майнинг, Скуф) ---
+    handleRoomInteraction(x, y, screenX, screenY) {
+        const targets = this.roomRenderer.getInteractiveTargets(this.canvas.width, this.roomHeight);
+        
+        for (const target of targets) {
+            const dist = Math.hypot(x - target.x, y - target.y);
+            const radius = target.radius || 24;
+            if (dist <= radius) {
+                if (target.id === 'cat') {
+                    this.roomRenderer.triggerCatPet();
+                    AudioCtrl.playPurr();
+                    this.stamina = Math.min(this.maxStamina, this.stamina + 25);
+                    this.isExhausted = false;
+                    this.addMotivation(250);
+                    this.ui.setQuote("«Котейка довольно мурчит: МЯУ! 🐾 +25 Дыхалка!»");
+                    this.spawnFloatingText(target.x, target.y - 15, "МЯУ! +25 ⚡", "#f472b6");
+                    this.spawnParticles(target.x, target.y, "#f472b6", 12);
+                    return;
+                }
+                if (target.id === 'tv') {
+                    const chan = this.roomRenderer.switchChannel();
+                    AudioCtrl.playTVClick();
+                    if (chan) {
+                        this.ui.setQuote(chan.quote);
+                        this.spawnFloatingText(target.x, target.y - 15, `${chan.title} 📺`, "#00f0ff");
+                        this.addMotivation(150);
+                        this.feverCharge = Math.min(100, this.feverCharge + 8);
+                    }
+                    return;
+                }
+                if (target.id === 'pc') {
+                    AudioCtrl.playJackpot();
+                    this.addMotivation(600);
+                    this.ui.setQuote("«Майнинг на ПК приносит прибыль: +600 Мотивации!»");
+                    this.spawnFloatingText(target.x, target.y - 15, "+600 💰", "#ffd700");
+                    this.spawnParticles(target.x, target.y, "#ffd700", 10);
+                    return;
+                }
+                if (target.id === 'brewery') {
+                    AudioCtrl.playGarbagePopped();
+                    this.stamina = this.maxStamina;
+                    this.isExhausted = false;
+                    this.addMotivation(400);
+                    this.ui.setQuote("«Холодное пенное прямо из кега! Дыхалка на 100%!»");
+                    this.spawnFloatingText(target.x, target.y - 15, "🍺 100% ДЫХАЛКА!", "#facc15");
+                    this.spawnParticles(target.x, target.y, "#facc15", 14);
+                    return;
+                }
+                if (target.id === 'mining') {
+                    AudioCtrl.playJackpot();
+                    this.addMotivation(1200);
+                    this.ui.setQuote("«Ферма разогнана! +1,200 Мотивации!»");
+                    this.spawnFloatingText(target.x, target.y - 15, "+1,200 💎", "#8b5cf6");
+                    this.spawnParticles(target.x, target.y, "#8b5cf6", 15);
+                    return;
+                }
+                if (target.id === 'vacuum') {
+                    AudioCtrl.playShake();
+                    this.physics.explode(target.x, this.roomHeight + 35, 75, 0.15);
+                    this.ui.setQuote("«Робот-пылесос прочистил сопла!»");
+                    this.spawnFloatingText(target.x, target.y - 15, "🤖 БИП-БИП!", "#00f0ff");
+                    return;
+                }
+                if (target.id === 'skuf') {
+                    this.handleSkufTap(screenX, screenY);
+                    return;
+                }
+            }
+        }
+
+        // По умолчанию клик по комнате тапает Скуфа
+        this.handleSkufTap(screenX, screenY);
+    }
+
+    toggleGyroscope() {
+        this.gyroEnabled = !this.gyroEnabled;
+        const btn = document.getElementById('btn-toggle-gyro');
+        if (btn) {
+            btn.classList.toggle('active', this.gyroEnabled);
+        }
+        if (this.gyroEnabled) {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(state => {
+                    if (state === 'granted') {
+                        window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
+                    }
+                }).catch(() => {});
+            } else {
+                window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
+            }
+            this.ui.setQuote("🧭 Гироскоп включен! Наклоняйте телефон влево/вправо!");
+            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, "🧭 ГИРОСКОП АКТИВЕН", "#00f0ff");
+        } else {
+            window.removeEventListener('deviceorientation', this.handleOrientation.bind(this));
+            this.physics.setGravityTilt(0);
+            this.ui.setQuote("🧭 Гироскоп выключен.");
+        }
+    }
+
+    handleOrientation(e) {
+        if (!this.gyroEnabled) return;
+        const gamma = e.gamma || 0;
+        const tilt = Math.max(-0.6, Math.min(0.6, (gamma / 25) * 0.7));
+        this.physics.setGravityTilt(tilt);
+    }
+
+    // --- ЛЕТАЮЩИЕ ИНТЕРАКТИВНЫЕ ИНСАЙТ-ПУЗЫРИ ---
+    updateInsightBubbles(dt) {
+        this.bubbleSpawnTimer -= dt;
+        if (this.bubbleSpawnTimer <= 0) {
+            this.bubbleSpawnTimer = 14 + Math.random() * 8;
+            this.spawnInsightBubble();
+        }
+
+        // Удаление просроченных пузырей
+        const now = performance.now();
+        for (let i = this.insightBubbles.length - 1; i >= 0; i--) {
+            const b = this.insightBubbles[i];
+            if (now - b.createdAt > 15000) {
+                b.element?.remove();
+                this.insightBubbles.splice(i, 1);
+            }
+        }
+    }
+
+    spawnInsightBubble() {
+        if (this.insightBubbles.length >= 2) return;
+        const pool = CONFIG.INSIGHT_BUBBLES || [];
+        if (pool.length === 0) return;
+        const conf = pool[Math.floor(Math.random() * pool.length)];
+
+        const bubbleEl = document.createElement('div');
+        bubbleEl.className = 'floating-insight-bubble';
+        bubbleEl.style.borderColor = conf.color;
+        bubbleEl.innerHTML = `
+            <span class="bubble-emoji">${conf.emoji}</span>
+            <span class="bubble-tag" style="color: ${conf.color}">${conf.title}</span>
+        `;
+
+        const bounds = this.physics.getCupBounds();
+        const startX = bounds.leftX + 20 + Math.random() * Math.max(40, bounds.width - 70);
+        const startY = this.roomHeight + 40 + Math.random() * (this.canvas.height - this.roomHeight - 140);
+
+        bubbleEl.style.left = `${Math.round(startX)}px`;
+        bubbleEl.style.top = `${Math.round(startY)}px`;
+
+        const bubbleObj = {
+            id: performance.now(),
+            type: conf.type,
+            conf,
+            element: bubbleEl,
+            createdAt: performance.now()
+        };
+
+        bubbleEl.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            this.popInsightBubble(bubbleObj, startX, startY);
+        });
+
+        this.container.appendChild(bubbleEl);
+        this.insightBubbles.push(bubbleObj);
+    }
+
+    popInsightBubble(bubbleObj, x, y) {
+        const idx = this.insightBubbles.indexOf(bubbleObj);
+        if (idx !== -1) {
+            this.insightBubbles.splice(idx, 1);
+        }
+        if (bubbleObj.element) {
+            bubbleObj.element.style.transform = 'scale(1.4)';
+            bubbleObj.element.style.opacity = '0';
+            setTimeout(() => bubbleObj.element?.remove(), 200);
+        }
+
+        AudioCtrl.playPop();
+        this.spawnParticles(x, y, bubbleObj.conf.color, 18);
+
+        switch (bubbleObj.type) {
+            case 'insight':
+                const bonus = 3500 + this.day * 1500;
+                this.addMotivation(bonus);
+                this.combo += 3;
+                this.comboTimer = 5.0;
+                this.spawnFloatingText(x, y, `+${CONFIG.formatNumber(bonus)} МОТИВАЦИИ! 💡`, "#ffd700");
+                this.ui.setQuote("💡 ВНЕЗАПНЫЙ ИНСАЙТ! Мозги заработали!");
+                break;
+            case 'pizza':
+                this.stamina = this.maxStamina;
+                this.isExhausted = false;
+                this.spawnFloatingText(x, y, "100% ДЫХАЛКА! 🍕", "#fb923c");
+                this.ui.setQuote("«О, курьер привез пиццу! Сил хватит на всё!»");
+                break;
+            case 'energy':
+                this.feverCharge = Math.min(100, this.feverCharge + 40);
+                this.spawnFloatingText(x, y, "+40% ХАЙП! ⚡", "#00f0ff");
+                this.ui.setQuote("⚡ ЭНЕРГЕТИК ЗАЛЕТЕЛ! Скоро Лихорадка!");
+                break;
+            case 'bomb':
+                this.items.bomb = (this.items.bomb || 0) + 1;
+                this.ui.updateConsumables(this.items);
+                this.spawnFloatingText(x, y, "+1 ПЕТАРДА! 💣", "#ef4444");
+                this.ui.setQuote("💣 Бесплатная петарда в кармане!");
+                break;
+            case 'spin':
+                this.freeSpinsAvailable++;
+                this.ui.updateRouletteTimer(this.rouletteTimer, this.freeSpinsAvailable);
+                this.spawnFloatingText(x, y, "+1 ФРИСПИН! 🎡", "#a855f7");
+                this.ui.setQuote("🎡 Бесплатный спин в Колесе Фортуны!");
+                break;
+        }
     }
 
     handleSkufTap(screenX, screenY) {
@@ -504,6 +789,10 @@ class SkufLifeGame {
         // Создание новой мысли следующего тира
         if (nextTier <= 10) {
             this.physics.createThought(midX, midY, nextTier);
+            if (nextTier > (this.highestTierUnlocked || 1)) {
+                this.highestTierUnlocked = nextTier;
+                this.ui.updateSideDashboard(this);
+            }
             if (nextTier === 10) {
                 this.gigachadsCreated++;
                 this.trackQuestProgress('gigachad', 1);
@@ -907,115 +1196,132 @@ class SkufLifeGame {
     gameLoop(now) {
         if (this.isGameOver) return;
 
-        const dt = Math.min(0.1, (now - this.lastTime) / 1000);
-        this.lastTime = now;
-        this.playTimeSeconds += dt;
+        try {
+            const dt = Math.min(0.1, (now - this.lastTime) / 1000);
+            this.lastTime = now;
+            this.playTimeSeconds += dt;
 
-        // Обновление физики
-        this.physics.update();
-        if (this.hasMagnetRelic) {
-            this.physics.applyMagneticAttraction();
-        }
-
-        // Действие Сигма-Магнита
-        if (this.magnetActiveUntil > now) {
-            this.physics.applySuperMagneticAttraction();
-        }
-
-        // Обновление таймеров
-        if (this.dropCooldown > 0) this.dropCooldown -= dt * 1000;
-        if (this.shakeCooldown > 0) {
-            this.shakeCooldown -= dt;
-            this.ui.updateShake(this.shakeCooldown);
-        }
-
-        // Замедление времени
-        if (this.flashActiveUntil > 0 && now >= this.flashActiveUntil) {
-            this.flashActiveUntil = 0;
-            this.physics.engine.timing.timeScale = 1.0;
-        }
-
-        // Хайп / Лихорадка (Fever)
-        if (this.isFeverActive) {
-            this.feverTimer -= dt;
-            this.dropCooldownMs = 120; // Турбо-скорость спама мыслей!
-            if (this.feverTimer <= 0) {
-                this.isFeverActive = false;
-                this.feverCharge = 0;
-                this.dropCooldownMs = 380;
-                this.ui.setQuote("«Хайп утих... Но синапсы горят!»");
+            // Обновление физики
+            this.physics.update();
+            if (this.hasMagnetRelic) {
+                this.physics.applyMagneticAttraction();
             }
-        } else {
-            // Медленное остывание хайпа если нет слияний
-            this.feverCharge = Math.max(0, this.feverCharge - dt * 2.5);
-        }
-        this.ui.updateFever(this.feverCharge, this.isFeverActive, this.feverTimer);
 
-        // Рулетка / Колесо Фортуны (таймер 240 сек = 4 минуты)
-        if (this.rouletteTimer > 0) {
-            this.rouletteTimer -= dt;
-            if (this.rouletteTimer <= 0) {
-                this.rouletteTimer = 240;
-                this.freeSpinsAvailable++;
-                AudioCtrl.playWheelTick();
-                this.ui.setQuote("🎡 Бесплатный спин Колеса Фортуны готов!");
+            // Действие Сигма-Магнита
+            if (this.magnetActiveUntil > now) {
+                this.physics.applySuperMagneticAttraction();
             }
-        }
-        this.ui.updateRouletteTimer(this.rouletteTimer, this.freeSpinsAvailable);
 
-        // Обновление Ранга
-        this.updateRankSystem();
-
-        // Пассивный доход
-        if (this.passiveIncome > 0) {
-            this.addMotivation(this.passiveIncome * dt);
-        }
-
-        // Восстановление дыхалки
-        if (this.stamina < this.maxStamina) {
-            let recovery = this.staminaRecoveryRate;
-            if (CONFIG.UPGRADES.hero[2]?.bought) recovery *= 1.8;
-            this.stamina = Math.min(this.maxStamina, this.stamina + recovery * dt);
-            if (this.stamina > 30) this.isExhausted = false;
-        }
-        this.ui.updateStamina(this.stamina, this.maxStamina, this.isExhausted);
-
-        // Таймер комбо
-        if (this.comboTimer > 0) {
-            this.comboTimer -= dt;
-            if (this.comboTimer <= 0) {
-                this.combo = 0;
+            // Обновление таймеров
+            if (this.dropCooldown > 0) this.dropCooldown -= dt * 1000;
+            if (this.shakeCooldown > 0) {
+                this.shakeCooldown -= dt;
+                this.ui.updateShake(this.shakeCooldown);
             }
-        }
 
-        // Авто-сброс мыслей
-        if (this.autoDropEnabled) {
-            this.autoDropTimer += dt;
-            if (this.autoDropTimer >= 1.6 && this.dropCooldown <= 0) {
-                this.autoDropTimer = 0;
-                this.aimX = 50 + Math.random() * (this.canvas.width - 100);
-                this.dropThought();
+            // Замедление времени
+            if (this.flashActiveUntil > 0 && now >= this.flashActiveUntil) {
+                this.flashActiveUntil = 0;
+                this.physics.engine.timing.timeScale = 1.0;
             }
+
+            // Хайп / Лихорадка (Fever)
+            if (this.isFeverActive) {
+                this.feverTimer -= dt;
+                this.dropCooldownMs = 120; // Турбо-скорость спама мыслей!
+                if (this.feverTimer <= 0) {
+                    this.isFeverActive = false;
+                    this.feverCharge = 0;
+                    this.dropCooldownMs = 380;
+                    this.ui.setQuote("«Хайп утих... Но синапсы горят!»");
+                }
+            } else {
+                // Медленное остывание хайпа если нет слияний
+                this.feverCharge = Math.max(0, this.feverCharge - dt * 2.5);
+            }
+            this.ui.updateFever(this.feverCharge, this.isFeverActive, this.feverTimer);
+
+            // Рулетка / Колесо Фортуны (таймер 240 сек = 4 минуты)
+            if (this.rouletteTimer > 0) {
+                this.rouletteTimer -= dt;
+                if (this.rouletteTimer <= 0) {
+                    this.rouletteTimer = 240;
+                    this.freeSpinsAvailable++;
+                    AudioCtrl.playWheelTick();
+                    this.ui.setQuote("🎡 Бесплатный спин Колеса Фортуны готов!");
+                }
+            }
+            this.ui.updateRouletteTimer(this.rouletteTimer, this.freeSpinsAvailable);
+
+            // Обновление Ранга
+            this.updateRankSystem();
+
+            // Пассивный доход
+            if (this.passiveIncome > 0) {
+                this.addMotivation(this.passiveIncome * dt);
+            }
+
+            // Восстановление дыхалки
+            if (this.stamina < this.maxStamina) {
+                let recovery = this.staminaRecoveryRate;
+                if (CONFIG.UPGRADES.hero[2]?.bought) recovery *= 1.8;
+                this.stamina = Math.min(this.maxStamina, this.stamina + recovery * dt);
+                if (this.stamina > 30) this.isExhausted = false;
+            }
+            this.ui.updateStamina(this.stamina, this.maxStamina, this.isExhausted);
+
+            // Таймер комбо
+            if (this.comboTimer > 0) {
+                this.comboTimer -= dt;
+                if (this.comboTimer <= 0) {
+                    this.combo = 0;
+                }
+            }
+
+            // Интерактивные летающие инсайты
+            this.updateInsightBubbles(dt);
+
+            // Таймер наклона стакана
+            if (this.tiltTimer > 0) {
+                this.tiltTimer -= dt;
+                if (this.tiltTimer <= 0 && !this.gyroEnabled) {
+                    this.physics.setGravityTilt(0);
+                }
+            }
+
+            // Авто-сброс мыслей
+            if (this.autoDropEnabled) {
+                this.autoDropTimer += dt;
+                if (this.autoDropTimer >= 1.6 && this.dropCooldown <= 0) {
+                    this.autoDropTimer = 0;
+                    this.aimX = 50 + Math.random() * (this.canvas.width - 100);
+                    this.dropThought();
+                }
+            }
+
+            // Таймер аренды
+            this.rentTimer -= dt;
+            const phaseIndex = Math.min(5, Math.ceil(this.day / 4));
+            const phase = CONFIG.PHASES[phaseIndex] || CONFIG.PHASES[1];
+            this.ui.updateRent(this.day, Math.max(0, this.rentTimer), phase.bgTitle);
+
+            if (this.rentTimer <= 0) {
+                this.onGameOver("Время аренды вышло! Выселен на улицу.");
+                return;
+            }
+
+            // Проверка переполнения (Красная черта)
+            this.checkDangerZone(dt);
+
+            // Отрисовка
+            this.render();
+        } catch (err) {
+            console.error("Game loop error:", err);
         }
 
-        // Таймер аренды
-        this.rentTimer -= dt;
-        const phaseIndex = Math.min(5, Math.ceil(this.day / 4));
-        const phase = CONFIG.PHASES[phaseIndex] || CONFIG.PHASES[1];
-        this.ui.updateRent(this.day, Math.max(0, this.rentTimer), phase.bgTitle);
-
-        if (this.rentTimer <= 0) {
-            this.onGameOver("Время аренды вышло! Выселен на улицу.");
-            return;
+        if (this.isRunning && !this.isGameOver) {
+            requestAnimationFrame(this.gameLoop.bind(this));
         }
-
-        // Проверка переполнения (Красная черта)
-        this.checkDangerZone(dt);
-
-        // Отрисовка
-        this.render();
-
-        requestAnimationFrame(this.gameLoop.bind(this));
     }
 
     checkDangerZone(dt) {
@@ -1247,14 +1553,15 @@ class SkufLifeGame {
         this.drawCup(this.ctx, w, h);
 
         // 3. Красная черта опасности
+        const bounds = this.physics.getCupBounds();
         const isDangerous = this.dangerTimer > 0;
         this.ctx.save();
         this.ctx.strokeStyle = isDangerous ? `rgba(239, 68, 68, ${0.5 + Math.sin(performance.now() * 0.015) * 0.5})` : 'rgba(239, 68, 68, 0.3)';
         this.ctx.lineWidth = isDangerous ? 3 : 1.5;
         this.ctx.setLineDash([8, 6]);
         this.ctx.beginPath();
-        this.ctx.moveTo(18, this.dangerLineY);
-        this.ctx.lineTo(w - 18, this.dangerLineY);
+        this.ctx.moveTo(bounds.leftX + 2, this.dangerLineY);
+        this.ctx.lineTo(bounds.rightX - 2, this.dangerLineY);
         this.ctx.stroke();
         this.ctx.setLineDash([]);
 
@@ -1262,7 +1569,7 @@ class SkufLifeGame {
             this.ctx.fillStyle = '#ef4444';
             this.ctx.font = "bold 9.5px 'Segoe UI', sans-serif";
             this.ctx.textAlign = 'right';
-            this.ctx.fillText(`ОПАСНОСТЬ: ${(this.dangerLimit - this.dangerTimer).toFixed(1)}с`, w - 24, this.dangerLineY - 6);
+            this.ctx.fillText(`ОПАСНОСТЬ: ${(this.dangerLimit - this.dangerTimer).toFixed(1)}с`, bounds.rightX - 8, this.dangerLineY - 6);
         }
         this.ctx.restore();
 
@@ -1370,6 +1677,111 @@ class SkufLifeGame {
     updateHUD() {
         this.ui.updateMotivation(this.motivation, this.passiveIncome);
         this.ui.updateConsumables(this.items);
+        this.ui.updateSideDashboard(this);
+    }
+
+    getClickDamage() {
+        let baseDamage = 15;
+        const heroUpgs = CONFIG.UPGRADES?.hero || [];
+        if (heroUpgs[0]?.bought) baseDamage *= 2;
+        if (heroUpgs[1]?.bought) baseDamage *= 5;
+        if (heroUpgs[3]?.bought) baseDamage *= 15;
+        if (heroUpgs[4]?.bought) baseDamage *= 50;
+        if (heroUpgs[5]?.bought) baseDamage *= 150;
+        if (heroUpgs[6]?.bought) baseDamage *= 600;
+        return Math.max(1, Math.floor(baseDamage * (this.bossDamageMultiplier || 1)));
+    }
+
+    // --- ПОЛНЫЙ СБРОС СТАТИСТИКИ И ПРОГРЕССА (СТАРТ С ЧИСТОГО НУЛЯ) ---
+    resetGame(manual = true) {
+        try {
+            localStorage.removeItem('skuf_save_v2');
+            localStorage.removeItem('skuf_save_v1');
+            localStorage.removeItem('skuf_stats_v1');
+        } catch (e) {
+            console.warn("Error clearing storage", e);
+        }
+
+        // Обнуление всех числовых и игровых показателей
+        this.motivation = 0;
+        this.totalMotivationEarned = 0;
+        this.passiveIncome = 0;
+        this.day = 1;
+        this.currentBossIndex = 1;
+        this.bossHp = CONFIG.BOSSES[1].hp;
+        this.rentTimer = 120;
+        this.prestigeCouches = 0;
+        this.prestigeLevel = 0;
+        this.autoDropEnabled = false;
+        this.freeSpinsAvailable = 1;
+        this.items = { beer: 1, script: 1, energy: 1, bomb: 1, magnet: 1 };
+        this.totalMerges = 0;
+        this.gigachadsCreated = 0;
+        this.bossesDefeated = 0;
+        this.trashDestroyed = 0;
+        this.maxCombo = 0;
+        this.playTimeSeconds = 0;
+        this.unlockedAchievements = [];
+        this.stamina = 100;
+        this.isExhausted = false;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.feverCharge = 0;
+        this.isFeverActive = false;
+        this.activeRelics = [];
+        this.highestTierUnlocked = 1;
+        this.activeConsumableMode = null;
+        this.dailyQuests = this.initDailyQuests ? this.initDailyQuests() : [];
+
+        // Сброс дерева апгрейдов во всех 4 ветках
+        if (CONFIG.UPGRADES) {
+            Object.keys(CONFIG.UPGRADES).forEach(cat => {
+                CONFIG.UPGRADES[cat].forEach(u => { u.bought = false; });
+            });
+        }
+
+        // Сброс перков Сансары
+        if (CONFIG.PRESTIGE_PERKS) {
+            CONFIG.PRESTIGE_PERKS.forEach(p => { p.level = 0; });
+        }
+
+        // Очистка стакана от всех старых мыслей и мусора
+        if (this.physics) {
+            this.physics.clearAllBodies();
+            const bounds = this.physics.getCupBounds();
+            setTimeout(() => {
+                this.physics.createThought(bounds.leftX + bounds.width * 0.38, this.dropY + 40, 1);
+                this.physics.createThought(bounds.leftX + bounds.width * 0.62, this.dropY + 40, 1);
+            }, 120);
+        }
+
+        this.recalculatePassives();
+
+        // Обновление всех элементов интерфейса
+        const boss = CONFIG.BOSSES[1];
+        this.ui.updateMotivation(0, 0);
+        this.ui.updateStamina(100, 100, false);
+        this.ui.updateBoss(boss, boss.hp, 1, this.maxDays);
+        this.ui.updateRent(1, 120, CONFIG.PHASES[1].bgTitle);
+        this.ui.updateAutoDropBadge(false);
+        this.ui.updateConsumables(this.items);
+        this.ui.updateRelics([]);
+        this.ui.updateRank("🛋️ Тюбик с дивана", "Сделайте первые слияния мыслей", "РАНГ 1");
+        this.ui.updateSideDashboard(this);
+        this.rollNextTier();
+
+        if (this.roomRenderer) {
+            this.roomRenderer.updateRoomStage(0);
+        }
+
+        this.saveGame();
+
+        if (manual) {
+            AudioCtrl.playLevelUp();
+            this.ui.triggerScreenShake();
+            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 50, "🚀 СТАРТ С ЧИСТОГО НУЛЯ!", "#00f0ff");
+            this.ui.setQuote("«Чистый лист! Начинаем новую жизнь с дивана!»");
+        }
     }
 
     // --- СОХРАНЕНИЕ И ЗАГРУЗКА ---
@@ -1413,6 +1825,14 @@ class SkufLifeGame {
 
     loadGame() {
         try {
+            // Проверка сброса статистики по запросу игрока (старт с нуля)
+            const cleanStartFlag = 'skuf_reset_to_zero_v5';
+            if (localStorage.getItem(cleanStartFlag) !== 'done') {
+                localStorage.setItem(cleanStartFlag, 'done');
+                this.resetGame(false);
+                return;
+            }
+
             const raw = localStorage.getItem('skuf_save_v2');
             if (!raw) {
                 this.rollNextTier();
@@ -1482,6 +1902,15 @@ class SkufLifeGame {
             this.ui.updateAutoDropBadge(this.autoDropEnabled);
             this.rollNextTier();
             this.updateHUD();
+
+            const phaseIndex = Math.min(5, Math.ceil(this.day / 4));
+            const phase = CONFIG.PHASES[phaseIndex] || CONFIG.PHASES[1];
+            if (this.roomRenderer && phase) {
+                this.roomRenderer.updateRoomStage(phase.roomStage);
+            }
+            if (this.ui && phase) {
+                this.ui.updateRent(this.day, Math.max(0, this.rentTimer), phase.bgTitle);
+            }
         } catch (e) {
             console.error("Failed to load save", e);
             this.rollNextTier();

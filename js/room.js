@@ -1,3 +1,34 @@
+// Безопасные полифилы для CanvasRenderingContext2D (гарантируют работу во всех версиях браузеров)
+if (typeof CanvasRenderingContext2D !== 'undefined') {
+    if (!CanvasRenderingContext2D.prototype.ellipse) {
+        CanvasRenderingContext2D.prototype.ellipse = function(x, y, radiusX, radiusY, rotation, startAngle, endAngle, counterclockwise) {
+            this.save();
+            this.translate(x, y);
+            this.rotate(rotation || 0);
+            this.scale(radiusX, radiusY);
+            this.arc(0, 0, 1, startAngle || 0, endAngle !== undefined ? endAngle : Math.PI * 2, counterclockwise || false);
+            this.restore();
+        };
+    }
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+            let r = typeof radii === 'number' ? radii : (Array.isArray(radii) ? radii[0] || 0 : 0);
+            if (w < 2 * r) r = w / 2;
+            if (h < 2 * r) r = h / 2;
+            this.moveTo(x + r, y);
+            this.lineTo(x + w - r, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r);
+            this.lineTo(x + w, y + h - r);
+            this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            this.lineTo(x + r, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r);
+            this.lineTo(x, y + r);
+            this.quadraticCurveTo(x, y, x + r, y);
+            this.closePath();
+        };
+    }
+}
+
 class RoomRenderer {
     constructor() {
         this.skufBounce = 1.0;
@@ -44,6 +75,9 @@ class RoomRenderer {
 
         this.zzzParticles = [];
         this.idleTimer = 0;
+        this.currentChannel = 0;
+        this.catPurrTimer = 0;
+        this.catBounce = 1.0;
     }
 
     updateRoomStage(stage) {
@@ -53,6 +87,51 @@ class RoomRenderer {
     triggerSkufBounce() {
         this.skufBounce = 1.35;
         this.idleTimer = 0;
+    }
+
+    triggerCatPet() {
+        this.catPurrTimer = 2.5;
+        this.catBounce = 1.35;
+    }
+
+    switchChannel() {
+        if (!CONFIG.TV_CHANNELS || CONFIG.TV_CHANNELS.length === 0) return null;
+        this.currentChannel = (this.currentChannel + 1) % CONFIG.TV_CHANNELS.length;
+        return CONFIG.TV_CHANNELS[this.currentChannel];
+    }
+
+    getInteractiveTargets(width, roomHeight) {
+        const floorY = roomHeight - 28;
+        const centerX = width / 2;
+        const hasPC = CONFIG.UPGRADES.room[1]?.bought;
+        const hasBrewery = CONFIG.UPGRADES.room[2]?.bought;
+        const hasMining = CONFIG.UPGRADES.room[3]?.bought;
+        const hasSmartHome = CONFIG.UPGRADES.room[4]?.bought;
+
+        const targets = [
+            // Котик на подлокотнике
+            { id: 'cat', x: centerX - 71, y: floorY - 33, radius: 24, name: 'Кот' },
+            // Телевизор
+            { id: 'tv', x: Math.max(16, centerX - 128) + 20, y: floorY - 32 + 14, radius: 24, name: 'Телевизор' },
+            // Скуф на диване
+            { id: 'skuf', x: centerX, y: floorY - 26, radius: 36, name: 'Скуф' }
+        ];
+
+        if (hasPC) {
+            targets.push({ id: 'pc', x: width - 60, y: floorY - 24, radius: 24, name: 'ПК' });
+        }
+        if (hasBrewery) {
+            targets.push({ id: 'brewery', x: width - 42 + 14, y: floorY + 4, radius: 20, name: 'Пивоварня' });
+        }
+        if (hasMining) {
+            targets.push({ id: 'mining', x: 46, y: floorY - 25, radius: 25, name: 'Ферма' });
+        }
+        if (hasSmartHome) {
+            const vacX = centerX + 80 + Math.sin(this.ambientTime * 1.5) * 20;
+            targets.push({ id: 'vacuum', x: vacX, y: floorY + 10, radius: 18, name: 'Пылесос' });
+        }
+
+        return targets;
     }
 
     triggerEndorphinFlash() {
@@ -263,7 +342,7 @@ class RoomRenderer {
             // Ворсистый край / бахрома ковра
             ctx.fillStyle = "rgba(180, 140, 70, 0.4)";
             ctx.beginPath();
-            ctx.ellipse(0, 0, 114, 21, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, 114, 21, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Основное полотно ковра
@@ -273,21 +352,21 @@ class RoomRenderer {
             rugGrad.addColorStop(1, "#230911");
             ctx.fillStyle = rugGrad;
             ctx.beginPath();
-            ctx.ellipse(0, 0, 108, 19, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, 108, 19, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Золотой геометрический орнамент ковра
             ctx.strokeStyle = "rgba(234, 179, 8, 0.4)";
             ctx.lineWidth = 1.4;
             ctx.beginPath();
-            ctx.ellipse(0, 0, 94, 15, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, 94, 15, 0, 0, Math.PI * 2);
             ctx.stroke();
 
             // Внутренний бордюр
             ctx.strokeStyle = "rgba(244, 63, 94, 0.35)";
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.ellipse(0, 0, 72, 11, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, 72, 11, 0, 0, Math.PI * 2);
             ctx.stroke();
 
             ctx.restore();
@@ -369,7 +448,7 @@ class RoomRenderer {
             const vacX = centerX + 80 + Math.sin(this.ambientTime * 1.5) * 20;
             ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
             ctx.beginPath();
-            ctx.ellipse(vacX, floorY + 14, 15, 4, 0, Math.PI * 2);
+            ctx.ellipse(vacX, floorY + 14, 15, 4, 0, 0, Math.PI * 2);
             ctx.fill();
 
             const vacGrad = ctx.createLinearGradient(vacX - 14, floorY, vacX + 14, floorY + 12);
@@ -378,7 +457,7 @@ class RoomRenderer {
             vacGrad.addColorStop(1, "#475569");
             ctx.fillStyle = vacGrad;
             ctx.beginPath();
-            ctx.ellipse(vacX, floorY + 10, 14, 6, 0, Math.PI * 2);
+            ctx.ellipse(vacX, floorY + 10, 14, 6, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Светящееся неоновое кольцо лидара
@@ -387,6 +466,11 @@ class RoomRenderer {
             ctx.arc(vacX, floorY + 8, 3, 0, Math.PI * 2);
             ctx.fill();
         }
+
+        // Телевизор в комнате (Интерактивный, кликабельный)
+        const tvX = Math.max(16, centerX - 128);
+        const tvY = floorY - 32;
+        this.drawRetroTV(ctx, tvX, tvY);
 
         // 6. Диван и Скуф (Центрированы)
         ctx.save();
@@ -508,8 +592,8 @@ class RoomRenderer {
 
         // 9. Неоновый разделитель (Переход в стакан мыслей)
         ctx.fillStyle = "#080711";
-        ctx.fillRect(0, roomHeight, width, 18);
-        const divY = roomHeight + 8;
+        ctx.fillRect(0, roomHeight, width, 24);
+        const divY = roomHeight + 5;
 
         // Неоновая светящаяся линия
         ctx.strokeStyle = "#00f0ff";
@@ -522,11 +606,22 @@ class RoomRenderer {
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        ctx.font = "bold 9px 'Segoe UI', sans-serif";
+        // Плашка "Чертоги разума" опущена НИЖЕ синей линии
+        const badgeW = 146;
+        const badgeH = 15;
+        const badgeY = divY + 6;
+        ctx.fillStyle = "rgba(8, 12, 24, 0.92)";
+        this.drawRoundedRect(ctx, centerX - badgeW / 2, badgeY, badgeW, badgeH, 4);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(0, 240, 255, 0.35)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = "bold 8.5px 'Segoe UI', sans-serif";
         ctx.fillStyle = "#67e8f9";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("🧠 ЧЕРТОГИ РАЗУМА 🧠", centerX, divY - 1);
+        ctx.fillText("🧠 ЧЕРТОГИ РАЗУМА 🧠", centerX, badgeY + badgeH / 2 + 0.5);
     }
 
     // --- МАТЕРИАЛЬНЫЕ ОТРИСОВКИ ПРЕДМЕТОВ КОМНАТЫ (ВМЕСТО ЭМОДЗИ) ---
@@ -745,10 +840,99 @@ class RoomRenderer {
         ctx.restore();
     }
 
-    // 4. Спящий пушистый рыжий котейка на подлокотнике
+    // 4. Интерактивный ретро-телевизор с переключением каналов
+    drawRetroTV(ctx, tvX, tvY) {
+        ctx.save();
+        ctx.translate(tvX, tvY);
+
+        // Тень тумбы
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.ellipse(20, 35, 18, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ножки тумбочки
+        ctx.strokeStyle = "#451a03";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(6, 28); ctx.lineTo(3, 34);
+        ctx.moveTo(34, 28); ctx.lineTo(37, 34);
+        ctx.stroke();
+
+        // Деревянный корпус телевизора
+        const tvGrad = ctx.createLinearGradient(0, 0, 0, 28);
+        tvGrad.addColorStop(0, "#78350f");
+        tvGrad.addColorStop(1, "#451a03");
+        ctx.fillStyle = tvGrad;
+        this.drawRoundedRect(ctx, 0, 0, 40, 28, 4);
+        ctx.fill();
+        ctx.strokeStyle = "#92400e";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Антенна-усы на крыше
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(18, 0); ctx.lineTo(10, -8);
+        ctx.moveTo(22, 0); ctx.lineTo(30, -8);
+        ctx.stroke();
+
+        // Экран кинескопа
+        const screenGrad = ctx.createLinearGradient(3, 3, 27, 24);
+        screenGrad.addColorStop(0, "#0f172a");
+        screenGrad.addColorStop(0.5, "#1e293b");
+        screenGrad.addColorStop(1, "#020617");
+        ctx.fillStyle = screenGrad;
+        this.drawRoundedRect(ctx, 3, 3, 25, 22, 3);
+        ctx.fill();
+
+        // Картинка текущего канала на экране
+        const channels = CONFIG.TV_CHANNELS || [];
+        const chan = channels.length > 0 ? channels[this.currentChannel % channels.length] : null;
+        if (chan) {
+            ctx.font = "11px system-ui, sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(chan.icon, 15, 14);
+
+            // Бегающая полоса CRT сканирования
+            const scanY = 4 + (this.ambientTime * 18) % 19;
+            ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
+            ctx.fillRect(3, scanY, 25, 1.5);
+        }
+
+        // Правая панель с ручками громкости/каналов
+        ctx.fillStyle = "#292524";
+        this.drawRoundedRect(ctx, 30, 4, 7, 20, 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#fbbf24";
+        ctx.beginPath();
+        ctx.arc(33.5, 9, 2, 0, Math.PI * 2);
+        ctx.arc(33.5, 16, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // 5. Спящий пушистый рыжий котейка на подлокотнике
     drawSleepingCat(ctx, x, y) {
         ctx.save();
         ctx.translate(x, y);
+
+        if (this.catPurrTimer > 0) {
+            this.catPurrTimer = Math.max(0, this.catPurrTimer - 0.025);
+            this.catBounce = Math.max(1.0, this.catBounce - 0.025);
+            ctx.scale(this.catBounce, this.catBounce);
+            // Floating heart
+            const heartOffset = (2.5 - this.catPurrTimer) * 12;
+            const heartAlpha = Math.min(1, this.catPurrTimer);
+            ctx.font = "10px system-ui";
+            ctx.fillStyle = `rgba(244, 114, 182, ${heartAlpha})`;
+            ctx.textAlign = "center";
+            ctx.fillText("❤️", 2, -12 - heartOffset);
+        }
 
         // Мягкая тень кота
         ctx.fillStyle = "rgba(0, 0, 0, 0.35)";

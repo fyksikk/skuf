@@ -4,19 +4,37 @@ const CONFIG = {
     MIN_ROOM_HEIGHT: 135,
     MAX_ROOM_HEIGHT: 195,
     
-    // 10 УРОВНЕЙ ЭВОЛЮЦИИ МЫСЛЕЙ (Сбалансированы под любой стакан)
+    // 10 УРОВНЕЙ ЭВОЛЮЦИИ МЫСЛЕЙ (Сбалансированы под широкий и просторный стакан)
     TIERS: {
-        1:  { name: "Квадробер", radius: 15, color: "#4ade80", emoji: "🐱", score: 2,   mappedImg: 1, glow: "#22c55e" },
-        2:  { name: "Симп",       radius: 20, color: "#38bdf8", emoji: "🥺", score: 6,   mappedImg: 2, glow: "#0ea5e9" },
-        3:  { name: "Тюбик",      radius: 26, color: "#818cf8", emoji: "🧪", score: 16,  mappedImg: 3, glow: "#6366f1" },
-        4:  { name: "Зумер",      radius: 33, color: "#c084fc", emoji: "🧢", score: 36,  mappedImg: 4, glow: "#a855f7" },
-        5:  { name: "Альтушка",   radius: 41, color: "#f472b6", emoji: "🎀", score: 80,  mappedImg: 5, glow: "#ec4899" },
-        6:  { name: "Масик",      radius: 50, color: "#fb7185", emoji: "🧸", score: 180, mappedImg: 6, glow: "#f43f5e" },
-        7:  { name: "Дед",        radius: 61, color: "#fb923c", emoji: "👴", score: 400, mappedImg: 7, glow: "#f97316" },
-        8:  { name: "Скуф",       radius: 73, color: "#facc15", emoji: "🛋️", score: 950, mappedImg: 8, glow: "#eab308" },
-        9:  { name: "Сигма",      radius: 87, color: "#a78bfa", emoji: "🗿", score: 2200, mappedImg: 9, glow: "#8b5cf6" },
-        10: { name: "ГИГАЧАД",    radius: 104, color: "#ffd700", emoji: "👑", score: 5000, mappedImg: 10, glow: "#ffbf00" }
+        1:  { name: "Квадробер", radius: 14, color: "#4ade80", emoji: "🐱", score: 2,   mappedImg: 1, glow: "#22c55e" },
+        2:  { name: "Симп",       radius: 18, color: "#38bdf8", emoji: "🥺", score: 6,   mappedImg: 2, glow: "#0ea5e9" },
+        3:  { name: "Тюбик",      radius: 23, color: "#818cf8", emoji: "🧪", score: 16,  mappedImg: 3, glow: "#6366f1" },
+        4:  { name: "Зумер",      radius: 29, color: "#c084fc", emoji: "🧢", score: 36,  mappedImg: 4, glow: "#a855f7" },
+        5:  { name: "Альтушка",   radius: 36, color: "#f472b6", emoji: "🎀", score: 80,  mappedImg: 5, glow: "#ec4899" },
+        6:  { name: "Масик",      radius: 44, color: "#fb7185", emoji: "🧸", score: 180, mappedImg: 6, glow: "#f43f5e" },
+        7:  { name: "Дед",        radius: 53, color: "#fb923c", emoji: "👴", score: 400, mappedImg: 7, glow: "#f97316" },
+        8:  { name: "Скуф",       radius: 63, color: "#facc15", emoji: "🛋️", score: 950, mappedImg: 8, glow: "#eab308" },
+        9:  { name: "Сигма",      radius: 74, color: "#a78bfa", emoji: "🗿", score: 2200, mappedImg: 9, glow: "#8b5cf6" },
+        10: { name: "ГИГАЧАД",    radius: 86, color: "#ffd700", emoji: "👑", score: 5000, mappedImg: 10, glow: "#ffbf00" }
     },
+
+    // ТЕЛЕКАНАЛЫ В КОМНАТЕ (Интерактивное переключение по клику)
+    TV_CHANNELS: [
+        { id: 0, title: "⚽ МАТЧ ТВ: СПАРТАК", quote: "«Судью на мыло! Гол был чистый!»", icon: "⚽", buff: "tap" },
+        { id: 1, title: "📺 УЛИЦЫ ФОНАРЕЙ", quote: "«У нас труп, возможно криминал... По коням!»", icon: "🚓", buff: "boss" },
+        { id: 2, title: "📈 КРИПТО-ПАМП 1000X", quote: "«Зеленая свеча! Закупаем на хаях!»", icon: "📉", buff: "income" },
+        { id: 3, title: "🎀 СТРИМ АЛЬТУШКИ", quote: "«Спасибо за донат в 50 рублей, чмок!»", icon: "🎀", buff: "stamina" },
+        { id: 4, title: "🛋️ МАГАЗИН НА ДИВАНЕ", quote: "«Купите массажер для поясницы со скидкой 90%!»", icon: "🛋️", buff: "fever" }
+    ],
+
+    // ЛЕТАЮЩИЕ ИНСАЙТ-ПУЗЫРИ (Интерактивные клики по экрану)
+    INSIGHT_BUBBLES: [
+        { type: "insight", emoji: "💡", title: "Инсайт!", color: "#ffd700" },
+        { type: "pizza", emoji: "🍕", title: "Доставка!", color: "#fb923c" },
+        { type: "energy", emoji: "⚡", title: "Хайп-Энергетик!", color: "#00f0ff" },
+        { type: "bomb", emoji: "💣", title: "Петарда!", color: "#ef4444" },
+        { type: "spin", emoji: "🎡", title: "Фриспин!", color: "#a855f7" }
+    ],
 
     // ФАЗЫ ПРОГРЕССИИ (смена окружения каждые 3-4 дня)
     PHASES: {
@@ -53,14 +71,14 @@ const CONFIG = {
 
     // МУСОРНЫЕ МЫСЛИ (не сливаются, взрываются слияниями)
     GARBAGE_TYPES: [
-        { name: "Кредит 💳",    color: "#475569", radius: 25 },
-        { name: "Бывшая 💔",    color: "#4a1525", radius: 27 },
-        { name: "Лень 🦥",      color: "#1e293b", radius: 26 },
-        { name: "Дедлайн ⏰",   color: "#7c2d12", radius: 24 },
-        { name: "Бессонница 🌙", color: "#1e1b4b", radius: 25 },
-        { name: "Тревога ⚡",   color: "#581c87", radius: 25 },
-        { name: "Похмелье 🤢",  color: "#14532d", radius: 28 },
-        { name: "Прокрастинация 💤", color: "#312e81", radius: 26 }
+        { name: "Кредит 💳",    color: "#475569", radius: 20 },
+        { name: "Бывшая 💔",    color: "#4a1525", radius: 21 },
+        { name: "Лень 🦥",      color: "#1e293b", radius: 20 },
+        { name: "Дедлайн ⏰",   color: "#7c2d12", radius: 19 },
+        { name: "Бессонница 🌙", color: "#1e1b4b", radius: 20 },
+        { name: "Тревога ⚡",   color: "#581c87", radius: 20 },
+        { name: "Похмелье 🤢",  color: "#14532d", radius: 21 },
+        { name: "Прокрастинация 💤", color: "#312e81", radius: 20 }
     ],
 
     // РЕЛИКВИИ ЗАБЕГА (выбираются при победе над боссом)

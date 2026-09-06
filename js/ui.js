@@ -71,6 +71,20 @@ class UIManager {
         this.rankDesc = document.getElementById('rank-desc');
         this.rankBadge = document.getElementById('rank-badge');
 
+        // Боковая панель для ПК
+        this.sideRankTitle = document.getElementById('side-rank-title');
+        this.sideRankDesc = document.getElementById('side-rank-desc');
+        this.sideRankBadge = document.getElementById('side-rank-badge');
+        this.sideTapPower = document.getElementById('side-tap-power');
+        this.sidePassiveInc = document.getElementById('side-passive-inc');
+        this.sideComboStat = document.getElementById('side-combo-stat');
+        this.sideTrashStat = document.getElementById('side-trash-stat');
+        this.sideEvoRow = document.getElementById('side-evo-row');
+        this.sideEvoCount = document.getElementById('side-evo-count');
+        this.btnResetGame = document.getElementById('btn-reset-game');
+        this.btnSideGuide = document.getElementById('btn-side-guide');
+        this.btnSideStats = document.getElementById('btn-side-stats');
+
         this.btnShake = document.getElementById('btn-brain-shake');
         this.btnShakeLabel = document.getElementById('btn-shake-label');
         this.heroQuote = document.getElementById('hero-quote');
@@ -141,6 +155,19 @@ class UIManager {
 
         document.getElementById('btn-close-stats')?.addEventListener('click', () => {
             this.statsOverlay.classList.remove('active');
+        });
+
+        // Боковая панель для ПК
+        this.btnSideGuide?.addEventListener('click', () => {
+            this.guideOverlay.classList.add('active');
+        });
+        this.btnSideStats?.addEventListener('click', () => {
+            this.openStats();
+        });
+        this.btnResetGame?.addEventListener('click', () => {
+            if (confirm("⚠️ Вы уверены, что хотите сбросить весь прогресс и начать игру с чистого нуля?\nВсе открытые улучшения, статистика и рекорды будут обнулены.")) {
+                this.game.resetGame(true);
+            }
         });
 
         // Вкладки магазина
@@ -866,5 +893,53 @@ class UIManager {
         if (this.rankTitle) this.rankTitle.textContent = title;
         if (this.rankDesc) this.rankDesc.textContent = desc;
         if (this.rankBadge) this.rankBadge.textContent = badge;
+
+        // Также обновляем боковую панель для ПК
+        if (this.sideRankTitle) this.sideRankTitle.textContent = title;
+        if (this.sideRankDesc) this.sideRankDesc.textContent = desc;
+        if (this.sideRankBadge) this.sideRankBadge.textContent = badge;
+    }
+
+    // --- БОКОВАЯ ПАНЕЛЬ ДЛЯ ПК (ПОКАЗАТЕЛИ И ЭВОЛЮЦИЯ) ---
+    updateSideDashboard(game) {
+        if (this.sideTapPower) {
+            this.sideTapPower.textContent = `+${CONFIG.formatNumber(game.getClickDamage())}`;
+        }
+        if (this.sidePassiveInc) {
+            this.sidePassiveInc.textContent = `+${CONFIG.formatNumber(game.passiveIncome)}/с`;
+        }
+        if (this.sideComboStat) {
+            const mul = game.combo > 1 ? (1 + Math.min(2.0, (game.combo - 1) * 0.1)).toFixed(1) : '1';
+            this.sideComboStat.textContent = `x${mul}`;
+        }
+        if (this.sideTrashStat) {
+            this.sideTrashStat.textContent = `${game.trashDestroyed || 0}`;
+        }
+
+        const highestTier = game.highestTierUnlocked || 1;
+        if (this.sideEvoCount) {
+            this.sideEvoCount.textContent = `${highestTier}/10`;
+        }
+
+        if (this.sideEvoRow && (this._lastRenderedTier !== highestTier || !this._evoInit)) {
+            this._lastRenderedTier = highestTier;
+            this._evoInit = true;
+            this.sideEvoRow.innerHTML = '';
+
+            for (let t = 1; t <= 10; t++) {
+                const conf = CONFIG.TIERS[t];
+                if (!conf) continue;
+                const isUnlocked = t <= highestTier;
+                const chip = document.createElement('div');
+                chip.className = `evo-ball-chip ${isUnlocked ? 'unlocked' : 'locked'}`;
+                chip.title = `T${t}: ${conf.name} (${isUnlocked ? 'Открыто' : 'Ещё не создано'})`;
+                chip.style.borderColor = isUnlocked ? conf.color : 'rgba(255, 255, 255, 0.1)';
+                chip.innerHTML = `
+                    <span class="evo-chip-emoji">${conf.badge}</span>
+                    <span class="evo-chip-tier" style="color: ${isUnlocked ? conf.color : '#64748b'}">T${t}</span>
+                `;
+                this.sideEvoRow.appendChild(chip);
+            }
+        }
     }
 }
