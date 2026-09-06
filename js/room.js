@@ -5,28 +5,41 @@ class RoomRenderer {
         this.ambientTime = 0;
         this.roomStage = 0;
 
-        this.dustParticles = Array.from({length: 20}, () => ({
-            x: 40 + Math.random() * 140,
-            y: 40 + Math.random() * 140,
-            radius: Math.random() * 1.6 + 0.6,
-            speedX: (Math.random() - 0.5) * 0.25,
-            speedY: -Math.random() * 0.25 - 0.05,
+        // Частицы пыли в луче света
+        this.dustParticles = Array.from({ length: 22 }, () => ({
+            x: 30 + Math.random() * 160,
+            y: 30 + Math.random() * 120,
+            radius: Math.random() * 1.5 + 0.5,
+            speedX: (Math.random() - 0.5) * 0.3,
+            speedY: -Math.random() * 0.3 - 0.05,
             alpha: Math.random() * 0.7 + 0.2
         }));
 
-        this.stars = Array.from({length: 14}, () => ({
-            x: 32 + Math.random() * 60,
-            y: 34 + Math.random() * 50,
-            size: Math.random() * 1.5 + 0.8,
+        // Звезды в окне
+        this.stars = Array.from({ length: 18 }, () => ({
+            x: 24 + Math.random() * 70,
+            y: 20 + Math.random() * 55,
+            size: Math.random() * 1.6 + 0.6,
             phase: Math.random() * Math.PI * 2
         }));
 
-        this.cosmicStars = Array.from({length: 80}, () => ({
-            x: Math.random() * 520,
-            y: Math.random() * 215,
-            size: Math.random() * 2 + 0.5,
+        // Космические звезды и туманности для поздних фаз
+        this.cosmicStars = Array.from({ length: 90 }, () => ({
+            x: Math.random() * 600,
+            y: Math.random() * 250,
+            size: Math.random() * 2.2 + 0.4,
             twinkle: Math.random() * Math.PI * 2,
-            speed: Math.random() * 0.5 + 0.2
+            speed: Math.random() * 0.6 + 0.2,
+            color: Math.random() > 0.3 ? '#ffffff' : (Math.random() > 0.5 ? '#67e8f9' : '#f472b6')
+        }));
+
+        // Неоновые летающие машины для Пентхауса
+        this.cyberCars = Array.from({ length: 5 }, () => ({
+            x: Math.random() * 500,
+            y: 30 + Math.random() * 70,
+            speed: Math.random() * 1.2 + 0.8,
+            color: Math.random() > 0.5 ? '#00f0ff' : '#ff2a85',
+            trail: Math.random() * 20 + 15
         }));
 
         this.zzzParticles = [];
@@ -34,7 +47,7 @@ class RoomRenderer {
     }
 
     updateRoomStage(stage) {
-        this.roomStage = stage;
+        this.roomStage = Math.max(0, Math.min(4, stage));
     }
 
     triggerSkufBounce() {
@@ -60,263 +73,416 @@ class RoomRenderer {
         ctx.closePath();
     }
 
-    draw(ctx, width, game) {
+    draw(ctx, width, roomHeight, game) {
         this.ambientTime += 0.025;
         this.idleTimer += 1 / 60;
-        const roomH = CONFIG.ROOM_HEIGHT;
-        const floorY = roomH - 38;
+        const floorY = roomHeight - 28;
         const centerX = width / 2;
         
-        // Проверяем покупки улучшений
-        const hasCleaned = CONFIG.UPGRADES.room.find(u => u.id === 'r1').bought;
-        const hasPC = CONFIG.UPGRADES.room.find(u => u.id === 'r2').bought;
-        const hasMining = CONFIG.UPGRADES.room.find(u => u.id === 'r3').bought;
-        const hasDumbbells = CONFIG.UPGRADES.hero.find(u => u.id === 'h1').bought;
+        // Проверяем купленные апгрейды
+        const hasCleaned = CONFIG.UPGRADES.room[0]?.bought;
+        const hasPC = CONFIG.UPGRADES.room[1]?.bought;
+        const hasBrewery = CONFIG.UPGRADES.room[2]?.bought;
+        const hasMining = CONFIG.UPGRADES.room[3]?.bought;
+        const hasSmartHome = CONFIG.UPGRADES.room[4]?.bought;
+        const hasDumbbells = CONFIG.UPGRADES.hero[0]?.bought;
+        const hasGigachadAura = CONFIG.UPGRADES.hero[6]?.bought;
 
-        // 1. Окружение (стены/космос)
+        // 1. Окружение и задний план в зависимости от стадии комнаты
         if (this.roomStage === 4) {
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(0, 0, width, roomH);
+            // Космос / Орбита
+            ctx.fillStyle = "#030208";
+            ctx.fillRect(0, 0, width, roomHeight);
+            
+            // Земля на горизонте
+            const earthGrad = ctx.createRadialGradient(centerX, roomHeight + 200, 150, centerX, roomHeight + 200, 320);
+            earthGrad.addColorStop(0, "#082f49");
+            earthGrad.addColorStop(0.5, "#0284c7");
+            earthGrad.addColorStop(0.8, "#38bdf8");
+            earthGrad.addColorStop(1, "transparent");
+            ctx.fillStyle = earthGrad;
+            ctx.beginPath();
+            ctx.arc(centerX, roomHeight + 200, 320, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Мерцающие звезды
             this.cosmicStars.forEach(s => {
-                s.twinkle += s.speed * 0.02;
-                ctx.fillStyle = `rgba(255, 255, 255, ${(Math.sin(s.twinkle) + 1) * 0.4 + 0.2})`;
+                s.twinkle += s.speed * 0.03;
+                const alpha = (Math.sin(s.twinkle) + 1) * 0.4 + 0.2;
+                ctx.fillStyle = s.color;
+                ctx.globalAlpha = alpha;
                 ctx.beginPath();
-                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.arc(s.x % width, s.y % (roomHeight - 20), s.size, 0, Math.PI * 2);
                 ctx.fill();
             });
-        } else {
-            const wallGrad = ctx.createLinearGradient(0, 0, 0, roomH);
-            wallGrad.addColorStop(0, "#18121d");
-            wallGrad.addColorStop(1, "#17101b");
-            ctx.fillStyle = wallGrad;
-            ctx.fillRect(0, 0, width, roomH);
+            ctx.globalAlpha = 1.0;
+        } else if (this.roomStage === 3) {
+            // Пентхаус с панорамным видом на кибер-город
+            const skyGrad = ctx.createLinearGradient(0, 0, 0, roomHeight);
+            skyGrad.addColorStop(0, "#090514");
+            skyGrad.addColorStop(0.7, "#1e0b36");
+            skyGrad.addColorStop(1, "#3b0764");
+            ctx.fillStyle = skyGrad;
+            ctx.fillRect(0, 0, width, roomHeight);
 
-            ctx.fillStyle = "rgba(255, 255, 255, 0.016)";
-            for (let x = 12; x < width; x += 24) {
+            // Небоскребы вдали
+            ctx.fillStyle = "#0c071a";
+            for (let bx = 10; bx < width; bx += 36) {
+                const bh = 50 + ((bx * 17) % 65);
+                ctx.fillRect(bx, floorY - bh, 28, bh);
+                // Окошки небоскребов
+                ctx.fillStyle = "rgba(255, 215, 0, 0.4)";
+                for (let wy = floorY - bh + 6; wy < floorY - 6; wy += 10) {
+                    ctx.fillRect(bx + 4, wy, 4, 4);
+                    ctx.fillRect(bx + 14, wy, 4, 4);
+                }
+                ctx.fillStyle = "#0c071a";
+            }
+
+            // Летающие машины
+            this.cyberCars.forEach(c => {
+                c.x = (c.x + c.speed) % (width + 60);
+                ctx.strokeStyle = c.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(c.x, c.y);
+                ctx.lineTo(c.x - c.trail, c.y);
+                ctx.stroke();
+            });
+        } else if (this.roomStage === 2) {
+            // Офис с неоном
+            const wallGrad = ctx.createLinearGradient(0, 0, 0, roomHeight);
+            wallGrad.addColorStop(0, "#0f172a");
+            wallGrad.addColorStop(1, "#1e293b");
+            ctx.fillStyle = wallGrad;
+            ctx.fillRect(0, 0, width, roomHeight);
+
+            // Неоновая вывеска "BASE"
+            ctx.font = "bold 14px 'Segoe UI', sans-serif";
+            ctx.fillStyle = "#00f0ff";
+            ctx.shadowColor = "#00f0ff";
+            ctx.shadowBlur = 10;
+            ctx.fillText("⚡ CYBER-BASE 2026 ⚡", centerX, 24);
+            ctx.shadowBlur = 0;
+        } else {
+            // Хрущёвка / Евроремонт
+            const wallGrad = ctx.createLinearGradient(0, 0, 0, roomHeight);
+            wallGrad.addColorStop(0, this.roomStage === 1 ? "#1a162b" : "#17101c");
+            wallGrad.addColorStop(1, this.roomStage === 1 ? "#120e20" : "#110b14");
+            ctx.fillStyle = wallGrad;
+            ctx.fillRect(0, 0, width, roomHeight);
+
+            // Обои в полоску
+            ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
+            for (let x = 10; x < width; x += 22) {
                 ctx.fillRect(x, 0, 8, floorY);
             }
         }
 
-        // 2. Пол
-        if (this.roomStage < 4) {
-            const floorGrad = ctx.createLinearGradient(0, floorY, 0, roomH);
-            floorGrad.addColorStop(0, "#2c1a12");
-            floorGrad.addColorStop(1, "#160d08");
-            ctx.fillStyle = floorGrad;
-            ctx.fillRect(0, floorY, width, 38);
-
-            ctx.strokeStyle = "rgba(0, 0, 0, 0.45)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, floorY + 18);
-            ctx.lineTo(width, floorY + 18);
-            ctx.stroke();
-        }
-
-        // 3. Окно и свет (Хрущёвка)
-        if (this.roomStage === 0) {
-            const winX = 26, winY = 26, winW = 74, winH = 86;
-            ctx.fillStyle = "#060a14";
-            this.drawRoundedRect(ctx, winX, winY, winW, winH, 6);
+        // 2. Окно хрущёвки (только на ранних стадиях)
+        if (this.roomStage <= 1) {
+            const winX = 20, winY = 16, winW = 68, winH = Math.min(80, roomHeight - 55);
+            ctx.fillStyle = "#060913";
+            this.drawRoundedRect(ctx, winX, winY, winW, winH, 5);
             ctx.fill();
 
+            // Звезды в окне
             this.stars.forEach(st => {
                 const twinkle = (Math.sin(this.ambientTime * 2 + st.phase) + 1) * 0.5;
-                ctx.fillStyle = `rgba(255, 255, 255, ${0.2 + twinkle * 0.7})`;
-                ctx.fillRect(st.x, st.y, st.size, st.size);
+                ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + twinkle * 0.7})`;
+                ctx.fillRect(st.x, Math.min(winY + winH - 6, st.y), st.size, st.size);
             });
 
             // Луна
-            ctx.fillStyle = "#fffdf0";
+            ctx.fillStyle = "#fef08a";
             ctx.beginPath();
-            ctx.arc(winX + 54, winY + 28, 8.5, 0, Math.PI * 2);
+            ctx.arc(winX + 48, winY + 24, 7.5, 0, Math.PI * 2);
             ctx.fill();
 
             // Рама
-            ctx.strokeStyle = "#43281c";
-            ctx.lineWidth = 4;
-            this.drawRoundedRect(ctx, winX, winY, winW, winH, 6);
+            ctx.strokeStyle = "#3e2316";
+            ctx.lineWidth = 3;
+            this.drawRoundedRect(ctx, winX, winY, winW, winH, 5);
             ctx.stroke();
 
-            // Луч света
-            const lightBeam = ctx.createLinearGradient(winX + 30, winY + 35, winX + 170, floorY + 20);
-            lightBeam.addColorStop(0, "rgba(180, 220, 255, 0.13)");
+            // Луч света на пол
+            const lightBeam = ctx.createLinearGradient(winX + 30, winY + 20, winX + 140, floorY + 10);
+            lightBeam.addColorStop(0, "rgba(180, 220, 255, 0.12)");
             lightBeam.addColorStop(1, "rgba(180, 220, 255, 0.0)");
             ctx.fillStyle = lightBeam;
             ctx.beginPath();
-            ctx.moveTo(winX + winW, winY + 14);
-            ctx.lineTo(winX + 175, floorY + 25);
-            ctx.lineTo(winX + 55, floorY + 25);
+            ctx.moveTo(winX + winW, winY + 10);
+            ctx.lineTo(winX + 150, floorY + 15);
+            ctx.lineTo(winX + 40, floorY + 15);
             ctx.lineTo(winX, winY + winH);
             ctx.closePath();
             ctx.fill();
 
-            // Пылинки
+            // Пылинки в луче
             this.dustParticles.forEach(dp => {
                 dp.x += dp.speedX;
                 dp.y += dp.speedY;
-                if (dp.y < winY + 10) dp.y = floorY + 15;
-                if (dp.x < winX + 10) dp.x = winX + 140;
-                if (dp.x > winX + 160) dp.x = winX + 20;
-                ctx.fillStyle = `rgba(220, 240, 255, ${dp.alpha * 0.8})`;
+                if (dp.y < winY + 6) dp.y = floorY + 6;
+                if (dp.x < winX + 6) dp.x = winX + 130;
+                if (dp.x > winX + 150) dp.x = winX + 15;
+                ctx.fillStyle = `rgba(220, 240, 255, ${dp.alpha * 0.75})`;
                 ctx.beginPath();
                 ctx.arc(dp.x, dp.y, dp.radius, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
 
-        // 4. Ковер (Центрирован)
+        // 3. Пол
+        const floorGrad = ctx.createLinearGradient(0, floorY, 0, roomHeight);
+        if (this.roomStage === 4) {
+            floorGrad.addColorStop(0, "#1e293b");
+            floorGrad.addColorStop(1, "#0f172a");
+        } else if (this.roomStage === 3) {
+            floorGrad.addColorStop(0, "#27272a");
+            floorGrad.addColorStop(1, "#18181b");
+        } else {
+            floorGrad.addColorStop(0, "#2c1810");
+            floorGrad.addColorStop(1, "#180c08");
+        }
+        ctx.fillStyle = floorGrad;
+        ctx.fillRect(0, floorY, width, roomHeight - floorY);
+
+        // Плинтус
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(0, floorY);
+        ctx.lineTo(width, floorY);
+        ctx.stroke();
+
+        // 4. Ковер (на ранних стадиях) - Детализированный винтажный ковер с орнаментом
         if (this.roomStage < 3) {
             ctx.save();
-            ctx.translate(centerX, floorY + 14);
-            const rugGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 110);
-            rugGrad.addColorStop(0, "#4a1e28");
-            rugGrad.addColorStop(0.7, "#35141c");
-            rugGrad.addColorStop(1, "#240b12");
+            ctx.translate(centerX, floorY + 11);
+            
+            // Ворсистый край / бахрома ковра
+            ctx.fillStyle = "rgba(180, 140, 70, 0.4)";
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 114, 21, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Основное полотно ковра
+            const rugGrad = ctx.createRadialGradient(0, 0, 15, 0, 0, 108);
+            rugGrad.addColorStop(0, "#5b1d28");
+            rugGrad.addColorStop(0.65, "#3b111b");
+            rugGrad.addColorStop(1, "#230911");
             ctx.fillStyle = rugGrad;
             ctx.beginPath();
-            ctx.ellipse(0, 0, 115, 22, 0, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, 108, 19, 0, Math.PI * 2);
             ctx.fill();
-            ctx.strokeStyle = "rgba(255, 215, 0, 0.22)";
-            ctx.lineWidth = 1.5;
+
+            // Золотой геометрический орнамент ковра
+            ctx.strokeStyle = "rgba(234, 179, 8, 0.4)";
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 94, 15, 0, Math.PI * 2);
             ctx.stroke();
+
+            // Внутренний бордюр
+            ctx.strokeStyle = "rgba(244, 63, 94, 0.35)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 72, 11, 0, Math.PI * 2);
+            ctx.stroke();
+
             ctx.restore();
         }
 
-        // 5. Визуализация улучшений в комнате
-        if (this.roomStage === 0 && !hasCleaned) {
-            ctx.font = "20px Arial";
-            ctx.fillText("🍕", centerX - 130, floorY + 18);
-            ctx.fillText("🥫", centerX - 110, floorY + 22);
-            ctx.fillText("📦", centerX - 155, floorY + 25);
+        // 5. Размещение улучшений в комнате (Материальная графика вместо голых эмодзи!)
+
+        // Мусор до уборки: картонная коробка из-под пиццы и мятая банка
+        if (!hasCleaned && this.roomStage === 0) {
+            this.drawTrashMaterials(ctx, centerX - 128, floorY + 14);
         }
 
+        // Гантели: литые чугунные шестигранные гантели с хромированным рифленым грифом
         if (hasDumbbells) {
-            ctx.fillStyle = "#1e2430";
-            this.drawRoundedRect(ctx, 40, floorY + 10, 40, 16, 4);
-            ctx.fill();
-            ctx.font = "20px Arial";
-            ctx.fillText("🏋️", 48, floorY + 25);
+            this.drawDumbbellsMaterial(ctx, 36, floorY + 6);
         }
 
+        // Игровой ПК с RGB подсветкой
         if (hasPC) {
-            const dx = width - 100, dy = floorY - 35;
-            ctx.fillStyle = "#1c202a";
-            this.drawRoundedRect(ctx, dx, dy, 70, 8, 3);
+            const pcX = width - 90, pcY = floorY - 30;
+            // Стол с текстурой карбона
+            ctx.fillStyle = "#1e293b";
+            this.drawRoundedRect(ctx, pcX - 6, pcY + 6, 68, 6, 2);
             ctx.fill();
-            
-            ctx.fillStyle = "#11141c";
-            ctx.fillRect(dx + 5, dy + 8, 6, 28);
-            ctx.fillRect(dx + 59, dy + 8, 6, 28);
-            
-            ctx.fillStyle = "#0a0d14";
-            this.drawRoundedRect(ctx, dx + 10, dy - 30, 50, 32, 5);
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(pcX - 2, pcY + 12, 4, 16);
+            ctx.fillRect(pcX + 54, pcY + 12, 4, 16);
+
+            // Тонкорамочный ультраширокий монитор
+            ctx.fillStyle = "#090d16";
+            this.drawRoundedRect(ctx, pcX + 4, pcY - 24, 46, 28, 4);
             ctx.fill();
-            
-            const hue = (this.ambientTime * 35) % 360;
-            ctx.strokeStyle = `hsl(${hue}, 100%, 55%)`;
+
+            // RGB подсветка экрана и обои рабочего стола
+            const hue = (this.ambientTime * 40) % 360;
+            ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
             ctx.lineWidth = 1.5;
             ctx.stroke();
-            
-            ctx.fillStyle = `hsl(${hue}, 90%, 75%)`;
-            ctx.fillRect(dx + 15, dy - 20, 25, 2);
-            ctx.fillRect(dx + 15, dy - 12, 15, 2);
+
+            // График на экране монитора
+            ctx.strokeStyle = "#22c55e";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(pcX + 8, pcY - 6);
+            ctx.lineTo(pcX + 20, pcY - 14);
+            ctx.lineTo(pcX + 32, pcY - 10);
+            ctx.lineTo(pcX + 44, pcY - 20);
+            ctx.stroke();
+
+            // Механическая клавиатура с индивидуальной подсветкой
+            ctx.fillStyle = `hsl(${hue}, 80%, 70%)`;
+            ctx.fillRect(pcX + 8, pcY + 1, 24, 3);
         }
 
+        // Майнинг-ферма со светящимися диодами
         if (hasMining) {
-            const rx = 30, ry = floorY - 60;
-            ctx.fillStyle = "#111";
-            ctx.fillRect(rx, ry, 45, 60);
-            const hue = (this.ambientTime * 150) % 360;
-            ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
+            const mX = 26, mY = floorY - 50;
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(mX, mY, 40, 50);
+            ctx.strokeStyle = "#334155";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(mX, mY, 40, 50);
+
+            // Диоды и вентиляторы
             for (let i = 0; i < 4; i++) {
-                ctx.fillRect(rx + 5, ry + 8 + i * 12, 35, 6);
+                const ledHue = (this.ambientTime * 120 + i * 60) % 360;
+                ctx.fillStyle = `hsl(${ledHue}, 100%, 50%)`;
+                ctx.fillRect(mX + 4, mY + 6 + i * 11, 32, 5);
             }
+        }
+
+        // Мини-пивоварня: стальной блестящий кег с латунным краном и манометром
+        if (hasBrewery) {
+            this.drawBreweryMaterial(ctx, width - 42, floorY + 4);
+        }
+
+        // Робот-пылесос с сенсорной панелью
+        if (hasSmartHome) {
+            const vacX = centerX + 80 + Math.sin(this.ambientTime * 1.5) * 20;
+            ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+            ctx.beginPath();
+            ctx.ellipse(vacX, floorY + 14, 15, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            const vacGrad = ctx.createLinearGradient(vacX - 14, floorY, vacX + 14, floorY + 12);
+            vacGrad.addColorStop(0, "#e2e8f0");
+            vacGrad.addColorStop(0.5, "#94a3b8");
+            vacGrad.addColorStop(1, "#475569");
+            ctx.fillStyle = vacGrad;
+            ctx.beginPath();
+            ctx.ellipse(vacX, floorY + 10, 14, 6, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Светящееся неоновое кольцо лидара
+            ctx.fillStyle = "#00f0ff";
+            ctx.beginPath();
+            ctx.arc(vacX, floorY + 8, 3, 0, Math.PI * 2);
+            ctx.fill();
         }
 
         // 6. Диван и Скуф (Центрированы)
         ctx.save();
-        ctx.translate(centerX, floorY - 6);
+        ctx.translate(centerX, floorY - 4);
 
-        // Тень под диваном
+        // Тень дивана
         ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
         ctx.beginPath();
-        ctx.ellipse(0, 8, 85, 8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 6, 80, 8, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        const couchW = 160;
-        ctx.fillStyle = "#1c1109";
-        ctx.fillRect(-65, 2, 10, 8);
-        ctx.fillRect(55, 2, 10, 8);
-
-        const backGrad = ctx.createLinearGradient(0, -56, 0, -14);
-        backGrad.addColorStop(0, "#5a3a2a");
-        backGrad.addColorStop(1, "#3c251a");
+        // Спинка дивана
+        const backGrad = ctx.createLinearGradient(0, -50, 0, -10);
+        if (this.roomStage >= 3) {
+            backGrad.addColorStop(0, "#1e1b4b");
+            backGrad.addColorStop(1, "#0f172a");
+        } else {
+            backGrad.addColorStop(0, "#5a3a28");
+            backGrad.addColorStop(1, "#3c2518");
+        }
         ctx.fillStyle = backGrad;
-        this.drawRoundedRect(ctx, -70, -56, 140, 44, 14);
+        this.drawRoundedRect(ctx, -68, -50, 136, 40, 12);
         ctx.fill();
 
-        const seatGrad = ctx.createLinearGradient(0, -22, 0, 4);
-        seatGrad.addColorStop(0, "#734a36");
-        seatGrad.addColorStop(1, "#4d3022");
+        // Сиденье дивана
+        const seatGrad = ctx.createLinearGradient(0, -18, 0, 4);
+        if (this.roomStage >= 3) {
+            seatGrad.addColorStop(0, "#312e81");
+            seatGrad.addColorStop(1, "#1e1b4b");
+        } else {
+            seatGrad.addColorStop(0, "#734932");
+            seatGrad.addColorStop(1, "#4d2f1f");
+        }
         ctx.fillStyle = seatGrad;
-        this.drawRoundedRect(ctx, -72, -20, 68, 24, 8);
+        this.drawRoundedRect(ctx, -70, -18, 66, 22, 7);
         ctx.fill();
-        this.drawRoundedRect(ctx, 4, -20, 68, 24, 8);
-        ctx.fill();
-
-        ctx.fillStyle = "#633f2d";
-        this.drawRoundedRect(ctx, -82, -34, 18, 38, 9);
-        ctx.fill();
-        this.drawRoundedRect(ctx, 64, -34, 18, 38, 9);
+        this.drawRoundedRect(ctx, 4, -18, 66, 22, 7);
         ctx.fill();
 
-        // Спящий кот на подлокотнике
-        ctx.save();
-        ctx.translate(-76, -38);
-        ctx.fillStyle = "#88d49e";
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 9, 6, 0, 0, Math.PI * 2);
+        // Подлокотники
+        ctx.fillStyle = this.roomStage >= 3 ? "#1e1b4b" : "#5d3824";
+        this.drawRoundedRect(ctx, -78, -30, 16, 34, 8);
         ctx.fill();
-        ctx.font = "8px Arial";
-        ctx.fillStyle = "#fff";
-        ctx.fillText("💤", 4, -8);
-        ctx.restore();
+        this.drawRoundedRect(ctx, 62, -30, 16, 34, 8);
+        ctx.fill();
 
-        // 7. Скуф (Замедленное дыхание и правильный пульс)
-        const skufBreath = Math.sin(this.ambientTime * 1.5) * 0.025;
-        this.skufBounce = Math.max(1.0, this.skufBounce - 0.02);
+        // Спящий пушистый рыжий котейка на подлокотнике (Материальная графика!)
+        this.drawSleepingCat(ctx, -71, -33);
+
+        // 7. Скуф (Дыхание, покачивание и реакция на усталость)
+        const skufBreath = Math.sin(this.ambientTime * 1.6) * 0.03;
+        this.skufBounce = Math.max(1.0, this.skufBounce - 0.025);
         
         ctx.save();
-        ctx.translate(0, -20);
+        ctx.translate(0, -18);
         ctx.scale((1 - skufBreath * 0.5) * this.skufBounce, (1 + skufBreath) * this.skufBounce);
-        ctx.translate(0, 20);
+        ctx.translate(0, 18);
+
+        // Золотая аура Гигачада
+        if (hasGigachadAura) {
+            ctx.shadowColor = "#ffd700";
+            ctx.shadowBlur = 20;
+            ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, -22, 36, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+        }
 
         const skufImg = (game.charImages && game.charImages[8]) ? game.charImages[8] : null;
         if (skufImg && skufImg.complete && skufImg.naturalWidth > 0) {
-            ctx.drawImage(skufImg, -35, -55, 70, 70);
+            ctx.drawImage(skufImg, -34, -54, 68, 68);
         } else {
-            ctx.font = "46px Arial";
+            ctx.font = "44px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText("🛋️", 0, -22);
+            ctx.fillText("🛋️", 0, -20);
         }
 
+        // Индикатор одышки
         if (game.isExhausted) {
             ctx.font = "16px Arial";
-            ctx.fillText("💦", 20, -45);
+            ctx.fillText("💦", 22, -42);
         }
         ctx.restore();
 
-        // Храп Zzz
-        if (this.idleTimer > 3.0 && !game.isExhausted) {
-            if (Math.random() < 0.03) {
+        // Частицы храпа Zzz при простое
+        if (this.idleTimer > 2.5 && !game.isExhausted) {
+            if (Math.random() < 0.035) {
                 this.zzzParticles.push({
-                    x: 8, y: -50,
-                    vx: Math.random() * 0.4 + 0.2,
-                    vy: -0.6,
+                    x: 6, y: -46,
+                    vx: Math.random() * 0.3 + 0.2,
+                    vy: -0.55,
                     alpha: 1.0,
-                    size: 12
+                    size: 11
                 });
             }
         }
@@ -324,7 +490,7 @@ class RoomRenderer {
         this.zzzParticles.forEach((zp, idx) => {
             zp.x += zp.vx;
             zp.y += zp.vy;
-            zp.alpha -= 0.015;
+            zp.alpha -= 0.016;
             ctx.font = `bold ${zp.size}px 'Segoe UI', sans-serif`;
             ctx.fillStyle = `rgba(186, 230, 253, ${zp.alpha})`;
             ctx.fillText("z", zp.x, zp.y);
@@ -336,25 +502,334 @@ class RoomRenderer {
         // 8. Вспышка эндорфинов
         if (this.endorphinFlash > 0) {
             ctx.fillStyle = `rgba(255, 215, 0, ${this.endorphinFlash * 0.35})`;
-            ctx.fillRect(0, 0, width, roomH);
-            this.endorphinFlash = Math.max(0, this.endorphinFlash - 0.03);
+            ctx.fillRect(0, 0, width, roomHeight);
+            this.endorphinFlash = Math.max(0, this.endorphinFlash - 0.035);
         }
 
-        // 9. Электро-шлюз
-        ctx.fillStyle = "#090810";
-        ctx.fillRect(0, roomH, width, CONFIG.BRAIN_TOP_Y - roomH);
-        const dividerY = CONFIG.BRAIN_TOP_Y - 2;
+        // 9. Неоновый разделитель (Переход в стакан мыслей)
+        ctx.fillStyle = "#080711";
+        ctx.fillRect(0, roomHeight, width, 18);
+        const divY = roomHeight + 8;
 
-        ctx.strokeStyle = "rgba(0, 240, 255, 0.45)";
+        // Неоновая светящаяся линия
+        ctx.strokeStyle = "#00f0ff";
+        ctx.shadowColor = "#00f0ff";
+        ctx.shadowBlur = 8;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(12, dividerY);
-        ctx.lineTo(width - 12, dividerY);
+        ctx.moveTo(14, divY);
+        ctx.lineTo(width - 14, divY);
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
         ctx.font = "bold 9px 'Segoe UI', sans-serif";
-        ctx.fillStyle = "#64d8ff";
+        ctx.fillStyle = "#67e8f9";
         ctx.textAlign = "center";
-        ctx.fillText("🧠 ЧЕРТОГИ РАЗУМА (МЫСЛИ СКУФА) 🧠", width / 2, dividerY - 4);
+        ctx.textBaseline = "middle";
+        ctx.fillText("🧠 ЧЕРТОГИ РАЗУМА 🧠", centerX, divY - 1);
+    }
+
+    // --- МАТЕРИАЛЬНЫЕ ОТРИСОВКИ ПРЕДМЕТОВ КОМНАТЫ (ВМЕСТО ЭМОДЗИ) ---
+
+    // 1. Литые чугунные гантели из реальных материалов
+    drawDumbbellsMaterial(ctx, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Прорезиненный спортивный коврик под снаряды
+        ctx.fillStyle = "rgba(15, 23, 42, 0.75)";
+        this.drawRoundedRect(ctx, -4, -4, 46, 20, 3);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Задняя гантель (под легким углом)
+        ctx.save();
+        ctx.translate(14, -1);
+        ctx.rotate(-0.12);
+        // Задний гриф
+        ctx.fillStyle = "#64748b";
+        ctx.fillRect(4, 3, 16, 3);
+        // Задние диски
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(0, 0, 5, 9);
+        ctx.fillRect(19, 0, 5, 9);
+        ctx.restore();
+
+        // Передняя основная чугунная гантель
+        // Тень
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.ellipse(20, 11, 18, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Хромированный рифленый гриф со стальным градиентом
+        const barGrad = ctx.createLinearGradient(0, 3, 0, 8);
+        barGrad.addColorStop(0, "#cbd5e1");
+        barGrad.addColorStop(0.5, "#ffffff");
+        barGrad.addColorStop(1, "#475569");
+        ctx.fillStyle = barGrad;
+        ctx.fillRect(7, 4, 18, 4);
+
+        // Насечка на грифе
+        ctx.strokeStyle = "rgba(30, 41, 59, 0.5)";
+        ctx.lineWidth = 0.8;
+        for (let gx = 9; gx <= 23; gx += 2.5) {
+            ctx.beginPath();
+            ctx.moveTo(gx, 4);
+            ctx.lineTo(gx, 8);
+            ctx.stroke();
+        }
+
+        // Левый шестигранный чугунный диск
+        this.drawHexPlate(ctx, 1, 1, 7, 11);
+        // Правый шестигранный чугунный диск
+        this.drawHexPlate(ctx, 24, 1, 7, 11);
+
+        // Маркировка веса "16 KG"
+        ctx.font = "bold 6.5px system-ui, sans-serif";
+        ctx.fillStyle = "#e2e8f0";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("16", 4.5, 6.5);
+        ctx.fillText("KG", 27.5, 6.5);
+
+        ctx.restore();
+    }
+
+    // Шестигранный диск гантели с металлической фаской
+    drawHexPlate(ctx, px, py, pw, ph) {
+        const plateGrad = ctx.createLinearGradient(px, py, px + pw, py + ph);
+        plateGrad.addColorStop(0, "#334155");
+        plateGrad.addColorStop(0.4, "#1e293b");
+        plateGrad.addColorStop(1, "#0f172a");
+        ctx.fillStyle = plateGrad;
+        this.drawRoundedRect(ctx, px, py, pw, ph, 2);
+        ctx.fill();
+
+        // Металлическая фаска / блик по верхнему контуру
+        ctx.strokeStyle = "rgba(203, 213, 225, 0.45)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    }
+
+    // 2. Стальная мини-пивоварня / блестящий кег
+    drawBreweryMaterial(ctx, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Тень под кегом
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.beginPath();
+        ctx.ellipse(14, 15, 15, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Корпус кега из матовой нержавеющей стали с вертикальным зеркальным градиентом
+        const steelGrad = ctx.createLinearGradient(0, -18, 26, -18);
+        steelGrad.addColorStop(0, "#334155");
+        steelGrad.addColorStop(0.2, "#94a3b8");
+        steelGrad.addColorStop(0.45, "#f8fafc");
+        steelGrad.addColorStop(0.7, "#64748b");
+        steelGrad.addColorStop(1, "#1e293b");
+        ctx.fillStyle = steelGrad;
+        this.drawRoundedRect(ctx, 2, -18, 24, 31, 3);
+        ctx.fill();
+
+        // Ребра жесткости кега
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(3, -9); ctx.lineTo(25, -9);
+        ctx.moveTo(3, 3); ctx.lineTo(25, 3);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(15, 23, 42, 0.6)";
+        ctx.beginPath();
+        ctx.moveTo(3, -8); ctx.lineTo(25, -8);
+        ctx.moveTo(3, 4); ctx.lineTo(25, 4);
+        ctx.stroke();
+
+        // Латунный пивной кран
+        const brassGrad = ctx.createLinearGradient(16, -14, 34, -8);
+        brassGrad.addColorStop(0, "#f59e0b");
+        brassGrad.addColorStop(0.5, "#fef08a");
+        brassGrad.addColorStop(1, "#b45309");
+        ctx.fillStyle = brassGrad;
+        // Носик крана
+        ctx.fillRect(23, -11, 8, 3);
+        ctx.fillRect(28, -8, 3, 5);
+
+        // Ручка крана из темного дерева
+        ctx.fillStyle = "#78350f";
+        this.drawRoundedRect(ctx, 25, -20, 4, 10, 1.5);
+        ctx.fill();
+
+        // Манометр давления
+        ctx.beginPath();
+        ctx.arc(8, -10, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = "#f8fafc";
+        ctx.fill();
+        ctx.strokeStyle = "#475569";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // Красная стрелка манометра
+        ctx.strokeStyle = "#ef4444";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(8, -10);
+        ctx.lineTo(10.5, -12);
+        ctx.stroke();
+
+        // Поддон для сбора капель внизу
+        ctx.fillStyle = "#0f172a";
+        this.drawRoundedRect(ctx, 20, 9, 11, 4, 1);
+        ctx.fill();
+
+        ctx.restore();
+    }
+
+    // 3. Мусор до уборки: картонная коробка из-под пиццы и алюминиевая банка
+    drawTrashMaterials(ctx, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Тень мусора
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        ctx.beginPath();
+        ctx.ellipse(14, 6, 16, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Коробка для пиццы из гофрированного крафт-картона
+        ctx.save();
+        ctx.rotate(-0.06);
+        ctx.fillStyle = "#b45309";
+        this.drawRoundedRect(ctx, 0, -4, 24, 8, 1.5);
+        ctx.fill();
+        // Крышка коробки
+        ctx.fillStyle = "#d97706";
+        this.drawRoundedRect(ctx, 0, -6, 24, 3, 1);
+        ctx.fill();
+
+        // Жирное пятно от пиццы на коробке
+        ctx.fillStyle = "rgba(180, 83, 9, 0.45)";
+        ctx.beginPath();
+        ctx.arc(12, -2, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ретро-надпись на коробке
+        ctx.font = "bold 5px system-ui, sans-serif";
+        ctx.fillStyle = "#dc2626";
+        ctx.fillText("PIZZA", 4, -1);
+        ctx.restore();
+
+        // Мятая алюминиевая банка газировки рядом
+        ctx.save();
+        ctx.translate(26, -2);
+        ctx.rotate(0.35);
+        const canGrad = ctx.createLinearGradient(0, 0, 8, 12);
+        canGrad.addColorStop(0, "#ef4444");
+        canGrad.addColorStop(0.4, "#fca5a5");
+        canGrad.addColorStop(0.7, "#dc2626");
+        canGrad.addColorStop(1, "#991b1b");
+        ctx.fillStyle = canGrad;
+        this.drawRoundedRect(ctx, 0, 0, 7, 10, 1.5);
+        ctx.fill();
+
+        // Серебристый ободок и ключ банки
+        ctx.fillStyle = "#cbd5e1";
+        ctx.fillRect(0, 0, 7, 1.5);
+        ctx.fillRect(0, 9, 7, 1);
+        ctx.restore();
+
+        ctx.restore();
+    }
+
+    // 4. Спящий пушистый рыжий котейка на подлокотнике
+    drawSleepingCat(ctx, x, y) {
+        ctx.save();
+        ctx.translate(x, y);
+
+        // Мягкая тень кота
+        ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 11, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Пушистое свернувшееся тельце (градиент рыжей шерсти)
+        const catGrad = ctx.createRadialGradient(-1, -1, 2, 0, 0, 11);
+        catGrad.addColorStop(0, "#fb923c");
+        catGrad.addColorStop(0.6, "#f97316");
+        catGrad.addColorStop(1, "#c2410c");
+        ctx.fillStyle = catGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 10, 6.5, -0.05, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Полоски шерсти (табби)
+        ctx.strokeStyle = "rgba(154, 52, 18, 0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(-5, -4); ctx.lineTo(-4, -1);
+        ctx.moveTo(-1, -5); ctx.lineTo(-1, -2);
+        ctx.moveTo(3, -4); ctx.lineTo(2, -1);
+        ctx.stroke();
+
+        // Пушистый свернувшийся хвостик с белым кончиком
+        ctx.strokeStyle = "#ea580c";
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(-4, 2, 5, 0.5, Math.PI * 0.9);
+        ctx.stroke();
+
+        // Белый кончик хвоста
+        ctx.strokeStyle = "#ffedd5";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(-4, 2, 5, 0.5, 0.9);
+        ctx.stroke();
+
+        // Голова кота
+        ctx.fillStyle = "#fb923c";
+        ctx.beginPath();
+        ctx.arc(5, -2, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Ушки
+        ctx.fillStyle = "#ea580c";
+        ctx.beginPath();
+        ctx.moveTo(3, -6); ctx.lineTo(5, -8.5); ctx.lineTo(6.5, -5.5); ctx.closePath();
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(6.5, -5.5); ctx.lineTo(8.5, -7.5); ctx.lineTo(9.5, -4.5); ctx.closePath();
+        ctx.fill();
+        // Розовые серединки ушек
+        ctx.fillStyle = "#fda4af";
+        ctx.beginPath();
+        ctx.moveTo(4, -6); ctx.lineTo(5, -7.5); ctx.lineTo(5.8, -5.8); ctx.closePath();
+        ctx.fill();
+
+        // Мордочка и закрытые спящие глазки-полумесяцы
+        ctx.strokeStyle = "#7c2d12";
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(4.5, -2, 1.2, 0.2, Math.PI * 0.8);
+        ctx.arc(7.2, -2, 1.2, 0.2, Math.PI * 0.8);
+        ctx.stroke();
+
+        // Розовый носик
+        ctx.fillStyle = "#fb7185";
+        ctx.beginPath();
+        ctx.arc(5.8, -0.8, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Мягкое мерцающее Zzz над котом
+        const zAlpha = (Math.sin(this.ambientTime * 3) + 1) * 0.35 + 0.3;
+        ctx.font = "bold 8px system-ui, sans-serif";
+        ctx.fillStyle = `rgba(186, 230, 253, ${zAlpha})`;
+        ctx.fillText("z", 8, -9);
+
+        ctx.restore();
     }
 }

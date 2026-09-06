@@ -2,8 +2,11 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Встань с дивана: Эволюция Скуфа</title>
+    <meta name="description" content="Аркадный физический дроп-мердж и симулятор превозмогания бытия.">
+    <meta property="og:title" content="Встань с дивана: Эволюция Скуфа">
+    <meta property="og:description" content="Аркадный физический дроп-мердж и симулятор превозмогания бытия.">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 </head>
@@ -11,17 +14,17 @@
 
 <div id="app-viewport">
     <!-- Стартовое Главное Меню -->
-    <div id="start-menu-overlay" class="modal-backdrop active">
+    <div id="start-menu-overlay" class="modal-backdrop">
         <div class="menu-card">
-            <div class="menu-badge">CYBER-SKUF 2026</div>
+            <div class="menu-badge">CYBER-SKUF 2026 • DELUXE EDITION</div>
             <h1 class="game-logo">ВСТАНЬ<br><span class="gradient-text">С ДИВАНА</span></h1>
-            <p class="menu-tagline">Аркадный физический дроп-мердж и симулятор превозмогания бытия.</p>
+            <p class="menu-tagline">Аркадный физический дроп-мердж, кликер и симулятор превозмогания бытия.</p>
             
             <div class="menu-actions">
                 <button id="btn-start-game" class="btn-primary-neon">ВЫЙТИ ИЗ СПЯЧКИ 🚀</button>
                 <button id="btn-open-guide" class="btn-secondary-neon">МАНУАЛ ПО ВЫЖИВАНИЮ 📖</button>
             </div>
-            <div class="menu-footer">Версия: 3.0 Deluxe • Made with Base 🗿</div>
+            <div class="menu-footer">Автосохранение включено • Версия 4.0 Pro 🗿</div>
         </div>
     </div>
 
@@ -35,20 +38,20 @@
             <div class="cards-scroll guide-content">
                 <section class="guide-section">
                     <h4>🎯 Главная цель</h4>
-                    <p>Выселение не ждет! Хозяйка квартиры требует аренду, а кредиты душат. Сбрасывайте мысли в голову Скуфа, объединяйте одинаковые и наносите колоссальный урон боссам, эволюционируя в истинного <b>ГИГАЧАДА</b>.</p>
+                    <p>Аренда давит, кредиты душат, а боссы выселяют на улицу! Сбрасывайте мысли в голову Скуфа, объединяйте одинаковые и наносите гигантский урон боссам, эволюционируя в истинного <b>ГИГАЧАДА</b>.</p>
                 </section>
 
                 <section class="guide-section">
                     <h4>🎮 Управление</h4>
                     <ul>
                         <li><b>Мышь / Тач по стакану:</b> прицеливание и сброс текущей мысли.</li>
-                        <li><b>Тап по дивану / Скуфу:</b> прямой клик наносит урон и качает Базу (расходует Дыхалку!).</li>
-                        <li><b>Красная черта:</b> если мысли переполнят чашу дольше 2.2 секунд — случится выгорание и игра окончена.</li>
+                        <li><b>Тап по комнате / Скуфу:</b> прямой клик качает Базу и дамажит босса (тратит Дыхалку!).</li>
+                        <li><b>Красная черта:</b> если стакан переполнен дольше 2.2 секунд — случится выгорание.</li>
                     </ul>
                 </section>
 
                 <section class="guide-section">
-                    <h4>🧬 Эволюция мыслей (Тиры)</h4>
+                    <h4>🧬 Эволюция мыслей (10 Тиров)</h4>
                     <div class="guide-grid-tiers">
                         <div class="tier-pill">T1: Квадробер 🐱</div>
                         <div class="tier-pill">T2: Симп 🥺</div>
@@ -64,19 +67,8 @@
                 </section>
 
                 <section class="guide-section">
-                    <h4>🍺 Расходники и кнопки</h4>
-                    <ul>
-                        <li><b>Балтика:</b> переводит в режим чистки. Кликните по любому шару на поле, чтобы растворить его навсегда.</li>
-                        <li><b>Скрипт:</b> находит на поле 2 одинаковые мысли и мгновенно притягивает их друг к другу.</li>
-                        <li><b>Флэш:</b> замедляет физику и падение времени на 10 секунд. Спасает в хаосе.</li>
-                        <li><b>Встряска мозга:</b> подбрасывает все мысли в черепе, перемешивая застрявшие слои.</li>
-                        <li><b>Цели 🏆:</b> магазин улучшений (прокачка дохода, расширение черепа, клики).</li>
-                    </ul>
-                </section>
-
-                <section class="guide-section">
-                    <h4>⚠️ Мусор и дилеммы</h4>
-                    <p>Каждые несколько сбросов падают серые мысли: <i>Кредит, Бывшая, Дедлайн</i>. Они не сливаются сами! Уничтожайте их взрывами слияний рядом или Балтикой. Следите за звонками и ивентами — каждое решение несет награду и штраф.</p>
+                    <h4>🌀 Перерождение и Долгая игра</h4>
+                    <p>Побеждайте 20 уникальных боссов, открывайте оффлайн-доход, прокачивайте 4 ветки улучшений и совершайте Перерождение за Золотые Диваны!</p>
                 </section>
             </div>
             <button id="btn-guide-back" class="btn-cta" style="margin-top: 10px; width: 100%;">ВСЁ ПОНЯТНО, В БОЙ!</button>
@@ -85,28 +77,71 @@
 
     <!-- Верхний HUD -->
     <header id="status-bar" class="glass-panel">
-        <div class="motivation-box">
-            <span class="label">МОТИВАЦИЯ (БАЗА)</span>
-            <div id="motivation-counter">0 🗿</div>
-            <div id="passive-counter">+0/сек</div>
-        </div>
-        <div class="stamina-box">
-            <span class="label">ДЫХАЛКА СКУФА</span>
-            <div id="stamina-track">
-                <div id="stamina-bar"></div>
+        <div class="hud-top-row">
+            <div class="motivation-box">
+                <span class="label">МОТИВАЦИЯ</span>
+                <div id="motivation-counter">0 🗿</div>
+                <div id="passive-counter">+0/сек</div>
             </div>
-            <span id="stamina-alert"></span>
-        </div>
-        <div class="hud-buttons">
-            <button id="btn-open-shop" class="hud-btn highlight">
-                <img src="trophy.png" alt="Цели" style="width: 18px; height: 18px; object-fit: contain;">
-                <span class="btn-text">Цели</span>
+
+            <div class="stamina-box">
+                <div class="stamina-label-row">
+                    <span class="label">ДЫХАЛКА</span>
+                    <span id="stamina-alert"></span>
+                </div>
+                <div id="stamina-track">
+                    <div id="stamina-bar"></div>
+                </div>
+            </div>
+
+            <button id="btn-open-roulette" class="hud-roulette-btn" title="Колесо Фортуны Скуфа">
+                <span class="hud-emoji">🎡</span>
+                <span id="roulette-badge" class="roulette-free-tag">СПИН!</span>
+            </button>
+
+            <button id="btn-toggle-fx" class="hud-sound-btn" title="Спецэффекты (FX): Вкл/Выкл">
+                <span id="fx-icon" class="hud-emoji">✨</span>
+            </button>
+
+            <button id="btn-toggle-sound" class="hud-sound-btn" title="Вкл/Выкл звук">
+                <span id="sound-icon" class="hud-emoji">🔊</span>
             </button>
         </div>
+
+        <nav class="hud-nav-bar">
+            <button id="btn-open-shop" class="hud-nav-btn highlight" title="Дерево улучшений">
+                <img src="trophy.png" alt="Цели" class="hud-icon">
+                <span class="btn-text">Цели</span>
+            </button>
+            <button id="btn-open-quests" class="hud-nav-btn" title="Задания">
+                <span class="hud-emoji">📋</span>
+                <span class="btn-text">Квесты</span>
+            </button>
+            <button id="btn-open-prestige" class="hud-nav-btn prestige-btn" title="Сансара / Перерождение">
+                <span class="hud-emoji">🌀</span>
+                <span class="btn-text">Сансара</span>
+            </button>
+            <button id="btn-open-stats" class="hud-nav-btn" title="Статистика и достижения">
+                <span class="hud-emoji">🎖️</span>
+                <span class="btn-text">Инфо</span>
+            </button>
+        </nav>
     </header>
 
-    <!-- Полоса Босса -->
+    <!-- Полоса Миссии & Босса (объединенная и компактная) -->
     <div id="boss-bar">
+        <div class="mission-top-row">
+            <div class="mission-left">
+                <span id="rent-day-label" class="rent-day-tag">ДЕНЬ 1</span>
+                <span id="crisis-badge" class="crisis-tag">Хрущёвка</span>
+                <span id="boss-day-tag" class="day-pill">Босс 1/20</span>
+            </div>
+            <div class="mission-right">
+                <span id="auto-drop-badge" class="auto-drop-badge hidden">⚡ АВТО</span>
+                <div id="rent-timer-display" class="rent-timer">⏳ 02:00</div>
+            </div>
+        </div>
+
         <div class="boss-info">
             <span id="boss-name">БОСС: Хозяйка Тамара 👵</span>
             <span id="boss-hp-text">600 / 600 HP</span>
@@ -114,48 +149,58 @@
         <div id="boss-hp-track">
             <div id="boss-hp-fill"></div>
         </div>
+        <div id="boss-quote-bubble">«Аренда сама себя не заплатит, вставай!»</div>
     </div>
 
-    <!-- Таймер Аренды -->
-    <div id="rent-bar" class="glass-panel">
-        <div class="rent-left">
-            <span id="rent-day-label">ДЕНЬ 1</span>
-            <span id="crisis-badge">Осада</span>
-        </div>
-        <div id="rent-timer-display">⏳ 02:00</div>
-    </div>
-
-    <!-- Реликвии -->
-    <div id="relics-bar" class="glass-panel">
+    <!-- Реликвии забега (скрыты, если реликвий нет) -->
+    <div id="relics-bar" class="glass-panel hidden">
         <span class="relics-title">РЕЛИКВИИ:</span>
         <div id="relics-container"></div>
     </div>
 
-    <!-- Основной Canvas -->
+    <!-- Основной Canvas с Matter.js -->
     <main id="canvas-wrapper">
         <canvas id="mainCanvas"></canvas>
+        <!-- Шкала Хайпа / Fever Mode -->
+        <div id="fever-bar">
+            <div class="fever-track">
+                <div id="fever-fill"></div>
+                <div id="fever-label" class="fever-text-overlay">🔥 ХАЙП 0%</div>
+            </div>
+        </div>
+        <div id="fever-banner" class="fever-banner">💥 РЕЖИМ ЛИХОРАДКИ! ОЧКИ x3! 💥</div>
+
         <div id="next-thought-indicator" class="glass-panel">
-            <span>МЫСЛЬ:</span>
+            <span>СЛЕДУЮЩАЯ:</span>
             <div id="next-thought-circle"></div>
+        </div>
+        <!-- Индикатор комбо по центру -->
+        <div id="combo-display" class="combo-bubble">
+            <span id="combo-text">COMBO x2</span>
         </div>
     </main>
 
-    <!-- Расходники -->
+    <!-- Расходники (Компактные слоты с иконками без лишнего текста) -->
     <div id="consumables-bar" class="glass-panel">
-        <button class="item-slot" id="slot-beer" title="Растворить любой шар кликом">
+        <button class="item-slot" id="slot-beer" title="Балтика: растворить любой шар или мусор кликом">
             <img src="item_beer.png" alt="Балтика" class="slot-img">
-            <span class="slot-name">Балтика</span>
             <span class="slot-count" id="count-beer">x1</span>
         </button>
-        <button class="item-slot" id="slot-script" title="Стянуть две одинаковые мысли">
+        <button class="item-slot" id="slot-script" title="Скрипт: стянуть две одинаковые мысли воедино">
             <img src="item_script.png" alt="Скрипт" class="slot-img">
-            <span class="slot-name">Скрипт</span>
             <span class="slot-count" id="count-script">x1</span>
         </button>
-        <button class="item-slot" id="slot-energy" title="Замедлить время на 10 сек">
+        <button class="item-slot" id="slot-energy" title="Флэш: замедлить время на 10 сек">
             <img src="item_energy.png" alt="Флэш" class="slot-img">
-            <span class="slot-name">Флэш</span>
             <span class="slot-count" id="count-energy">x1</span>
+        </button>
+        <button class="item-slot" id="slot-bomb" title="Петарда: взорвать завал и мусор кликом">
+            <span class="hud-emoji">💣</span>
+            <span class="slot-count" id="count-bomb">x1</span>
+        </button>
+        <button class="item-slot" id="slot-magnet" title="Сигма-Магнит: притянуть одинаковые мысли">
+            <span class="hud-emoji">🧲</span>
+            <span class="slot-count" id="count-magnet">x1</span>
         </button>
     </div>
 
@@ -168,16 +213,32 @@
         <span id="hero-quote">«Надо бы прибраться...»</span>
     </footer>
 
-    <!-- Модалка: Выбор Перков (Реликвий) -->
-    <div id="perk-overlay" class="modal-backdrop">
+    <!-- Модалка: Оффлайн доход ("Пока ты спал...") -->
+    <div id="offline-overlay" class="modal-backdrop">
         <div class="modal-box alert">
-            <h2 style="color: #ffd700; font-size: 22px; text-shadow: 0 0 15px rgba(255,215,0,0.5);">БОСС ПОВЕРЖЕН! 🎉</h2>
-            <p style="color: #cbd5e1; font-size: 13px;">Выберите реликвию забега:</p>
-            <div id="perk-cards-container" class="perks-grid"></div>
+            <span style="font-size: 42px;">💤</span>
+            <h2 style="color: #ffd700; font-size: 20px;">С ВОЗВРАЩЕНИЕМ НА ДИВАН!</h2>
+            <p id="offline-desc" style="color: #cbd5e1; font-size: 13px; line-height: 1.5;">Пока вы спали, накопился пассивный доход:</p>
+            <div id="offline-amount" style="font-size: 28px; font-weight: 900; color: #10b981;">+0 🗿</div>
+            <button id="btn-claim-offline" class="btn-cta" style="width: 100%;">ЗАБРАТЬ БАЗУ 💰</button>
         </div>
     </div>
 
-    <!-- Модалка: Магазин -->
+    <!-- Модалка: Выбор Реликвий при победе над боссом -->
+    <div id="perk-overlay" class="modal-backdrop">
+        <div class="modal-box alert">
+            <h2 style="color: #ffd700; font-size: 20px; text-shadow: 0 0 15px rgba(255,215,0,0.5);">БОСС ПОВЕРЖЕН! 🎉</h2>
+            <div id="perk-lock-banner" class="safety-lock-banner locked">
+                <span class="lock-icon">🔒</span>
+                <span id="perk-lock-text" class="lock-text">Защита от случайного клика: <b>1.4с</b></span>
+                <div class="lock-progress-track"><div id="perk-lock-bar" class="lock-progress-bar"></div></div>
+            </div>
+            <p style="color: #cbd5e1; font-size: 12px; margin-top: 4px;">Выберите благословение забега:</p>
+            <div id="perk-cards-container" class="perks-grid locked-choices"></div>
+        </div>
+    </div>
+
+    <!-- Модалка: Дерево Эволюции (Магазин с 4 вкладками) -->
     <div id="shop-overlay" class="modal-backdrop">
         <div class="modal-box glass-panel">
             <div class="modal-top">
@@ -188,8 +249,97 @@
                 <button class="shop-tab active" data-category="hero">ТЕЛО 🏋️</button>
                 <button class="shop-tab" data-category="room">БЕРЛОГА 🛋️</button>
                 <button class="shop-tab" data-category="brain">РАЗУМ 🧠</button>
+                <button class="shop-tab" data-category="career">КАРЬЕРА 💼</button>
             </div>
             <div id="upgrades-container" class="cards-scroll"></div>
+        </div>
+    </div>
+
+    <!-- Задания и Квесты -->
+    <div id="quests-overlay" class="modal-backdrop">
+        <div class="modal-box glass-panel">
+            <div class="modal-top">
+                <h3>📋 ЕЖЕДНЕВНЫЕ КВЕСТЫ</h3>
+                <button id="btn-close-quests" class="close-x">✕</button>
+            </div>
+            <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">Выполняйте задания, чтобы получать расходники и Базу:</p>
+            <div id="quests-container" class="cards-scroll"></div>
+        </div>
+    </div>
+
+    <!-- Сансара / Перерождение (Престиж) -->
+    <div id="prestige-overlay" class="modal-backdrop">
+        <div class="modal-box glass-panel">
+            <div class="modal-top">
+                <h3>🌀 САНСАРА (ПЕРЕРОЖДЕНИЕ)</h3>
+                <button id="btn-close-prestige" class="close-x">✕</button>
+            </div>
+            <div class="prestige-header">
+                <div class="prestige-balance">Золотые Диваны: <b id="golden-couches-count">0 🛋️</b></div>
+                <p style="font-size: 11.5px; color: #94a3b8; line-height: 1.4;">Сбросьте текущий день и обычные апгрейды, чтобы навсегда усилить Скуфа космическими перками!</p>
+            </div>
+            <div id="prestige-perks-container" class="cards-scroll"></div>
+            <div class="prestige-action-box">
+                <div id="prestige-estimate" style="font-size: 12px; color: #ffd700; margin-bottom: 6px;">При сбросе получите: +0 🛋️</div>
+                <button id="btn-do-prestige" class="btn-cta" style="width: 100%;">ВСТАТЬ С ДИВАНА (ПЕРЕРОЖДЕНИЕ)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика & Ачивки -->
+    <div id="stats-overlay" class="modal-backdrop">
+        <div class="modal-box glass-panel">
+            <div class="modal-top">
+                <h3>🎖️ СТАТИСТИКА & АЧИВКИ</h3>
+                <button id="btn-close-stats" class="close-x">✕</button>
+            </div>
+
+            <!-- Блок текущего ранга / звания -->
+            <div class="skuf-rank-box">
+                <div>
+                    <div id="rank-title" class="rank-title-text">🛋️ Тюбик с дивана</div>
+                    <div id="rank-desc" class="rank-desc-text">До следующего ранга: 1,500 🗿</div>
+                </div>
+                <span id="rank-badge" class="crisis-tag">РАНГ 1</span>
+            </div>
+
+            <div class="stats-summary-grid">
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-merges">0</span>
+                    <span class="stat-lbl">Всего слияний</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-gigachads">0</span>
+                    <span class="stat-lbl">Гигачадов</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-bosses">0</span>
+                    <span class="stat-lbl">Боссов пало</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num" id="stat-time">0 мин</span>
+                    <span class="stat-lbl">В игре</span>
+                </div>
+            </div>
+            <h4 style="color: #ffd700; font-size: 13px; margin: 12px 0 6px;">ДОСТИЖЕНИЯ</h4>
+            <div id="achievements-container" class="cards-scroll"></div>
+        </div>
+    </div>
+
+    <!-- Модалка: Колесо Фортуны / Рулетка Скуфа -->
+    <div id="roulette-overlay" class="modal-backdrop">
+        <div class="modal-box glass-panel roulette-modal">
+            <div class="modal-top">
+                <h3>🎡 КОЛЕСО ФОРТУНЫ</h3>
+                <button id="btn-close-roulette" class="close-x">✕</button>
+            </div>
+            <p style="font-size: 11px; color: #cbd5e1; margin-bottom: 8px;">Крутите рулетку за победу над боссом или по таймеру!</p>
+            <div class="wheel-container">
+                <div class="wheel-pointer"></div>
+                <canvas id="roulette-canvas" width="250" height="250"></canvas>
+            </div>
+            <div id="roulette-prize" class="roulette-prize-banner">Готовы сорвать куш? 🎁</div>
+            <button id="btn-spin-wheel" class="roulette-spin-btn">КРУТИТЬ КОЛЕСО! ✨</button>
         </div>
     </div>
 
@@ -199,17 +349,26 @@
             <h2 class="alert-title">ВЫСЕЛЕН НА УЛИЦУ! 📦</h2>
             <p id="gameover-reason">Не хватило сил отбиться от босса.</p>
             <p id="gameover-stats">Прожито дней: 0</p>
-            <button id="btn-retry" class="btn-cta">НАЧАТЬ ЗАНОВО</button>
+            <div id="gameover-lock-banner" class="safety-lock-banner locked" style="margin-bottom: 8px;">
+                <span class="lock-icon">🔒</span>
+                <span id="gameover-lock-text" class="lock-text">Защита от клика: <b>1.0с</b></span>
+            </div>
+            <button id="btn-retry" class="btn-cta locked-choices">ПРОБОВАТЬ СНОВА 🔄</button>
         </div>
     </div>
 
     <!-- Модалка: События / Дилеммы -->
     <div id="event-overlay" class="modal-backdrop">
         <div class="modal-box alert">
-            <span id="event-icon" style="font-size: 40px;">📞</span>
-            <h2 id="event-title" style="color: #ffd700; font-size: 18px;">Звонок из банка</h2>
-            <p id="event-desc" style="color: #cbd5e1; font-size: 12px; line-height: 1.4;">Вам предлагают выгодный кредит...</p>
-            <div class="event-choices">
+            <span id="event-icon" style="font-size: 38px;">📞</span>
+            <h2 id="event-title" style="color: #ffd700; font-size: 17px;">Звонок из банка</h2>
+            <div id="event-lock-banner" class="safety-lock-banner locked">
+                <span class="lock-icon">🔒</span>
+                <span id="event-lock-text" class="lock-text">Защита от случайного клика: <b>1.4с</b></span>
+                <div class="lock-progress-track"><div id="event-lock-bar" class="lock-progress-bar"></div></div>
+            </div>
+            <p id="event-desc" style="color: #cbd5e1; font-size: 12px; line-height: 1.4; margin-top: 4px;">Вам предлагают выгодный кредит...</p>
+            <div class="event-choices locked-choices" id="event-choices-container">
                 <button class="choice-btn" id="btn-choice-a">
                     <span class="choice-title" id="choice-a-title">Взять кредит</span>
                     <span class="choice-penalty" id="choice-a-penalty">Штраф</span>
