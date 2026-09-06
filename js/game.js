@@ -8,6 +8,7 @@ class SkufLifeGame {
         this.roomRenderer = new RoomRenderer();
 
         this.runMotivationEarned = 0;
+        this.mergeWaves = [];
         this.runBossesDefeated = 0;
         this.uiTickAccumulator = 0;
         // Основное состояние
@@ -54,6 +55,7 @@ class SkufLifeGame {
         this.items = { beer: 1, script: 1, energy: 1, bomb: 1, magnet: 1 };
         this.activeRelics = [];
         this.activeConsumableMode = null; // 'beer' | 'bomb'
+        this.syncConsumableSelectionVisual();
         this.flashActiveUntil = 0;
         this.flashDuration = 12000;
         this.magnetActiveUntil = 0;
@@ -150,6 +152,7 @@ class SkufLifeGame {
         this.resizeCanvas();
         this.loadGame();
         this.ensureInitialBodies();
+        this.render();
         this.boundHandleOrientation = this.handleOrientation.bind(this);
         window.addEventListener('resize', () => this.resizeCanvas());
 
@@ -679,6 +682,7 @@ class SkufLifeGame {
         document.getElementById('slot-beer')?.addEventListener('click', () => {
             if (this.items.beer > 0) {
                 this.activeConsumableMode = this.activeConsumableMode === 'beer' ? null : 'beer';
+                this.syncConsumableSelectionVisual();
                 this.ui.setQuote(this.activeConsumableMode ? "Выберите мысль или мусор для растворения!" : "");
             }
         });
@@ -705,6 +709,7 @@ class SkufLifeGame {
         document.getElementById('slot-bomb')?.addEventListener('click', () => {
             if ((this.items.bomb || 0) > 0) {
                 this.activeConsumableMode = this.activeConsumableMode === 'bomb' ? null : 'bomb';
+                this.syncConsumableSelectionVisual();
                 this.ui.setQuote(this.activeConsumableMode ? "💣 Выберите точку на стакане для детонации!" : "");
             }
         });
@@ -1123,6 +1128,66 @@ class SkufLifeGame {
         };
     }
 
+    spawnMergeWave(
+        x,
+        y,
+        color,
+        tier
+    ) {
+        if (!this.fxEnabled) {
+            return;
+        }
+
+        this.mergeWaves.push({
+            x,
+            y,
+
+            radius: 8,
+
+            maxRadius:
+                46 +
+                tier * 7,
+
+            speed:
+                3.4 +
+                tier * 0.28,
+
+            alpha: 0.85,
+
+            decay: 0.045,
+
+            color,
+
+            width:
+                tier >= 7
+                    ? 3.5
+                    : 2.2
+        });
+
+        if (tier >= 8) {
+            this.mergeWaves.push({
+                x,
+                y,
+
+                radius: 3,
+
+                maxRadius:
+                    72 +
+                    tier * 5,
+
+                speed: 2.5,
+
+                alpha: 0.48,
+
+                decay: 0.028,
+
+                color,
+
+                width: 1.5
+            });
+        }
+    }
+
     handleSkufTap(screenX, screenY) {
         if (
             this.stamina < 8 ||
@@ -1194,6 +1259,7 @@ class SkufLifeGame {
         if (this.activeConsumableMode === 'bomb') {
             this.items.bomb--;
             this.activeConsumableMode = null;
+            this.syncConsumableSelectionVisual();
             this.physics.explode(x, y, 140, 0.25);
             AudioCtrl.playExplosion();
             this.ui.triggerScreenShake();
@@ -1213,6 +1279,7 @@ class SkufLifeGame {
                     Matter.World.remove(this.physics.world, b);
                     this.items.beer--;
                     this.activeConsumableMode = null;
+                    this.syncConsumableSelectionVisual();
                     AudioCtrl.playGarbagePopped();
                     this.spawnFloatingText(x, y, "РАСТВОРЕНО! 🍺", "#38bdf8");
                     this.ui.updateConsumables(this.items);
@@ -1388,6 +1455,14 @@ class SkufLifeGame {
         // Звук и частицы сочности
         AudioCtrl.playMerge(tier);
         this.spawnParticles(midX, midY, tierConfig.color || '#3b82f6', 10 + tier);
+        this.spawnMergeWave(
+            midX,
+            midY,
+            tierConfig.glow ||
+                tierConfig.color ||
+                "#00e5ff",
+            tier
+        );
 
         // Мемные всплывашки для вовлечения
         if (this.isFeverActive || Math.random() < 0.28 || tier >= 5) {
@@ -1951,6 +2026,7 @@ class SkufLifeGame {
         this.bossBreakTimer = 0;
 
         this.activeConsumableMode = null;
+        this.syncConsumableSelectionVisual();
 
         this.flashActiveUntil = 0;
         this.magnetActiveUntil = 0;
@@ -2714,72 +2790,381 @@ class SkufLifeGame {
 
     // --- ОТРИСОВКА СТАКАНА МЫСЛЕЙ (КИБЕР-КОЛБА) ---
     drawCup(ctx, w, h) {
-        const bounds = this.physics.getCupBounds();
-        const { leftX, rightX, width, topY, bottomY } = bounds;
-        const cornerR = 14;
+        const bounds =
+            this.physics.getCupBounds();
+
+        const {
+            leftX,
+            rightX,
+            width,
+            topY,
+            bottomY
+        } = bounds;
+
+        const cornerR = 16;
 
         ctx.save();
-        
-        // Полупрозрачный градиентный фон стакана
-        const cupBg = ctx.createLinearGradient(0, topY, 0, bottomY);
-        cupBg.addColorStop(0, 'rgba(10, 16, 32, 0.42)');
-        cupBg.addColorStop(0.6, 'rgba(7, 12, 24, 0.65)');
-        cupBg.addColorStop(1, 'rgba(4, 8, 18, 0.90)');
 
-        ctx.fillStyle = cupBg;
-        ctx.beginPath();
-        ctx.moveTo(leftX, topY);
-        ctx.lineTo(leftX, bottomY - cornerR);
-        ctx.quadraticCurveTo(leftX, bottomY, leftX + cornerR, bottomY);
-        ctx.lineTo(rightX - cornerR, bottomY);
-        ctx.quadraticCurveTo(rightX, bottomY, rightX, bottomY - cornerR);
-        ctx.lineTo(rightX, topY);
-        ctx.closePath();
-        ctx.fill();
-
-        // Неоновые стенки стакана
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.45)';
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.moveTo(leftX, topY);
-        ctx.lineTo(leftX, bottomY - cornerR);
-        ctx.quadraticCurveTo(leftX, bottomY, leftX + cornerR, bottomY);
-        ctx.lineTo(rightX - cornerR, bottomY);
-        ctx.quadraticCurveTo(rightX, bottomY, rightX, bottomY - cornerR);
-        ctx.lineTo(rightX, topY);
-        ctx.stroke();
-
-        // Верхние акцентные закругления/колпачки стакана
-        ctx.fillStyle = '#00f0ff';
-        ctx.beginPath();
-        ctx.arc(leftX, topY, 3, 0, Math.PI * 2);
-        ctx.arc(rightX, topY, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Мерные засечки на стекле
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
-        ctx.lineWidth = 1;
-        const cupH = bottomY - topY;
-        for (let pct of [0.25, 0.5, 0.75]) {
-            const markY = bottomY - cupH * pct;
+        const traceCup = () => {
             ctx.beginPath();
-            ctx.moveTo(leftX + 2, markY);
-            ctx.lineTo(leftX + 10, markY);
-            ctx.moveTo(rightX - 10, markY);
-            ctx.lineTo(rightX - 2, markY);
+
+            ctx.moveTo(
+                leftX,
+                topY
+            );
+
+            ctx.lineTo(
+                leftX,
+                bottomY - cornerR
+            );
+
+            ctx.quadraticCurveTo(
+                leftX,
+                bottomY,
+                leftX + cornerR,
+                bottomY
+            );
+
+            ctx.lineTo(
+                rightX - cornerR,
+                bottomY
+            );
+
+            ctx.quadraticCurveTo(
+                rightX,
+                bottomY,
+                rightX,
+                bottomY - cornerR
+            );
+
+            ctx.lineTo(
+                rightX,
+                topY
+            );
+
+            ctx.closePath();
+        };
+
+        // -----------------------------
+        // ОСНОВНОЙ ФОН КОЛБЫ
+        // -----------------------------
+
+        const background =
+            ctx.createLinearGradient(
+                0,
+                topY,
+                0,
+                bottomY
+            );
+
+        background.addColorStop(
+            0,
+            "rgba(11, 21, 42, 0.50)"
+        );
+
+        background.addColorStop(
+            0.55,
+            "rgba(7, 13, 28, 0.76)"
+        );
+
+        background.addColorStop(
+            1,
+            "rgba(3, 7, 17, 0.96)"
+        );
+
+        traceCup();
+
+        ctx.fillStyle =
+            background;
+
+        ctx.fill();
+
+        // -----------------------------
+        // ВНУТРЕННИЙ CYBER BACKGROUND
+        // -----------------------------
+
+        ctx.save();
+
+        traceCup();
+        ctx.clip();
+
+        // Центральная подсветка
+
+        const centerGlow =
+            ctx.createRadialGradient(
+                w / 2,
+                topY +
+                    (bottomY - topY) * 0.48,
+                10,
+
+                w / 2,
+                topY +
+                    (bottomY - topY) * 0.48,
+                width * 0.65
+            );
+
+        centerGlow.addColorStop(
+            0,
+            "rgba(0, 229, 255, 0.055)"
+        );
+
+        centerGlow.addColorStop(
+            0.55,
+            "rgba(92, 67, 255, 0.025)"
+        );
+
+        centerGlow.addColorStop(
+            1,
+            "rgba(0, 0, 0, 0)"
+        );
+
+        ctx.fillStyle =
+            centerGlow;
+
+        ctx.fillRect(
+            leftX,
+            topY,
+            width,
+            bottomY - topY
+        );
+
+        // Слабая технологическая сетка
+
+        ctx.strokeStyle =
+            "rgba(120, 180, 255, 0.035)";
+
+        ctx.lineWidth = 1;
+
+        for (
+            let x = leftX + 20;
+            x < rightX;
+            x += 28
+        ) {
+            ctx.beginPath();
+
+            ctx.moveTo(
+                x,
+                topY
+            );
+
+            ctx.lineTo(
+                x,
+                bottomY
+            );
+
             ctx.stroke();
         }
 
-        // Нижняя платформа-подставка стакана
-        ctx.fillStyle = '#0b1329';
-        ctx.strokeStyle = 'rgba(0, 240, 255, 0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        if (ctx.roundRect) {
-            ctx.roundRect(leftX - 4, bottomY, width + 8, 6, [0, 0, 4, 4]);
-        } else {
-            ctx.rect(leftX - 4, bottomY, width + 8, 6);
+        for (
+            let y = topY + 24;
+            y < bottomY;
+            y += 28
+        ) {
+            ctx.beginPath();
+
+            ctx.moveTo(
+                leftX,
+                y
+            );
+
+            ctx.lineTo(
+                rightX,
+                y
+            );
+
+            ctx.stroke();
         }
+
+        // Стеклянный блик слева
+
+        const glassHighlight =
+            ctx.createLinearGradient(
+                leftX,
+                0,
+                leftX + width * 0.28,
+                0
+            );
+
+        glassHighlight.addColorStop(
+            0,
+            "rgba(255,255,255,0.08)"
+        );
+
+        glassHighlight.addColorStop(
+            0.35,
+            "rgba(255,255,255,0.018)"
+        );
+
+        glassHighlight.addColorStop(
+            1,
+            "rgba(255,255,255,0)"
+        );
+
+        ctx.fillStyle =
+            glassHighlight;
+
+        ctx.fillRect(
+            leftX,
+            topY,
+            width * 0.35,
+            bottomY - topY
+        );
+
+        ctx.restore();
+
+        // -----------------------------
+        // СТЕНКИ
+        // -----------------------------
+
+        ctx.shadowColor =
+            "rgba(0, 229, 255, 0.38)";
+
+        ctx.shadowBlur = 10;
+
+        ctx.strokeStyle =
+            "rgba(0, 229, 255, 0.58)";
+
+        ctx.lineWidth = 2;
+
+        traceCup();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+
+        // -----------------------------
+        // ВНУТРЕННЯЯ РАМКА
+        // -----------------------------
+
+        ctx.strokeStyle =
+            "rgba(255,255,255,0.07)";
+
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            leftX + 5,
+            topY + 2
+        );
+
+        ctx.lineTo(
+            leftX + 5,
+            bottomY - 17
+        );
+
+        ctx.stroke();
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            rightX - 5,
+            topY + 2
+        );
+
+        ctx.lineTo(
+            rightX - 5,
+            bottomY - 17
+        );
+
+        ctx.stroke();
+
+        // -----------------------------
+        // МЕРНЫЕ ЗАСЕЧКИ
+        // -----------------------------
+
+        const cupH =
+            bottomY - topY;
+
+        for (
+            const pct of [
+                0.25,
+                0.5,
+                0.75
+            ]
+        ) {
+            const markY =
+                bottomY -
+                cupH * pct;
+
+            ctx.strokeStyle =
+                "rgba(255,255,255,0.09)";
+
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+
+            ctx.moveTo(
+                leftX + 5,
+                markY
+            );
+
+            ctx.lineTo(
+                leftX + 14,
+                markY
+            );
+
+            ctx.moveTo(
+                rightX - 14,
+                markY
+            );
+
+            ctx.lineTo(
+                rightX - 5,
+                markY
+            );
+
+            ctx.stroke();
+        }
+
+        // -----------------------------
+        // НИЖНЯЯ БАЗА
+        // -----------------------------
+
+        const baseGradient =
+            ctx.createLinearGradient(
+                0,
+                bottomY,
+                0,
+                bottomY + 8
+            );
+
+        baseGradient.addColorStop(
+            0,
+            "#15223c"
+        );
+
+        baseGradient.addColorStop(
+            1,
+            "#070c18"
+        );
+
+        ctx.fillStyle =
+            baseGradient;
+
+        ctx.strokeStyle =
+            "rgba(0,229,255,0.35)";
+
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+
+        if (ctx.roundRect) {
+            ctx.roundRect(
+                leftX - 4,
+                bottomY,
+                width + 8,
+                7,
+                [0, 0, 5, 5]
+            );
+        } else {
+            ctx.rect(
+                leftX - 4,
+                bottomY,
+                width + 8,
+                7
+            );
+        }
+
         ctx.fill();
         ctx.stroke();
 
@@ -2809,6 +3194,32 @@ class SkufLifeGame {
         ctx.restore();
     }
 
+    syncConsumableSelectionVisual() {
+        document
+            .querySelectorAll(
+                ".item-slot"
+            )
+            .forEach(el => {
+                el.classList.remove(
+                    "selected"
+                );
+            });
+
+        if (
+            this.activeConsumableMode
+        ) {
+            document
+                .getElementById(
+                    `slot-${
+                        this
+                            .activeConsumableMode
+                    }`
+                )
+                ?.classList
+                .add("selected");
+        }
+    }
+
     // --- ОТРИСОВКА ---
     render() {
         const w = this.canvas.width;
@@ -2821,25 +3232,166 @@ class SkufLifeGame {
         // 2. Отрисовка стакана мыслей (полупрозрачная колба с неоновыми стенками)
         this.drawCup(this.ctx, w, h);
 
-        // 3. Красная черта опасности
-        const bounds = this.physics.getCupBounds();
-        const isDangerous = this.dangerTimer > 0;
+        // -----------------------------------------
+        // DANGER ZONE
+        // -----------------------------------------
+
+        const bounds =
+            this.physics.getCupBounds();
+
+        const isDangerous =
+            this.dangerTimer > 0;
+
+        const dangerProgress =
+            Math.min(
+                1,
+                this.dangerTimer /
+                this.dangerLimit
+            );
+
         this.ctx.save();
-        this.ctx.strokeStyle = isDangerous ? `rgba(239, 68, 68, ${0.5 + Math.sin(performance.now() * 0.015) * 0.5})` : 'rgba(239, 68, 68, 0.3)';
-        this.ctx.lineWidth = isDangerous ? 3 : 1.5;
-        this.ctx.setLineDash([8, 6]);
-        this.ctx.beginPath();
-        this.ctx.moveTo(bounds.leftX + 2, this.dangerLineY);
-        this.ctx.lineTo(bounds.rightX - 2, this.dangerLineY);
-        this.ctx.stroke();
-        this.ctx.setLineDash([]);
+
+        // Слабая зона всегда видна,
+        // при опасности усиливается.
+
+        const zoneGradient =
+            this.ctx.createLinearGradient(
+                0,
+                bounds.topY,
+                0,
+                this.dangerLineY
+            );
 
         if (isDangerous) {
-            this.ctx.fillStyle = '#ef4444';
-            this.ctx.font = "bold 9.5px 'Segoe UI', sans-serif";
-            this.ctx.textAlign = 'right';
-            this.ctx.fillText(`ОПАСНОСТЬ: ${(this.dangerLimit - this.dangerTimer).toFixed(1)}с`, bounds.rightX - 8, this.dangerLineY - 6);
+            zoneGradient.addColorStop(
+                0,
+                `rgba(239,68,68,${
+                    0.05 +
+                    dangerProgress * 0.13
+                })`
+            );
+
+            zoneGradient.addColorStop(
+                1,
+                `rgba(239,68,68,${
+                    0.02 +
+                    dangerProgress * 0.06
+                })`
+            );
+        } else {
+            zoneGradient.addColorStop(
+                0,
+                "rgba(239,68,68,0.025)"
+            );
+
+            zoneGradient.addColorStop(
+                1,
+                "rgba(239,68,68,0.008)"
+            );
         }
+
+        this.ctx.fillStyle =
+            zoneGradient;
+
+        this.ctx.fillRect(
+            bounds.leftX + 3,
+            bounds.topY + 2,
+            bounds.width - 6,
+            Math.max(
+                0,
+                this.dangerLineY -
+                bounds.topY - 2
+            )
+        );
+
+        // Красная линия
+
+        const pulse =
+            0.5 +
+            Math.sin(
+                performance.now() *
+                0.012
+            ) * 0.5;
+
+        this.ctx.strokeStyle =
+            isDangerous
+                ? `rgba(
+                    255,
+                    70,
+                    85,
+                    ${0.65 + pulse * 0.35}
+                )`
+                : "rgba(239,68,68,0.30)";
+
+        this.ctx.lineWidth =
+            isDangerous
+                ? 2.8
+                : 1.3;
+
+        this.ctx.setLineDash(
+            isDangerous
+                ? [10, 5]
+                : [7, 7]
+        );
+
+        if (isDangerous) {
+            this.ctx.shadowColor =
+                "#ef4444";
+
+            this.ctx.shadowBlur =
+                10 +
+                dangerProgress * 12;
+        }
+
+        this.ctx.beginPath();
+
+        this.ctx.moveTo(
+            bounds.leftX + 3,
+            this.dangerLineY
+        );
+
+        this.ctx.lineTo(
+            bounds.rightX - 3,
+            this.dangerLineY
+        );
+
+        this.ctx.stroke();
+
+        this.ctx.shadowBlur = 0;
+        this.ctx.setLineDash([]);
+
+        // Текст появляется только
+        // когда действительно опасно.
+
+        if (isDangerous) {
+            const remaining =
+                Math.max(
+                    0,
+                    this.dangerLimit -
+                    this.dangerTimer
+                );
+
+            this.ctx.font =
+                "900 10px 'Segoe UI', sans-serif";
+
+            this.ctx.textAlign =
+                "center";
+
+            this.ctx.fillStyle =
+                "#ff5b68";
+
+            this.ctx.shadowColor =
+                "rgba(239,68,68,0.8)";
+
+            this.ctx.shadowBlur = 6;
+
+            this.ctx.fillText(
+                `⚠ ПЕРЕГРУЗКА ${remaining.toFixed(1)}с`,
+                this.canvas.width / 2,
+                this.dangerLineY - 8
+            );
+        }
+
         this.ctx.restore();
 
         // 3. Линия прицеливания и текущая мысль
@@ -2860,6 +3412,67 @@ class SkufLifeGame {
                     this.nextTier
                 );
 
+            // -----------------------------------------
+            // GHOST LANDING PREVIEW
+            // -----------------------------------------
+
+            const ghostY =
+                bounds.bottomY -
+                previewRadius -
+                7;
+
+            this.ctx.save();
+
+            this.ctx.globalAlpha = 0.16;
+
+            this.ctx.strokeStyle =
+                CONFIG.TIERS[
+                    this.nextTier
+                ]?.glow ||
+                "#00e5ff";
+
+            this.ctx.lineWidth = 1.5;
+
+            this.ctx.setLineDash([
+                4,
+                4
+            ]);
+
+            this.ctx.beginPath();
+
+            this.ctx.arc(
+                this.aimX,
+                ghostY,
+                previewRadius * 0.86,
+                0,
+                Math.PI * 2
+            );
+
+            this.ctx.stroke();
+
+            this.ctx.setLineDash([]);
+
+            // Тень на полу
+
+            this.ctx.fillStyle =
+                "rgba(0,0,0,0.38)";
+
+            this.ctx.beginPath();
+
+            this.ctx.ellipse(
+                this.aimX,
+                bounds.bottomY - 3,
+                previewRadius * 0.7,
+                4,
+                0,
+                0,
+                Math.PI * 2
+            );
+
+            this.ctx.fill();
+
+            this.ctx.restore();
+
             this.drawThoughtBall(
                 this.ctx,
                 this.aimX,
@@ -2875,6 +3488,30 @@ class SkufLifeGame {
         bodies.forEach(b => {
             const { x, y } = b.position;
             const r = b.circleRadius || 20;
+            if (
+                typeof b.visualScale ===
+                    "number" &&
+                b.visualScale < 0.999
+            ) {
+                b.visualScale +=
+                    (
+                        1 -
+                        b.visualScale
+                    ) * 0.22;
+
+                if (
+                    b.visualScale > 0.995
+                ) {
+                    b.visualScale = 1;
+                }
+            }
+
+            const visualRadius =
+                r *
+                (
+                    b.visualScale ??
+                    1
+                );
 
             if (b.isGarbage) {
                 this.ctx.save();
@@ -2890,7 +3527,14 @@ class SkufLifeGame {
                 this.ctx.translate(x, y);
                 this.ctx.rotate(b.angle);
                 // Отрисовываем внутри локальных координат
-                this.drawThoughtBall(this.ctx, 0, 0, r, b.tier, false);
+                this.drawThoughtBall(
+                    this.ctx,
+                    0,
+                    0,
+                    visualRadius,
+                    b.tier,
+                    false
+                );
                 this.ctx.restore();
             }
         });
@@ -3042,6 +3686,7 @@ class SkufLifeGame {
         this.activeRelics = [];
         this.highestTierUnlocked = 1;
         this.activeConsumableMode = null;
+        this.syncConsumableSelectionVisual();
         this.flashActiveUntil = 0;
         this.magnetActiveUntil = 0;
 
@@ -3135,6 +3780,7 @@ class SkufLifeGame {
 
         this.activeRelics = [];
         this.activeConsumableMode = null;
+        this.syncConsumableSelectionVisual();
 
         this.combo = 0;
         this.comboTimer = 0;

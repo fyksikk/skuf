@@ -114,7 +114,13 @@ class RoomRenderer {
             // Телевизор
             { id: 'tv', x: Math.max(16, centerX - 128) + 20, y: floorY - 32 + 14, radius: 24, name: 'Телевизор' },
             // Скуф на диване
-            { id: 'skuf', x: centerX, y: floorY - 26, radius: 36, name: 'Скуф' }
+            {
+                id: 'skuf',
+                x: centerX,
+                y: floorY - 26,
+                radius: 43,
+                name: 'Скуф'
+            }
         ];
 
         if (hasPC) {
@@ -524,9 +530,56 @@ class RoomRenderer {
         const skufBreath = Math.sin(this.ambientTime * 1.6) * 0.03;
         this.skufBounce = Math.max(1.0, this.skufBounce - 0.025);
         
+        const skufGlow =
+            ctx.createRadialGradient(
+                0,
+                -24,
+                8,
+                0,
+                -24,
+                52
+            );
+
+        skufGlow.addColorStop(
+            0,
+            "rgba(0,229,255,0.075)"
+        );
+
+        skufGlow.addColorStop(
+            1,
+            "rgba(0,229,255,0)"
+        );
+
+        ctx.fillStyle =
+            skufGlow;
+
+        ctx.beginPath();
+
+        ctx.arc(
+            0,
+            -24,
+            52,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
         ctx.save();
         ctx.translate(0, -18);
-        ctx.scale((1 - skufBreath * 0.5) * this.skufBounce, (1 + skufBreath) * this.skufBounce);
+        const skufVisualScale =
+            width < 380
+                ? 1.08
+                : 1.16;
+
+        ctx.scale(
+            skufVisualScale *
+                (1 - skufBreath * 0.5) *
+                this.skufBounce,
+
+            skufVisualScale *
+                (1 + skufBreath) *
+                this.skufBounce
+        );
         ctx.translate(0, 18);
 
         // Золотая аура Гигачада

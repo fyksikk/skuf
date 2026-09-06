@@ -302,13 +302,90 @@ class UIManager {
         }
     }
 
-    updateBoss(boss, currentHp, day, maxDays = 20) {
-        this.bossName.textContent = `БОСС: ${boss.name}`;
-        this.bossDayTag.textContent = `День ${day}/${maxDays}`;
-        const pct = Math.max(0, Math.min(100, (currentHp / boss.hp) * 100));
-        this.bossHpFill.style.width = `${pct}%`;
-        this.bossHpText.textContent = `${CONFIG.formatNumber(Math.max(0, Math.floor(currentHp)))} / ${CONFIG.formatNumber(boss.hp)} HP`;
-        this.bossQuoteBubble.textContent = boss.quote || '';
+    updateBoss(
+        boss,
+        currentHp,
+        day,
+        maxDays = 20
+    ) {
+        const bossChanged =
+            this.lastBossName &&
+            this.lastBossName !==
+                boss.name;
+
+        this.bossName.textContent =
+            boss.name;
+
+        this.bossDayTag.textContent =
+            `День ${day}/${maxDays}`;
+
+        const pct =
+            Math.max(
+                0,
+                Math.min(
+                    100,
+                    (
+                        currentHp /
+                        boss.hp
+                    ) * 100
+                )
+            );
+
+        this.bossHpFill.style.width =
+            `${pct}%`;
+
+        this.bossHpText.textContent =
+            `${CONFIG.formatNumber(
+                Math.max(
+                    0,
+                    Math.floor(currentHp)
+                )
+            )} / ${CONFIG.formatNumber(
+                boss.hp
+            )} HP`;
+
+        this.bossQuoteBubble.textContent =
+            boss.quote || "";
+
+        const bossIcon =
+            document.getElementById(
+                "boss-icon"
+            );
+
+        const bossIndex =
+            this.game
+                ?.currentBossIndex ||
+            day;
+
+        if (bossIcon) {
+            bossIcon.textContent =
+                CONFIG.BOSS_ICONS[
+                    bossIndex
+                ] ||
+                "👹";
+        }
+
+        if (bossChanged) {
+            const bar =
+                document.getElementById(
+                    "boss-bar"
+                );
+
+            if (bar) {
+                bar.classList.remove(
+                    "boss-enter"
+                );
+
+                void bar.offsetWidth;
+
+                bar.classList.add(
+                    "boss-enter"
+                );
+            }
+        }
+
+        this.lastBossName =
+            boss.name;
     }
 
     updateRent(day, timeRemaining, phaseName) {
@@ -357,6 +434,15 @@ class UIManager {
         } else {
             this.nextThoughtCircle.style.background = conf.color;
             this.nextThoughtCircle.textContent = conf.emoji;
+        }
+        const nameEl =
+            document.getElementById(
+                "next-thought-name"
+            );
+
+        if (nameEl) {
+            nameEl.textContent =
+                conf.name;
         }
     }
 
@@ -993,6 +1079,19 @@ class UIManager {
 
         const viewport =
             document.getElementById('app-viewport');
+
+        const feverBar =
+            document.getElementById(
+                "fever-bar"
+            );
+
+        feverBar
+            ?.classList
+            .toggle(
+                "ready",
+                !isFeverActive &&
+                pct >= 100
+            );
 
         if (isFeverActive) {
             this.feverLabel.textContent =

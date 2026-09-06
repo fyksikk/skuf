@@ -170,14 +170,38 @@
             </div>
         </div>
 
-        <div class="boss-info">
-            <span id="boss-name">БОСС: Хозяйка Тамара</span>
-            <span id="boss-hp-text">3000 / 3000 HP</span>
+        <div class="boss-main-row">
+
+            <div
+                id="boss-icon"
+                class="boss-icon"
+            >
+                🏠
+            </div>
+
+            <div class="boss-content">
+
+                <div class="boss-info">
+                    <span id="boss-name">
+                        Хозяйка Тамара
+                    </span>
+
+                    <span id="boss-hp-text">
+                        3 000 / 3 000 HP
+                    </span>
+                </div>
+
+                <div id="boss-hp-track">
+                    <div id="boss-hp-fill"></div>
+                </div>
+
+                <div id="boss-quote-bubble">
+                    «Аренда сама себя не заплатит, вставай!»
+                </div>
+
+            </div>
+
         </div>
-        <div id="boss-hp-track">
-            <div id="boss-hp-fill"></div>
-        </div>
-        <div id="boss-quote-bubble">«Аренда сама себя не заплатит, вставай!»</div>
     </div>
 
     <!-- Реликвии забега (скрыты, если реликвий нет) -->
@@ -198,9 +222,23 @@
         </div>
         <div id="fever-banner" class="fever-banner">РЕЖИМ ЛИХОРАДКИ! МОТИВАЦИЯ x2!</div>
 
-        <div id="next-thought-indicator" class="glass-panel">
-            <span>СЛЕДУЮЩАЯ:</span>
+        <div
+            id="next-thought-indicator"
+            class="glass-panel"
+        >
+
+            <div class="next-copy">
+                <span class="next-label">
+                    NEXT
+                </span>
+
+                <span id="next-thought-name">
+                    Квадробер
+                </span>
+            </div>
+
             <div id="next-thought-circle"></div>
+
         </div>
         <!-- Индикатор комбо по центру -->
         <div id="combo-display" class="combo-bubble">

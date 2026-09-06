@@ -290,6 +290,7 @@ class BrainPhysics {
                 saved.angularVelocity || 0
             );
         }
+        body.visualScale = 1;
     }
 
     buildCupWalls() {
@@ -386,7 +387,7 @@ class BrainPhysics {
         
         body.tier = tier;
         body.isDead = false;
-        
+        body.visualScale = 0.72;
         Matter.Composite.add(this.world, body);
         return body;
     }
