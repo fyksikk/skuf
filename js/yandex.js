@@ -28,15 +28,6 @@ class YandexManager {
                 color: '#ec4899',
                 icon: '⚡'
             },
-            energy: {
-                id: 'energy',
-                title: 'Турбо-Энергетик',
-                desc: 'Мгновенный вход в Лихорадку (16с) + 100% Дыхалка',
-                cooldown: 45, // сек
-                lastUsed: 0,
-                color: '#ec4899',
-                icon: '⚡'
-            },
             cleaning: {
                 id: 'cleaning',
                 title: 'Генеральный Клининг',

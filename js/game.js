@@ -1422,7 +1422,18 @@ class SkufLifeGame {
         if (nextTier === 7) this.trackQuestProgress('tier_7', 1);
         if (nextTier === 8) this.trackQuestProgress('tier_8', 1);
         if (nextTier === 9) this.trackQuestProgress('tier_9', 1);
-        this.trackQuestProgress('combo', this.combo);
+        this.dailyQuests?.forEach(q => {
+            if (
+                q.type === 'combo' &&
+                !q.claimed
+            ) {
+                q.progress =
+                    Math.max(
+                        q.progress || 0,
+                        this.combo
+                    );
+            }
+        });
 
         // Создание новой мысли следующего тира
         if (nextTier <= 10) {
@@ -2214,17 +2225,30 @@ class SkufLifeGame {
     }
 
     // --- ХАЙП / FEVER MODE ---
-    triggerFeverMode() {
+    triggerFeverMode(durationOverride = null) {
+        const wasAlreadyActive =
+            this.isFeverActive;
+
         this.isFeverActive = true;
 
         this.feverTimer =
-            CONFIG.UPGRADES.brain[8]?.bought
-                ? 14
-                : 8.5;
+            durationOverride ??
+            (
+                CONFIG.UPGRADES.brain[8]?.bought
+                    ? 14
+                    : 8.5
+            );
 
         this.feverCharge = 100;
 
         this.updateDropCooldownFromState();
+
+        if (!wasAlreadyActive) {
+            this.trackQuestProgress(
+                'fever',
+                1
+            );
+        }
 
         const scoreMultiplier =
             this.getFeverScoreMultiplier();
@@ -2344,13 +2368,12 @@ class SkufLifeGame {
 
         switch (boostType) {
             case 'turbo':
-                this.isFeverActive = true;
-                this.feverTimer = 16.0;
-                this.feverCharge = 100;
-                this.stamina = this.maxStamina;
+                this.triggerFeverMode(16);
+
+                this.stamina =
+                    this.maxStamina;
+
                 this.isExhausted = false;
-                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, "ТУРБО-ХАЙП НА 16 СЕКУНД!", "#ec4899");
-                this.ui.setQuote("«ЭНЕРГИЯ ЗАШКАЛИВАЕТ! МОЗГ РАБОТАЕТ НА 200%!»");
                 break;
             case 'cleaning':
                 this.physics.cleanseNearbyGarbage(this.canvas.width / 2, this.canvas.height / 2, 1200);
@@ -2405,6 +2428,7 @@ class SkufLifeGame {
                 frameMs / 1000;
 
             this.lastTime = now;
+            const wallNow = Date.now();
 
             this.playTimeSeconds += dt;
 
@@ -2481,7 +2505,7 @@ class SkufLifeGame {
                     this.physics.applyMagneticAttraction();
                 }
 
-                if (this.magnetActiveUntil > now) {
+                if (this.magnetActiveUntil > wallNow) {
                     this.physics.applySuperMagneticAttraction();
                 }
 
@@ -2507,7 +2531,10 @@ class SkufLifeGame {
             }
 
             // Замедление времени
-            if (this.flashActiveUntil > 0 && now >= this.flashActiveUntil) {
+            if (
+                this.flashActiveUntil > 0 &&
+                wallNow >= this.flashActiveUntil
+            ) {
                 this.flashActiveUntil = 0;
                 this.physics.engine.timing.timeScale = 1.0;
             }
