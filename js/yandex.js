@@ -114,13 +114,18 @@ class YandexManager {
                     quantityAround: quantityAround
                 });
 
-                const entries = (res.entries || []).map(entry => ({
-                    rank: entry.rank,
-                    name: entry.player.publicName || 'Анонимный Гигачад',
-                    score: entry.score,
-                    avatar: entry.player.getAvatarSrc('small') || '',
-                    isUser: entry.player.uniqueID === (this.player ? this.player.getUniqueID() : null)
-                }));
+                const entries = (res.entries || []).map(entry => {
+                    const isCurrentUser = entry.player.uniqueID === (this.player ? this.player.getUniqueID() : null);
+                    return {
+                        rank: entry.rank,
+                        name: entry.player.publicName || 'Анонимный Гигачад',
+                        score: entry.score,
+                        avatar: entry.player.getAvatarSrc('small') || '',
+                        isUser: isCurrentUser,
+                        isCurrentUser: isCurrentUser,
+                        title: entry.extraData || 'Кибер-Скуф'
+                    };
+                });
 
                 const userRank = res.userRank || 1;
                 return { entries, userRank };
@@ -134,6 +139,17 @@ class YandexManager {
             entries: this.getLocalEntries(),
             userRank: this.getUserLocalRank()
         };
+    }
+
+    async getLeaderboardEntries(quantity = 15) {
+        return this.getLeaderboard(quantity, 3);
+    }
+
+    showRewardedVideo(boostId, onRewarded, onClose) {
+        this.showRewardedBoost(boostId, {
+            onRewarded: onRewarded,
+            onClose: onClose
+        });
     }
 
     // --- ЛОКАЛЬНЫЙ ЛИДЕРБОРД (Fallback) ---

@@ -359,16 +359,17 @@ body {
 }
 
 /* ---------------------------------------------------------
-   ВЕРХНИЙ HUD (2 КОМПАКТНЫХ РЯДА: СТАТУС + НАВИГАЦИЯ)
+   ВЕРХНИЙ HUD (3 АККУРАТНЫХ РЯДА: СТАТУС + ДЫХАЛКА + НАВИГАЦИЯ)
    --------------------------------------------------------- */
 #status-bar {
     display: flex;
     flex-direction: column;
-    padding: 6px 10px 6px 10px;
+    padding: 6px 10px;
     z-index: 20;
-    gap: 6px;
+    gap: 5px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
+    background: rgba(10, 14, 28, 0.92);
 }
 
 .hud-top-row {
@@ -385,9 +386,9 @@ body {
     flex-shrink: 0;
 }
 
-.motivation-box .label, .stamina-box .label {
+.motivation-box .label {
     font-size: 8px;
-    font-weight: 700;
+    font-weight: 800;
     letter-spacing: 0.5px;
     color: var(--text-muted);
 }
@@ -404,15 +405,101 @@ body {
 #passive-counter {
     font-size: 9px;
     color: var(--green-neon);
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.1;
 }
 
+/* Компактные быстрые сервисные кнопки */
+.hud-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.hud-mini-btn {
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 7px;
+    height: 28px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    position: relative;
+    color: #e2e8f0;
+    transition: transform 0.1s, background 0.15s, border-color 0.15s;
+    user-select: none;
+}
+
+.hud-mini-btn:active {
+    transform: scale(0.92);
+}
+
+.hud-mini-btn.icon-only {
+    width: 28px;
+    padding: 0;
+}
+
+.hud-mini-btn .hud-emoji {
+    font-size: 13px;
+    line-height: 1;
+}
+
+.hud-mini-btn .hud-btn-caption {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+.hud-mini-btn.boost-btn-glow {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: rgba(236, 72, 153, 0.45);
+    color: #f472b6;
+}
+
+.hud-mini-btn.roulette-btn-glow {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: rgba(255, 215, 0, 0.45);
+    color: #fde047;
+}
+
+.hud-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 900;
+    border-radius: 99px;
+    padding: 1px 4px;
+    border: 1px solid #ffffff;
+    line-height: 1;
+}
+
+.hud-badge-gold {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ffd700;
+    color: #000000;
+    font-size: 7.5px;
+    font-weight: 900;
+    border-radius: 99px;
+    padding: 1px 3px;
+    border: 1px solid #000000;
+    line-height: 1;
+}
+
+/* Полоса Дыхалки на отдельной строке: широкая, четкая, не перекрываемая */
 .stamina-box {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-width: 0;
+    width: 100%;
+    margin-top: 1px;
 }
 
 .stamina-label-row {
@@ -422,14 +509,22 @@ body {
     gap: 4px;
 }
 
+.stamina-box .label {
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #38bdf8;
+}
+
 #stamina-track {
     width: 100%;
-    height: 7px;
-    background: rgba(255, 255, 255, 0.08);
+    height: 8px;
+    background: rgba(0, 0, 0, 0.5);
     border-radius: 99px;
     overflow: hidden;
     margin-top: 2px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 #stamina-bar {
@@ -437,33 +532,17 @@ body {
     height: 100%;
     background: linear-gradient(90deg, #10b981, #00f0ff);
     transition: width 0.12s ease-out, background 0.2s;
+    box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
 }
 
 #stamina-alert {
-    font-size: 8px;
-    font-weight: 800;
+    font-size: 8.5px;
+    font-weight: 900;
     color: var(--danger-red);
     height: 11px;
     line-height: 11px;
     white-space: nowrap;
-}
-
-.hud-sound-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: transform 0.1s, background 0.2s;
-}
-
-.hud-sound-btn:active {
-    transform: scale(0.92);
+    text-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
 }
 
 /* Навигационная панель кнопок: 4 кнопки, равная ширина 25%, никогда не переполняются */
@@ -472,6 +551,7 @@ body {
     align-items: center;
     gap: 4px;
     width: 100%;
+    margin-top: 1px;
 }
 
 .hud-nav-btn {
@@ -480,15 +560,16 @@ body {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
-    padding: 5px 2px;
+    padding: 4px 2px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 3px;
     color: var(--text-main);
     transition: transform 0.1s, background 0.2s, border-color 0.2s;
     overflow: hidden;
+    user-select: none;
 }
 
 .hud-nav-btn:active {
@@ -513,13 +594,13 @@ body {
 }
 
 .hud-emoji {
-    font-size: 12px;
+    font-size: 13px;
     line-height: 1;
     flex-shrink: 0;
 }
 
 .btn-text {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 800;
     white-space: nowrap;
     letter-spacing: -0.2px;
@@ -786,7 +867,7 @@ body {
 }
 
 /* ---------------------------------------------------------
-   РАСХОДНИКИ
+   РАСХОДНИКИ (КОМПАКТНЫЕ СЛОТЫ С ЭМОДЗИ)
    --------------------------------------------------------- */
 #consumables-bar {
     display: flex;
@@ -796,6 +877,7 @@ body {
     z-index: 20;
     gap: 6px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 14, 28, 0.85);
     flex-shrink: 0;
 }
 
@@ -807,17 +889,18 @@ body {
     align-items: center;
     justify-content: center;
     position: relative;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 9px;
     padding: 2px 4px;
     cursor: pointer;
     transition: transform 0.1s, background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    user-select: none;
 }
 
 .item-slot:hover {
-    background: rgba(255, 255, 255, 0.09);
-    border-color: rgba(0, 240, 255, 0.4);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(0, 240, 255, 0.5);
 }
 
 .item-slot:active {
@@ -829,17 +912,10 @@ body {
     cursor: not-allowed;
 }
 
-.slot-img {
-    width: 24px;
-    height: 24px;
-    object-fit: contain;
-    flex-shrink: 0;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
-}
-
-.item-slot .hud-emoji {
-    font-size: 19px;
+.slot-emoji {
+    font-size: 20px;
     line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
 }
 
 .slot-count {
@@ -849,8 +925,8 @@ body {
     font-size: 8.5px;
     font-weight: 800;
     color: #fef08a;
-    background: rgba(0, 0, 0, 0.78);
-    border: 1px solid rgba(255, 215, 0, 0.4);
+    background: rgba(0, 0, 0, 0.82);
+    border: 1px solid rgba(255, 215, 0, 0.5);
     padding: 0px 3.5px;
     border-radius: 4px;
     line-height: 1.2;
@@ -858,7 +934,7 @@ body {
 }
 
 /* ---------------------------------------------------------
-   НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ
+   НИЖНЯЯ ПАНЕЛЬ ДЕЙСТВИЙ (ЕДИНЫЙ УДОБНЫЙ ЦЕНТР УПРАВЛЕНИЯ)
    --------------------------------------------------------- */
 #action-panel {
     display: flex;
@@ -904,77 +980,88 @@ body {
     width: 100%;
 }
 
-#btn-brain-shake {
-    flex: 1.2 1 0;
+.action-btn {
     min-width: 0;
-    height: 32px;
+    height: 34px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
-    background: linear-gradient(135deg, #0ea5e9, #6366f1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    gap: 4px;
     border-radius: 8px;
-    padding: 0 8px;
-    color: #ffffff;
-    cursor: pointer;
     font-weight: 800;
     font-size: 10.5px;
     white-space: nowrap;
-    box-shadow: 0 3px 10px rgba(14, 165, 233, 0.3);
-    transition: transform 0.1s, filter 0.2s;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: transform 0.1s, background 0.15s, border-color 0.15s, box-shadow 0.15s, filter 0.2s;
 }
 
-#btn-brain-shake:active {
-    transform: scale(0.94);
+.action-btn:active {
+    transform: scale(0.93);
 }
 
-#btn-brain-shake.disabled {
-    opacity: 0.5;
+.action-btn.shake-btn {
+    flex: 1.3 1 0;
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.35);
+}
+
+.action-btn.shake-btn.disabled {
+    opacity: 0.45;
     filter: grayscale(0.7);
     cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: #94a3b8;
+    box-shadow: none;
 }
 
-.shake-icon {
-    width: 15px;
-    height: 15px;
-    object-fit: contain;
-    flex-shrink: 0;
-}
-
-.btn-tilt {
+.action-btn.tilt-btn {
     flex: 0.9 1 0;
-    min-width: 0;
-    height: 32px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    background: rgba(255, 255, 255, 0.07);
+    background: rgba(0, 240, 255, 0.08);
     border: 1px solid rgba(0, 240, 255, 0.3);
-    border-radius: 8px;
     color: var(--cyan-neon);
-    font-size: 10.5px;
-    font-weight: 700;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: transform 0.1s, background 0.15s, border-color 0.15s, box-shadow 0.15s;
-    user-select: none;
 }
 
-.btn-tilt:hover {
-    background: rgba(0, 240, 255, 0.2);
-    border-color: var(--cyan-neon);
-}
-
-.btn-tilt:active {
-    transform: scale(0.9);
-}
-
-.btn-tilt.active {
-    background: rgba(0, 240, 255, 0.35);
+.action-btn.tilt-btn:hover {
+    background: rgba(0, 240, 255, 0.18);
     border-color: #00f0ff;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
+}
+
+.action-btn.tilt-btn.active {
+    background: rgba(0, 240, 255, 0.35);
+    border-color: #ffffff;
+    box-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+    color: #ffffff;
+}
+
+.action-btn.gyro-btn {
+    flex: 0.85 1 0;
+    background: rgba(168, 85, 247, 0.1);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    color: #d8b4fe;
+}
+
+.action-btn.gyro-btn:hover {
+    background: rgba(168, 85, 247, 0.22);
+    border-color: #c084fc;
+}
+
+.action-btn.gyro-btn.active {
+    background: rgba(168, 85, 247, 0.35);
+    border-color: #ffffff;
+    box-shadow: 0 0 12px rgba(168, 85, 247, 0.6);
+    color: #ffffff;
+}
+
+.action-icon {
+    font-size: 12px;
+    line-height: 1;
 }
 
 /* Летающие пузыри инсайтов */
@@ -1133,6 +1220,30 @@ body {
     background: rgba(0, 240, 255, 0.15);
     border-color: rgba(0, 240, 255, 0.4);
     color: var(--cyan-neon);
+}
+
+.quest-timer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0, 240, 255, 0.08);
+    border: 1px solid rgba(0, 240, 255, 0.25);
+    border-radius: 8px;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+}
+
+.quest-timer-lbl {
+    font-size: 10px;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.quest-timer-val {
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--cyan-neon);
+    letter-spacing: 0.5px;
 }
 
 /* Карточки улучшений */

@@ -16,7 +16,7 @@ class BrainPhysics {
         const { Engine } = Matter;
         this.engine = Engine.create({ 
             enableSleeping: true,
-            gravity: { x: 0, y: 0.95, scale: 0.001 },
+            gravity: { x: 0, y: 0.48, scale: 0.00065 },
             positionIterations: 10,
             velocityIterations: 8
         });
@@ -159,10 +159,10 @@ class BrainPhysics {
 
         // Создание сферического тела с оптимизацией сна (sleepThreshold: 45) и высокой упругостью/пружинистостью
         const body = Matter.Bodies.circle(clampedX, clampedY, r, {
-            restitution: 0.38,
-            friction: 0.25,
-            frictionAir: 0.007,
-            density: 0.0022 + (tier * 0.0002),
+            restitution: 0.35,
+            friction: 0.28,
+            frictionAir: 0.016,
+            density: 0.0020 + (tier * 0.00015),
             sleepThreshold: 45
         });
         
@@ -180,10 +180,10 @@ class BrainPhysics {
         const clampedY = Math.min(y, bounds.bottomY - r);
 
         const body = Matter.Bodies.circle(clampedX, clampedY, r, {
-            restitution: 0.28,
-            friction: 0.35,
-            frictionAir: 0.007,
-            density: 0.0035,
+            restitution: 0.26,
+            friction: 0.32,
+            frictionAir: 0.016,
+            density: 0.0030,
             sleepThreshold: 45
         });
         
@@ -402,6 +402,17 @@ class BrainPhysics {
     setGravityTilt(tiltX) {
         const clamped = Math.max(-0.65, Math.min(0.65, tiltX));
         this.engine.gravity.x = clamped;
+
+        if (Math.abs(clamped) > 0.05) {
+            const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
+            bodies.forEach(b => {
+                Matter.Sleeping.set(b, false);
+                Matter.Body.applyForce(b, b.position, {
+                    x: clamped * 0.00045 * (b.mass || 1),
+                    y: -0.00015 * (b.mass || 1)
+                });
+            });
+        }
     }
 
     microBounce(centerX) {

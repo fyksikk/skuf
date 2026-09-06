@@ -29,11 +29,11 @@ const CONFIG = {
 
     // ЛЕТАЮЩИЕ ИНСАЙТ-ПУЗЫРИ (Интерактивные клики по экрану)
     INSIGHT_BUBBLES: [
-        { type: "insight", title: "Инсайт!", color: "#ffd700" },
-        { type: "pizza", title: "Доставка!", color: "#fb923c" },
-        { type: "energy", title: "Хайп-Энергетик!", color: "#00f0ff" },
-        { type: "bomb", title: "Петарда!", color: "#ef4444" },
-        { type: "spin", title: "Фриспин!", color: "#a855f7" }
+        { type: "insight", title: "Инсайт!", emoji: "💡", color: "#ffd700" },
+        { type: "pizza", title: "Доставка!", emoji: "🍕", color: "#fb923c" },
+        { type: "energy", title: "Хайп-Энергетик!", emoji: "⚡", color: "#00f0ff" },
+        { type: "bomb", title: "Петарда!", emoji: "💣", color: "#ef4444" },
+        { type: "spin", title: "Фриспин!", emoji: "🎡", color: "#a855f7" }
     ],
 
     // ФАЗЫ ПРОГРЕССИИ (смена окружения каждые 4 дня)
@@ -229,14 +229,38 @@ const CONFIG = {
         { id: "p8", name: "Золотой Конвейер", desc: "+25% к шансу бесплатных расходников и фриспинов", cost: 3, level: 0, max: 4 }
     ],
 
-    // ЗАДАНИЯ И КВЕСТЫ (РЕГУЛЯРНЫЕ НАГРАДЫ)
-    DAILY_QUESTS: [
-        { id: "q1", title: "Разминка костей", desc: "Сделайте 40 тапов по дивану", goal: 40, type: "taps", reward: 800, rewardItem: "beer" },
-        { id: "q2", title: "Уборка в голове", desc: "Уничтожьте 8 мусорных мыслей", goal: 8, type: "trash", reward: 1500, rewardItem: "script" },
-        { id: "q3", title: "Мастер комбо", desc: "Наберите комбо x5 или выше", goal: 5, type: "combo", reward: 2500, rewardItem: "energy" },
-        { id: "q4", title: "Конвейер мыслей", desc: "Слейте 60 любых мыслей", goal: 60, type: "merges", reward: 4000, rewardItem: "beer" },
-        { id: "q5", title: "Гроза Хозяек", desc: "Победите любого босса", goal: 1, type: "boss", reward: 8000, rewardItem: "script" },
-        { id: "q6", title: "Рождение Гигачада", desc: "Создайте хотя бы одного Гигачада", goal: 1, type: "gigachad", reward: 25000, rewardItem: "energy" }
+    // ПУЛ ЕЖЕДНЕВНЫХ КВЕСТОВ (ОБНОВЛЯЕТСЯ КАЖДЫЙ ДЕНЬ В 00:00 ПО МОСКВЕ)
+    QUESTS_POOL: [
+        { id: "q_taps_1", title: "Разминка костей", desc: "Сделайте 35 тапов по Скуфу", goal: 35, type: "taps", reward: 1200, rewardItem: "beer" },
+        { id: "q_taps_2", title: "Массаж дивана", desc: "Сделайте 80 тапов по Скуфу", goal: 80, type: "taps", reward: 3500, rewardItem: "energy" },
+        { id: "q_taps_3", title: "Скуф в ярости", desc: "Сделайте 160 тапов по Скуфу", goal: 160, type: "taps", reward: 9000, rewardItem: "bomb" },
+        
+        { id: "q_merges_1", title: "Первые мысли", desc: "Слейте 30 любых мыслей воедино", goal: 30, type: "merges", reward: 1800, rewardItem: "script" },
+        { id: "q_merges_2", title: "Конвейер синапсов", desc: "Слейте 75 любых мыслей", goal: 75, type: "merges", reward: 4500, rewardItem: "beer" },
+        { id: "q_merges_3", title: "Нейро-фабрика", desc: "Слейте 160 любых мыслей", goal: 160, type: "merges", reward: 12000, rewardItem: "magnet" },
+        
+        { id: "q_tier_5", title: "Культ Альтушки", desc: "Слейте 3 мысли уровня «Альтушка (T5)»", goal: 3, type: "tier_5", reward: 5000, rewardItem: "script" },
+        { id: "q_tier_7", title: "Совет Старейшин", desc: "Слейте 2 мысли уровня «Дед (T7)»", goal: 2, type: "tier_7", reward: 9000, rewardItem: "beer" },
+        { id: "q_tier_8", title: "Клон Скуфа", desc: "Слейте мысль уровня «Скуф (T8)»", goal: 1, type: "tier_8", reward: 15000, rewardItem: "energy" },
+        { id: "q_tier_9", title: "Сигма-Движ", desc: "Слейте мысль уровня «Сигма (T9)»", goal: 1, type: "tier_9", reward: 35000, rewardItem: "magnet" },
+        { id: "q_gigachad", title: "Рождение Гигачада", desc: "Слейте мысль 10 уровня «ГИГАЧАД»", goal: 1, type: "gigachad", reward: 80000, rewardItem: "bomb" },
+        
+        { id: "q_trash_1", title: "Голова без долгов", desc: "Уничтожьте 6 мусорных мыслей", goal: 6, type: "trash", reward: 2200, rewardItem: "script" },
+        { id: "q_trash_2", title: "Генеральный клининг", desc: "Уничтожьте 15 мусорных мыслей", goal: 15, type: "trash", reward: 6000, rewardItem: "bomb" },
+        { id: "q_trash_3", title: "Тотальная детоксикация", desc: "Уничтожьте 30 мусорных мыслей", goal: 30, type: "trash", reward: 16000, rewardItem: "beer" },
+        
+        { id: "q_combo_1", title: "Серия ударов", desc: "Наберите комбо x4 или выше", goal: 4, type: "combo", reward: 2500, rewardItem: "energy" },
+        { id: "q_combo_2", title: "Нейро-шторм", desc: "Наберите комбо x7 или выше", goal: 7, type: "combo", reward: 7500, rewardItem: "script" },
+        { id: "q_combo_3", title: "Сигма-Тайфун", desc: "Наберите комбо x10 или выше", goal: 10, type: "combo", reward: 20000, rewardItem: "energy" },
+        
+        { id: "q_boss_1", title: "Аренда отменяется", desc: "Победите 1 босса", goal: 1, type: "boss", reward: 5000, rewardItem: "beer" },
+        { id: "q_boss_2", title: "Уничтожитель тиранов", desc: "Победите 3 боссов за день", goal: 3, type: "boss", reward: 18000, rewardItem: "bomb" },
+        
+        { id: "q_fever_1", title: "Хайпожор", desc: "Активируйте режим Лихорадки 2 раза", goal: 2, type: "fever", reward: 4000, rewardItem: "energy" },
+        { id: "q_fever_2", title: "В огне событий", desc: "Активируйте режим Лихорадки 5 раз", goal: 5, type: "fever", reward: 11000, rewardItem: "magnet" },
+        
+        { id: "q_wheel_1", title: "Испытание Фортуны", desc: "Прокрутите Колесо Фортуны 2 раза", goal: 2, type: "spins", reward: 3500, rewardItem: "beer" },
+        { id: "q_shake_1", title: "Шевеление извилинами", desc: "Используйте встряску мозга 3 раза", goal: 3, type: "shakes", reward: 2800, rewardItem: "script" }
     ],
 
     // СОБЫТИЯ И ДИЛЕММЫ
@@ -303,17 +327,80 @@ const CONFIG = {
         }
     ],
 
-    // ДОСТИЖЕНИЯ
+    // РАСШИРЕННЫЕ ДОСТИЖЕНИЯ (26 АЧИВОК С БОГАТОЙ ПРОГРЕССИЕЙ)
     ACHIEVEMENTS: [
         { id: "first_merge", badge: "🐱", name: "Первое слияние", desc: "Слейте первые две мысли воедино", check: (g) => g.totalMerges >= 1 },
-        { id: "gigachad", badge: "👑", name: "Явление Гигачада", desc: "Слейте мысль 10 уровня", check: (g) => g.gigachadsCreated >= 1 },
+        { id: "merges_25", badge: "🍕", name: "Перекус на диване", desc: "Совершите 25 слияний мыслей", check: (g) => g.totalMerges >= 25 },
+        { id: "merges_100", badge: "🧠", name: "Шевеление извилинами", desc: "Совершите 100 слияний мыслей", check: (g) => g.totalMerges >= 100 },
+        { id: "merges_300", badge: "⚡", name: "Нейронный шторм", desc: "Совершите 300 слияний мыслей", check: (g) => g.totalMerges >= 300 },
+        { id: "merges_1000", badge: "🌌", name: "Владыка Синтеза", desc: "Совершите 1 000 слияний мыслей", check: (g) => g.totalMerges >= 1000 },
+        
+        { id: "tier_altushka", badge: "🎀", name: "Тяга к прекрасному", desc: "Создайте мысль 5 уровня (Альтушка)", check: (g) => (g.tierCreatedCounts && g.tierCreatedCounts[5] >= 1) || g.gigachadsCreated >= 1 },
+        { id: "tier_skuf", badge: "🍺", name: "Зеркальное отражение", desc: "Создайте мысль 8 уровня (Скуф)", check: (g) => (g.tierCreatedCounts && g.tierCreatedCounts[8] >= 1) || g.gigachadsCreated >= 1 },
+        { id: "tier_sigma", badge: "🗿", name: "Истинный Сигма", desc: "Создайте мысль 9 уровня (Сигма)", check: (g) => (g.tierCreatedCounts && g.tierCreatedCounts[9] >= 1) || g.gigachadsCreated >= 1 },
+        { id: "gigachad", badge: "👑", name: "Явление Гигачада", desc: "Слейте мысль 10 уровня (ГИГАЧАД)", check: (g) => g.gigachadsCreated >= 1 },
+        { id: "triple_gigachad", badge: "🌟", name: "Совет Гигачадов", desc: "Создайте 3 Гигачада за всё время", check: (g) => g.gigachadsCreated >= 3 },
+        
         { id: "boss_slayer", badge: "👵", name: "Аренда отменяется", desc: "Одолейте первого босса Тамару", check: (g) => g.bossesDefeated >= 1 },
+        { id: "bosses_3", badge: "🥊", name: "Разборки на кухне", desc: "Одолейте 3 разных боссов", check: (g) => g.bossesDefeated >= 3 },
         { id: "five_bosses", badge: "🏆", name: "Ветеран превозмогания", desc: "Одолейте 5 разных боссов", check: (g) => g.bossesDefeated >= 5 },
+        { id: "bosses_10", badge: "⚔️", name: "Покоритель Судьбы", desc: "Одолейте 10 разных боссов", check: (g) => g.bossesDefeated >= 10 },
+        { id: "bosses_20", badge: "🌌", name: "Абсолютный Триумфатор", desc: "Одолейте всех 20 боссов!", check: (g) => g.bossesDefeated >= 20 },
+        
+        { id: "combo_spark", badge: "✨", name: "Серия искр", desc: "Наберите серию комбо x3", check: (g) => g.maxCombo >= 3 },
         { id: "combo_master", badge: "🔥", name: "Нейро-вихрь", desc: "Наберите серию комбо x6", check: (g) => g.maxCombo >= 6 },
-        { id: "rich_skuf", badge: "💰", name: "Крипто-магнат", desc: "Накопите более 250 000 Мотивации", check: (g) => g.motivation >= 250000 },
-        { id: "clean_freak", badge: "✨", name: "Чистый разум", desc: "Уничтожьте 25 мусорных мыслей", check: (g) => g.trashDestroyed >= 25 },
-        { id: "rebirth", badge: "🌀", name: "Выход из матрицы", desc: "Совершите свое первое Перерождение", check: (g) => g.prestigeLevel >= 1 }
+        { id: "combo_typhoon", badge: "🌪️", name: "Сигма-Тайфун", desc: "Наберите рекордное комбо x10", check: (g) => g.maxCombo >= 10 },
+        
+        { id: "cash_10k", badge: "💵", name: "Заначка в носке", desc: "Накопите 10 000 Мотивации", check: (g) => g.motivation >= 10000 || g.totalMotivationEarned >= 10000 },
+        { id: "rich_skuf", badge: "💰", name: "Крипто-магнат", desc: "Накопите более 250 000 Мотивации", check: (g) => g.motivation >= 250000 || g.totalMotivationEarned >= 250000 },
+        { id: "cash_5m", badge: "🏦", name: "Финансовый Демиург", desc: "Заработайте суммарно 5 000 000 Мотивации", check: (g) => g.totalMotivationEarned >= 5000000 },
+        
+        { id: "clean_freak", badge: "🧹", name: "Чистый разум", desc: "Уничтожьте 10 мусорных тревожных мыслей", check: (g) => g.trashDestroyed >= 10 },
+        { id: "clean_master", badge: "✨", name: "Тотальный Дзен", desc: "Уничтожьте 50 мусорных мыслей", check: (g) => g.trashDestroyed >= 50 },
+        
+        { id: "skuf_tapper", badge: "🛋️", name: "Властелин Дивана", desc: "Сделайте 100 ударов по Скуфу", check: (g) => g.totalTaps >= 100 },
+        { id: "lucky_wheel", badge: "🎡", name: "Любимчик Фортуны", desc: "Прокрутите Колесо Фортуны 5 раз", check: (g) => g.totalSpins >= 5 },
+        { id: "rebirth", badge: "🌀", name: "Выход из матрицы", desc: "Совершите свое первое Перерождение (Сансара)", check: (g) => g.prestigeLevel >= 1 || g.prestigeCouches >= 1 }
     ],
+
+    // РАСЧЕТ ДАТЫ И ВРЕМЕНИ ПО МОСКВЕ (UTC+3) ДЛЯ ЕЖЕДНЕВНЫХ КВЕСТОВ
+    getMoscowDateKey() {
+        try {
+            const now = new Date();
+            // Смещение UTC+3 в миллисекундах (3 * 3600 * 1000)
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const mskDate = new Date(utc + (3 * 3600000));
+            const y = mskDate.getFullYear();
+            const m = String(mskDate.getMonth() + 1).padStart(2, '0');
+            const d = String(mskDate.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        } catch (e) {
+            return new Date().toISOString().slice(0, 10);
+        }
+    },
+
+    getMsUntilMoscowMidnight() {
+        try {
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const mskNow = new Date(utc + (3 * 3600000));
+            
+            const nextMidnightMSK = new Date(mskNow);
+            nextMidnightMSK.setHours(24, 0, 0, 0);
+            
+            return Math.max(1000, nextMidnightMSK.getTime() - mskNow.getTime());
+        } catch (e) {
+            return 3600000;
+        }
+    },
+
+    formatTimeHMS(ms) {
+        const totalSec = Math.max(0, Math.floor(ms / 1000));
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    },
 
     // ФОРМАТИРОВАНИЕ ЧИСЕЛ С БУКВАМИ (1К, 1М, 1B, 1T, 1Qa, 1Qi, 1Sx, 1Sp, 1Oc, 1No, 1Dc...)
     formatNumber(num) {

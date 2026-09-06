@@ -41,6 +41,9 @@ class SkufLifeGame {
         this.bossesDefeated = 0;
         this.trashDestroyed = 0;
         this.maxCombo = 0;
+        this.totalTaps = 0;
+        this.totalSpins = 0;
+        this.tierCreatedCounts = {};
         this.playTimeSeconds = 0;
         this.unlockedAchievements = [];
 
@@ -51,6 +54,7 @@ class SkufLifeGame {
         this.flashActiveUntil = 0;
         this.flashDuration = 12000;
         this.magnetActiveUntil = 0;
+        this.bossBreakTimer = 0; // Кулдаун между боссами
 
         // Хайп / Fever Mode
         this.feverCharge = 0;
@@ -65,8 +69,10 @@ class SkufLifeGame {
         // Ранг / Звание
         this.currentRankIndex = 0;
 
-        // Квесты
-        this.dailyQuests = JSON.parse(JSON.stringify(CONFIG.DAILY_QUESTS));
+        // Квесты (Полноценный пул с синхронизацией по 00:00 МСК)
+        this.questsDateKey = CONFIG.getMoscowDateKey();
+        this.dailyQuests = [];
+        this.initDailyQuestsPool();
 
         // Механика сброса мыслей
         this.nextTier = 1;
@@ -272,7 +278,9 @@ class SkufLifeGame {
         });
 
         // Кнопка Встряски
-        document.getElementById('btn-brain-shake')?.addEventListener('click', () => {
+        const btnShake = document.getElementById('btn-brain-shake');
+        const triggerShake = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
             if (this.shakeCooldown <= 0) {
                 this.physics.shakeBrain();
                 AudioCtrl.playShake();
@@ -280,23 +288,52 @@ class SkufLifeGame {
                 this.shakeCooldown = this.shakeCooldownMax;
                 this.ui.updateShake(this.shakeCooldown);
                 this.ui.setQuote("«Мозги встали на место!»");
+                this.trackQuestProgress('shakes', 1);
             }
-        });
+        };
+        btnShake?.addEventListener('pointerdown', triggerShake);
+        btnShake?.addEventListener('click', triggerShake);
 
-        // Кнопки Наклона (Тилт стакана влево/вправо)
-        document.getElementById('btn-tilt-left')?.addEventListener('click', () => {
-            this.physics.setGravityTilt(-0.5);
-            this.tiltTimer = 1.2;
+        // Кнопки Наклона (Тилт стакана влево/вправо) с поддержкой тач-зажатия и клика
+        const btnTiltLeft = document.getElementById('btn-tilt-left');
+        const applyTiltLeft = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            btnTiltLeft?.classList.add('active');
+            this.physics.setGravityTilt(-0.55);
+            this.tiltTimer = 1.3;
             AudioCtrl.playTilt();
             this.spawnFloatingText(this.canvas.width * 0.35, this.roomHeight + 35, "⤹ НАКЛОН ВЛЕВО", "#00f0ff");
-        });
+        };
+        const releaseTiltLeft = (e) => {
+            btnTiltLeft?.classList.remove('active');
+        };
 
-        document.getElementById('btn-tilt-right')?.addEventListener('click', () => {
-            this.physics.setGravityTilt(0.5);
-            this.tiltTimer = 1.2;
+        btnTiltLeft?.addEventListener('pointerdown', applyTiltLeft);
+        btnTiltLeft?.addEventListener('pointerup', releaseTiltLeft);
+        btnTiltLeft?.addEventListener('pointercancel', releaseTiltLeft);
+        btnTiltLeft?.addEventListener('touchstart', applyTiltLeft, { passive: false });
+        btnTiltLeft?.addEventListener('touchend', releaseTiltLeft, { passive: false });
+        btnTiltLeft?.addEventListener('click', applyTiltLeft);
+
+        const btnTiltRight = document.getElementById('btn-tilt-right');
+        const applyTiltRight = (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            btnTiltRight?.classList.add('active');
+            this.physics.setGravityTilt(0.55);
+            this.tiltTimer = 1.3;
             AudioCtrl.playTilt();
             this.spawnFloatingText(this.canvas.width * 0.65, this.roomHeight + 35, "НАКЛОН ВПРАВО ⤸", "#00f0ff");
-        });
+        };
+        const releaseTiltRight = (e) => {
+            btnTiltRight?.classList.remove('active');
+        };
+
+        btnTiltRight?.addEventListener('pointerdown', applyTiltRight);
+        btnTiltRight?.addEventListener('pointerup', releaseTiltRight);
+        btnTiltRight?.addEventListener('pointercancel', releaseTiltRight);
+        btnTiltRight?.addEventListener('touchstart', applyTiltRight, { passive: false });
+        btnTiltRight?.addEventListener('touchend', releaseTiltRight, { passive: false });
+        btnTiltRight?.addEventListener('click', applyTiltRight);
 
         // Кнопка переключения Гироскопа
         document.getElementById('btn-toggle-gyro')?.addEventListener('click', () => {
@@ -758,19 +795,21 @@ class SkufLifeGame {
         if (this.hasGoldenCat && tier === 1) reward += 1500;
         this.addMotivation(reward);
 
-        // Урон по боссу от слияния
-        let bossDmg = tierConfig.score * 2.5 * Math.max(1, this.combo * 0.35);
-        if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 2.5; // Третий глаз Сигмы
+        // Урон по боссу от слияния:
+        // Во время Лихорадки урон по боссу сбалансирован (0.7x), чтобы босс не умирал мгновенно,
+        // позволяя игроку насладиться хайпом, серией комбо и набором Мотивации
+        let bossDmg = tierConfig.score * 2.2 * Math.max(1, this.combo * 0.3);
+        if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 2.0; // Третий глаз Сигмы
         
-        // В режиме Лихорадки урон по боссу получает тактический бонус (+35%),
-        // сохраняя босса крепким испытанием вместо мгновенного уничтожения
-        const feverBossDmgMult = this.isFeverActive ? 1.35 : 1.0;
+        const feverBossDmgMult = this.isFeverActive ? 0.70 : 1.0;
         bossDmg *= feverBossDmgMult;
         
         const bossHunterBonus = 1.0 + (CONFIG.PRESTIGE_PERKS[6]?.level || 0) * 0.5;
         bossDmg *= this.bossDamageMultiplier * bossHunterBonus;
-        this.dealBossDamage(Math.floor(bossDmg));
-        this.spawnFloatingText(midX, midY + 16, `-${CONFIG.formatNumber(bossDmg)} HP ⚔️`, '#f43f5e');
+        if (this.bossBreakTimer <= 0) {
+            this.dealBossDamage(Math.floor(bossDmg));
+            this.spawnFloatingText(midX, midY + 16, `-${CONFIG.formatNumber(bossDmg)} HP ⚔️`, '#f43f5e');
+        }
 
         // Звук и частицы сочности
         AudioCtrl.playMerge(tier);
@@ -802,6 +841,14 @@ class SkufLifeGame {
             this.physics.cleanseNearbyGarbage(this.canvas.width / 2, this.canvas.height / 2, 800);
             this.ui.setQuote("🍺 ПИВНОЙ ЩИТ: Весь мусор сожжён!");
         }
+
+        // Трекинг создания мыслей для квестов и ачивок
+        this.tierCreatedCounts[nextTier] = (this.tierCreatedCounts[nextTier] || 0) + 1;
+        if (nextTier === 5) this.trackQuestProgress('tier_5', 1);
+        if (nextTier === 7) this.trackQuestProgress('tier_7', 1);
+        if (nextTier === 8) this.trackQuestProgress('tier_8', 1);
+        if (nextTier === 9) this.trackQuestProgress('tier_9', 1);
+        this.trackQuestProgress('combo', this.combo);
 
         // Создание новой мысли следующего тира
         if (nextTier <= 10) {
@@ -846,6 +893,7 @@ class SkufLifeGame {
     }
 
     dealBossDamage(amount) {
+        if (this.bossBreakTimer > 0) return; // Во время передышки босс неуязвим/отсутствует
         this.bossHp = Math.max(0, this.bossHp - amount);
         const boss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
         this.ui.updateBoss(boss, this.bossHp, this.day, this.maxDays);
@@ -860,6 +908,9 @@ class SkufLifeGame {
         this.trackQuestProgress('boss', 1);
         AudioCtrl.playEndorphinFanfare();
         this.ui.triggerScreenShake();
+
+        // Запуск фазы передышки / кулдауна перед следующим боссом (очередь боссов)
+        this.bossBreakTimer = 3.5;
 
         // Награда за босса
         const jackpot = this.day * 1500;
@@ -878,6 +929,15 @@ class SkufLifeGame {
         this.ui.updateConsumables(this.items);
         this.ui.updateRouletteTimer(this.rouletteTimer, this.freeSpinsAvailable);
 
+        // Показ плашки передышки
+        this.ui.updateBoss({
+            name: "ПЕРЕДЫШКА ☕",
+            title: "ПЕРЕДЫШКА",
+            desc: "Босс повержен! Передышка перед новым оппонентом...",
+            hp: 100,
+            color: "#10b981"
+        }, 100, this.day, this.maxDays);
+
         // Выбор реликвии (драфт 3 случайных)
         const pool = CONFIG.RELICS_POOL.filter(r => !this.activeRelics.some(ar => ar.id === r.id));
         if (pool.length > 0) {
@@ -887,10 +947,7 @@ class SkufLifeGame {
                 this.activeRelics.push(pickedRelic);
                 pickedRelic.apply(this);
                 this.ui.updateRelics(this.activeRelics);
-                this.advanceDay();
             });
-        } else {
-            this.advanceDay();
         }
     }
 
@@ -912,6 +969,7 @@ class SkufLifeGame {
         this.ui.updateRent(this.day, this.rentTimer, phase.bgTitle);
         this.ui.updateBoss(nextBoss, this.bossHp, this.day, this.maxDays);
         this.ui.setQuote(`«День ${this.day}. Пришёл новый противник: ${nextBoss.name}»`);
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, `⚔️ БОСС: ${nextBoss.name}!`, "#ef4444");
 
         // Случайное событие / дилемма каждые 3 дня
         if (this.day % 3 === 0) {
@@ -1055,8 +1113,39 @@ class SkufLifeGame {
         return false;
     }
 
-    // --- КВЕСТЫ ---
+    // --- КВЕСТЫ (СИНХРОНИЗАЦИЯ ПО 00:00 МСК) ---
+    initDailyQuestsPool() {
+        const pool = CONFIG.QUESTS_POOL || [];
+        if (!pool || pool.length === 0) {
+            this.dailyQuests = JSON.parse(JSON.stringify(CONFIG.DAILY_QUESTS || []));
+            return;
+        }
+        // Выбираем 6 случайных разнообразных квестов из пула
+        const shuffled = [...pool].sort(() => 0.5 - Math.random());
+        this.dailyQuests = shuffled.slice(0, 6).map(q => ({
+            id: q.id,
+            title: q.title,
+            desc: q.desc,
+            type: q.type,
+            goal: q.goal,
+            reward: q.reward,
+            rewardItem: q.rewardItem,
+            progress: 0,
+            claimed: false
+        }));
+    }
+
+    checkDailyQuestsDate(force = false) {
+        const todayKey = CONFIG.getMoscowDateKey();
+        if (force || this.questsDateKey !== todayKey || !this.dailyQuests || this.dailyQuests.length === 0) {
+            this.questsDateKey = todayKey;
+            this.initDailyQuestsPool();
+            this.saveGame();
+        }
+    }
+
     trackQuestProgress(type, count = 1) {
+        if (!this.dailyQuests) return;
         this.dailyQuests.forEach(q => {
             if (q.type === type && !q.claimed) {
                 q.progress = (q.progress || 0) + count;
@@ -1074,6 +1163,19 @@ class SkufLifeGame {
             this.items[q.rewardItem]++;
             this.ui.updateConsumables(this.items);
         }
+    }
+
+    // --- СИСТЕМА ДОСТИЖЕНИЙ (ACHIEVEMENTS) ---
+    checkAchievements() {
+        if (!CONFIG.ACHIEVEMENTS) return;
+        CONFIG.ACHIEVEMENTS.forEach(ach => {
+            if (!this.unlockedAchievements.includes(ach.id) && ach.check && ach.check(this)) {
+                this.unlockedAchievements.push(ach.id);
+                AudioCtrl.playLevelUp();
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 30, `🏆 ${ach.badge} ${ach.name}!`, "#ffd700");
+                this.ui.setQuote(`«🏆 Достижение разблокировано: ${ach.name}!»`);
+            }
+        });
     }
 
     // --- ПЕРЕКЛЮЧАТЕЛЬ СПЕЦЭФФЕКТОВ (FX) ---
@@ -1370,6 +1472,21 @@ class SkufLifeGame {
                 if (this.stamina > 30) this.isExhausted = false;
             }
             this.ui.updateStamina(this.stamina, this.maxStamina, this.isExhausted);
+
+            // Передышка между боссами (Очередь боссов с кулдауном)
+            if (this.bossBreakTimer > 0) {
+                this.bossBreakTimer -= dt;
+                if (this.bossBreakTimer <= 0) {
+                    this.bossBreakTimer = 0;
+                    this.advanceDay();
+                }
+            }
+
+            // Проверка смены суток по МСК для ежедневных квестов и проверка достижений
+            if (Math.random() < 0.05) {
+                this.checkDailyQuestsDate();
+                this.checkAchievements();
+            }
 
             // Таймер комбо
             if (this.comboTimer > 0) {
@@ -1782,6 +1899,55 @@ class SkufLifeGame {
         }
     }
 
+    // --- ПЕРЕЗАПУСК ПОСЛЕ ВЫСЕЛЕНИЯ / ПОРАЖЕНИЯ (СБРОС НАКОПЛЕННОЙ МОТИВАЦИИ) ---
+    restart() {
+        this.isGameOver = false;
+        // Полный сброс при выселении: сбрасывается всё, включая накопленную мотивацию
+        this.motivation = 0;
+        this.day = 1;
+        this.currentBossIndex = 1;
+        this.bossHp = CONFIG.BOSSES[1].hp;
+        this.rentTimer = this.rentTimeMax;
+        this.activeRelics = [];
+        this.activeConsumableMode = null;
+        this.combo = 0;
+        this.comboTimer = 0;
+        this.feverCharge = 0;
+        this.isFeverActive = false;
+        this.stamina = this.maxStamina;
+        this.isExhausted = false;
+        this.dangerTimer = 0;
+        this.bossBreakTimer = 0;
+
+        // Очищаем стакан от всех мыслей
+        if (this.physics) {
+            this.physics.clearAllBodies();
+            const bounds = this.physics.getCupBounds();
+            setTimeout(() => {
+                this.physics.createThought(bounds.leftX + bounds.width * 0.38, this.dropY + 40, 1);
+                this.physics.createThought(bounds.leftX + bounds.width * 0.62, this.dropY + 40, 1);
+            }, 120);
+        }
+
+        const boss = CONFIG.BOSSES[1];
+        this.ui.updateMotivation(this.motivation, this.passiveIncome);
+        this.ui.updateStamina(this.stamina, this.maxStamina, false);
+        this.ui.updateBoss(boss, boss.hp, 1, this.maxDays);
+        this.ui.updateRent(1, this.rentTimer, CONFIG.PHASES[1].bgTitle);
+        this.ui.updateRelics([]);
+        this.ui.updateFever(0, false, 0);
+        this.rollNextTier();
+
+        if (this.roomRenderer) {
+            this.roomRenderer.updateRoomStage(0);
+        }
+
+        this.saveGame();
+        this.lastTime = performance.now();
+        this.start();
+        this.ui.setQuote("«Новая попытка! Не дай арендодателю выселить тебя снова!»");
+    }
+
     // --- СОХРАНЕНИЕ И ЗАГРУЗКА ---
     saveGame() {
         const data = {
@@ -1804,6 +1970,7 @@ class SkufLifeGame {
             playTimeSeconds: this.playTimeSeconds,
             unlockedAchievements: this.unlockedAchievements,
             dailyQuests: this.dailyQuests,
+            questsDateKey: this.questsDateKey,
             upgrades: {
                 hero: CONFIG.UPGRADES.hero.map(u => ({ id: u.id, bought: u.bought })),
                 room: CONFIG.UPGRADES.room.map(u => ({ id: u.id, bought: u.bought })),
@@ -1833,6 +2000,7 @@ class SkufLifeGame {
 
             const raw = localStorage.getItem('skuf_save_v2');
             if (!raw) {
+                this.checkDailyQuestsDate(true);
                 this.rollNextTier();
                 return;
             }
@@ -1856,7 +2024,9 @@ class SkufLifeGame {
             this.playTimeSeconds = data.playTimeSeconds || 0;
             this.unlockedAchievements = data.unlockedAchievements || [];
 
+            this.questsDateKey = data.questsDateKey || CONFIG.getMoscowDateKey();
             if (data.dailyQuests) this.dailyQuests = data.dailyQuests;
+            this.checkDailyQuestsDate();
 
             // Восстановление апгрейдов
             if (data.upgrades) {

@@ -77,63 +77,66 @@
 
     <!-- Верхний HUD -->
     <header id="status-bar" class="glass-panel">
+        <!-- Верхний ряд: Мотивация слева, кнопки сервисов справа -->
         <div class="hud-top-row">
             <div class="motivation-box">
-                <span class="label">МОТИВАЦИЯ</span>
-                <div id="motivation-counter">0</div>
+                <span class="label">💎 МОТИВАЦИЯ</span>
+                <div id="motivation-counter">0 🗿</div>
                 <div id="passive-counter">+0/сек</div>
             </div>
 
-            <div class="stamina-box">
-                <div class="stamina-label-row">
-                    <span class="label">ДЫХАЛКА</span>
-                    <span id="stamina-alert"></span>
-                </div>
-                <div id="stamina-track">
-                    <div id="stamina-bar"></div>
-                </div>
+            <!-- Быстрые компактные сервисные кнопки с яркими эмодзи -->
+            <div class="hud-quick-actions">
+                <button id="btn-open-boosts" class="hud-mini-btn boost-btn-glow" title="Бесплатные бусты">
+                    <span class="hud-emoji">🎁</span>
+                    <span class="hud-btn-caption">Буст</span>
+                    <span id="boosts-badge" class="hud-badge">4</span>
+                </button>
+                <button id="btn-open-leaderboard" class="hud-mini-btn" title="Таблица лидеров">
+                    <span class="hud-emoji">🏆</span>
+                    <span class="hud-btn-caption">Топ</span>
+                </button>
+                <button id="btn-open-roulette" class="hud-mini-btn roulette-btn-glow" title="Колесо Фортуны">
+                    <span class="hud-emoji">🎡</span>
+                    <span class="hud-btn-caption">Спин</span>
+                    <span id="roulette-badge" class="hud-badge-gold">FREE</span>
+                </button>
+                <button id="btn-toggle-sound" class="hud-mini-btn icon-only" title="Вкл/Выкл звук">
+                    <span id="sound-icon" class="hud-emoji">🔊</span>
+                </button>
+                <button id="btn-toggle-fx" class="hud-mini-btn icon-only" title="Спецэффекты FX">
+                    <span id="fx-icon" class="hud-emoji">✨</span>
+                </button>
             </div>
-
-            <!-- Кнопки быстрых сервисов -->
-            <button id="btn-open-boosts" class="hud-boost-btn" title="Рекламные бусты Яндекса">
-                <span class="hud-icon-text">БУСТ</span>
-                <span id="boosts-badge" class="hud-mini-badge">4</span>
-            </button>
-
-            <button id="btn-open-leaderboard" class="hud-service-btn" title="Таблица лидеров">
-                <span class="hud-icon-text">ТОП</span>
-            </button>
-
-            <button id="btn-open-roulette" class="hud-roulette-btn" title="Колесо Фортуны">
-                <span class="hud-icon-text">РУЛЕТКА</span>
-                <span id="roulette-badge" class="roulette-free-tag">СПИН</span>
-            </button>
-
-            <button id="btn-toggle-fx" class="hud-sound-btn" title="Спецэффекты: Вкл/Выкл">
-                <span id="fx-icon" class="hud-btn-text">FX</span>
-            </button>
-
-            <button id="btn-toggle-sound" class="hud-sound-btn" title="Вкл/Выкл звук">
-                <span id="sound-icon" class="hud-btn-text">ЗВУК</span>
-            </button>
         </div>
 
-        <!-- Навигационная панель -->
+        <!-- Ряд Дыхалки: широкий, четкий, никогда не перекрываемый -->
+        <div class="stamina-box">
+            <div class="stamina-label-row">
+                <span class="label">🫁 ДЫХАЛКА</span>
+                <span id="stamina-alert"></span>
+            </div>
+            <div id="stamina-track">
+                <div id="stamina-bar"></div>
+            </div>
+        </div>
+
+        <!-- Навигационная панель с 4 сочными кнопками -->
         <nav class="hud-nav-bar">
             <button id="btn-open-shop" class="hud-nav-btn highlight" title="Дерево улучшений">
-                <span class="nav-tag">UPG</span>
+                <span class="hud-emoji">🛠️</span>
                 <span class="btn-text">Прокачка</span>
             </button>
-            <button id="btn-open-quests" class="hud-nav-btn" title="Задания">
-                <span class="nav-tag">QST</span>
+            <button id="btn-open-quests" class="hud-nav-btn" title="Ежедневные задания">
+                <span class="hud-emoji">📋</span>
                 <span class="btn-text">Квесты</span>
             </button>
             <button id="btn-open-prestige" class="hud-nav-btn prestige-btn" title="Сансара / Перерождение">
-                <span class="nav-tag">RE</span>
+                <span class="hud-emoji">🌀</span>
                 <span class="btn-text">Сансара</span>
             </button>
             <button id="btn-open-stats" class="hud-nav-btn" title="Статистика и достижения">
-                <span class="nav-tag">INF</span>
+                <span class="hud-emoji">📊</span>
                 <span class="btn-text">Инфо</span>
             </button>
         </nav>
@@ -191,26 +194,26 @@
         </div>
     </main>
 
-    <!-- Расходники (Компактные слоты) -->
+    <!-- Расходники (Компактные слоты с сочными эмодзи) -->
     <div id="consumables-bar" class="glass-panel">
         <button class="item-slot" id="slot-beer" title="Балтика: растворить шар кликом">
-            <img src="item_beer.png" alt="Балтика" class="slot-img">
+            <span class="slot-emoji">🍺</span>
             <span class="slot-count" id="count-beer">x1</span>
         </button>
         <button class="item-slot" id="slot-script" title="Скрипт: стянуть две одинаковые мысли">
-            <img src="item_script.png" alt="Скрипт" class="slot-img">
+            <span class="slot-emoji">📜</span>
             <span class="slot-count" id="count-script">x1</span>
         </button>
         <button class="item-slot" id="slot-energy" title="Флэш: замедлить время">
-            <img src="item_energy.png" alt="Флэш" class="slot-img">
+            <span class="slot-emoji">⚡</span>
             <span class="slot-count" id="count-energy">x1</span>
         </button>
         <button class="item-slot" id="slot-bomb" title="Петарда: взорвать завал">
-            <span class="slot-text-badge">BOMB</span>
+            <span class="slot-emoji">💣</span>
             <span class="slot-count" id="count-bomb">x1</span>
         </button>
         <button class="item-slot" id="slot-magnet" title="Магнит: притянуть мысли">
-            <span class="slot-text-badge">MAG</span>
+            <span class="slot-emoji">🧲</span>
             <span class="slot-count" id="count-magnet">x1</span>
         </button>
     </div>
@@ -220,11 +223,11 @@
         <!-- Блок профиля и ранга -->
         <div class="sidebar-section profile-section">
             <div class="sidebar-header-row">
-                <span class="sidebar-title">ДОСЬЕ СКУФА</span>
+                <span class="sidebar-title">📋 ДОСЬЕ СКУФА</span>
                 <span id="side-rank-badge" class="crisis-tag">РАНГ 1</span>
             </div>
             <div class="sidebar-skuf-status">
-                <div class="skuf-status-title" id="side-rank-title">Тюбик с дивана</div>
+                <div class="skuf-status-title" id="side-rank-title">🛋️ Тюбик с дивана</div>
                 <div class="skuf-status-desc" id="side-rank-desc">До повышения: 1,500</div>
             </div>
         </div>
@@ -232,19 +235,19 @@
         <!-- Боевые характеристики -->
         <div class="sidebar-section metrics-section">
             <div class="side-metric-item">
-                <span class="side-metric-lbl">Урон тапа:</span>
+                <span class="side-metric-lbl">⚡ Урон тапа:</span>
                 <span class="side-metric-val" id="side-tap-power">+15</span>
             </div>
             <div class="side-metric-item">
-                <span class="side-metric-lbl">Доход/сек:</span>
+                <span class="side-metric-lbl">💰 Доход/сек:</span>
                 <span class="side-metric-val" id="side-passive-inc">+0/с</span>
             </div>
             <div class="side-metric-item">
-                <span class="side-metric-lbl">Комбо-бонус:</span>
+                <span class="side-metric-lbl">🔥 Комбо-бонус:</span>
                 <span class="side-metric-val" id="side-combo-stat">x1</span>
             </div>
             <div class="side-metric-item">
-                <span class="side-metric-lbl">Мусора сбито:</span>
+                <span class="side-metric-lbl">🧹 Мусора сбито:</span>
                 <span class="side-metric-val" id="side-trash-stat">0</span>
             </div>
         </div>
@@ -252,7 +255,7 @@
         <!-- Линейка эволюции мыслей -->
         <div class="sidebar-section evo-section">
             <div class="sidebar-header-row">
-                <span class="sidebar-title">ЭВОЛЮЦИЯ МЫСЛЕЙ</span>
+                <span class="sidebar-title">🧬 ЭВОЛЮЦИЯ МЫСЛЕЙ</span>
                 <span class="evo-count" id="side-evo-count">1/10</span>
             </div>
             <div class="evo-icons-row" id="side-evo-row"></div>
@@ -262,20 +265,20 @@
         <div class="sidebar-section actions-section">
             <div class="sidebar-actions-grid">
                 <button id="btn-side-guide" class="side-btn" title="Справка и правила игры">
-                    <span>Правила</span>
+                    <span>📖 Правила</span>
                 </button>
                 <button id="btn-side-leaderboard" class="side-btn" title="Таблица рекордов">
-                    <span>Лидерборд</span>
+                    <span>🏆 Лидерборд</span>
                 </button>
                 <button id="btn-side-stats" class="side-btn" title="Достижения и рекорды">
-                    <span>Ачивки</span>
+                    <span>🎖️ Ачивки</span>
                 </button>
                 <button id="btn-side-boosts" class="side-btn" title="Рекламные бусты">
-                    <span>Бусты</span>
+                    <span>🎁 Бусты</span>
                 </button>
             </div>
             <button id="btn-reset-game" class="btn-danger-reset" title="Сбросить все сохранения">
-                <span>Начать игру с нуля</span>
+                <span>🗑️ Начать игру с нуля</span>
             </button>
         </div>
     </aside>
@@ -286,13 +289,22 @@
             <span id="hero-quote">«Надо бы прибраться...»</span>
         </div>
         <div class="action-buttons-group">
-            <button id="btn-brain-shake" title="Встряска мозга: растолкать мысли">
-                <img src="item_shake.png" alt="Встряска" class="shake-icon">
-                <span id="btn-shake-label">Встряска</span>
+            <button id="btn-brain-shake" class="action-btn shake-btn" title="Встряска мозга: растолкать мысли">
+                <span class="action-icon">⚡</span>
+                <span id="btn-shake-label">Встряска мозга</span>
             </button>
-            <button id="btn-tilt-left" class="btn-tilt" title="Наклонить стакан влево (A / ←)">Влево</button>
-            <button id="btn-tilt-right" class="btn-tilt" title="Наклонить стакан вправо (D / →)">Вправо</button>
-            <button id="btn-toggle-gyro" class="btn-tilt" title="Гироскоп / Наклон телефона">Наклон</button>
+            <button id="btn-tilt-left" class="action-btn tilt-btn" title="Наклонить стакан влево (A / ←)">
+                <span class="action-icon">⤹</span>
+                <span>Влево</span>
+            </button>
+            <button id="btn-tilt-right" class="action-btn tilt-btn" title="Наклонить стакан вправо (D / →)">
+                <span>Вправо</span>
+                <span class="action-icon">⤸</span>
+            </button>
+            <button id="btn-toggle-gyro" class="action-btn gyro-btn" title="Гироскоп / Наклон телефона">
+                <span class="action-icon">📱</span>
+                <span>Наклон</span>
+            </button>
         </div>
     </footer>
 
@@ -387,7 +399,10 @@
                 <h3>ЕЖЕДНЕВНЫЕ КВЕСТЫ</h3>
                 <button id="btn-close-quests" class="close-x">✕</button>
             </div>
-            <p style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px;">Выполняйте задания, чтобы получать расходники и Мотивацию:</p>
+            <div class="quest-timer-row">
+                <span class="quest-timer-lbl">Обновление (00:00 МСК):</span>
+                <span id="quest-reset-timer" class="quest-timer-val">00:00:00</span>
+            </div>
             <div id="quests-container" class="cards-scroll"></div>
         </div>
     </div>

@@ -429,6 +429,32 @@ class UIManager {
         if (!container) return;
         container.innerHTML = '';
 
+        // Проверяем смену дня по МСК перед рендером
+        if (this.game && typeof this.game.checkDailyQuestsDate === 'function') {
+            this.game.checkDailyQuestsDate();
+        }
+
+        // Обновление таймера МСК
+        const timerEl = document.getElementById('quest-reset-timer');
+        if (timerEl) {
+            const msLeft = CONFIG.getMsUntilMoscowMidnight();
+            timerEl.textContent = CONFIG.formatTimeHMS(msLeft);
+            
+            if (this.questTimerInterval) clearInterval(this.questTimerInterval);
+            this.questTimerInterval = setInterval(() => {
+                if (!this.questsOverlay || !this.questsOverlay.classList.contains('active')) {
+                    clearInterval(this.questTimerInterval);
+                    return;
+                }
+                const ms = CONFIG.getMsUntilMoscowMidnight();
+                timerEl.textContent = CONFIG.formatTimeHMS(ms);
+                if (ms <= 1000 && this.game) {
+                    this.game.checkDailyQuestsDate(true);
+                    this.openQuests();
+                }
+            }, 1000);
+        }
+
         this.game.dailyQuests.forEach(q => {
             const card = document.createElement('div');
             card.className = 'quest-card';
