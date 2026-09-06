@@ -605,25 +605,30 @@ class SkufLifeGame {
         // Расчет урона тапа
         let baseDamage = 1;
         const heroUpgs = CONFIG.UPGRADES.hero;
-        if (heroUpgs[0]?.bought) baseDamage *= 2;
+        if (heroUpgs[0]?.bought) baseDamage *= 3;
         if (heroUpgs[1]?.bought) baseDamage *= 5;
         if (heroUpgs[3]?.bought) baseDamage *= 15;
-        if (heroUpgs[4]?.bought) baseDamage *= 50;
-        if (heroUpgs[5]?.bought) baseDamage *= 150;
-        if (heroUpgs[6]?.bought) baseDamage *= 600;
+        if (heroUpgs[4]?.bought) baseDamage *= 40;
+        if (heroUpgs[5]?.bought) baseDamage *= 120;
+        if (heroUpgs[6]?.bought) baseDamage *= 450;
+        if (heroUpgs[7]?.bought) baseDamage *= 1800;
+        if (heroUpgs[8]?.bought) baseDamage *= 8000;
 
-        // Шанс крита
+        // Шанс крита и множитель
         let isCrit = false;
-        if (heroUpgs[1]?.bought && Math.random() < 0.15) {
-            baseDamage *= 10;
+        const critChance = heroUpgs[8]?.bought ? 0.40 : (heroUpgs[6]?.bought ? 0.30 : (heroUpgs[1]?.bought ? 0.15 : 0));
+        const critMult = heroUpgs[8]?.bought ? 50 : (heroUpgs[3]?.bought ? 15 : 8);
+        if (critChance > 0 && Math.random() < critChance) {
+            baseDamage *= critMult;
             isCrit = true;
         }
 
-        baseDamage *= this.bossDamageMultiplier;
+        const bossHunterBonus = 1.0 + (CONFIG.PRESTIGE_PERKS[6]?.level || 0) * 0.5;
+        baseDamage *= this.bossDamageMultiplier * bossHunterBonus;
         const finalDamage = Math.max(1, Math.floor(baseDamage));
 
         this.dealBossDamage(finalDamage);
-        this.addMotivation(Math.max(1, Math.floor(finalDamage * 0.5)));
+        this.addMotivation(Math.max(1, Math.floor(finalDamage * 0.4)));
 
         this.roomRenderer.triggerSkufBounce();
         AudioCtrl.playSkufGrunt(isCrit);
@@ -634,7 +639,7 @@ class SkufLifeGame {
         this.spawnFloatingText(
             this.canvas.width / 2 + (Math.random() - 0.5) * 60,
             this.roomHeight - 35,
-            isCrit ? `КРИТ -${finalDamage}! 💥` : `-${finalDamage}`,
+            isCrit ? `КРИТ -${CONFIG.formatNumber(finalDamage)}! 💥` : `-${CONFIG.formatNumber(finalDamage)}`,
             isCrit ? '#ff2a85' : '#ffd700'
         );
     }
@@ -747,17 +752,19 @@ class SkufLifeGame {
 
         // Награда Мотивации
         const tierConfig = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
-        let reward = tierConfig.score * Math.max(1, this.combo * 0.5) * this.comboMultiplier * this.globalIncomeMultiplier;
-        if (this.isFeverActive) reward *= 3; // В режиме Fever x3 очков!
+        const feverMult = this.isFeverActive ? (CONFIG.UPGRADES.brain[8]?.bought ? 5 : 3) : 1;
+        let reward = tierConfig.score * Math.max(1, this.combo * 0.4) * this.comboMultiplier * this.globalIncomeMultiplier * feverMult;
         
-        if (this.hasGoldenCat && tier === 1) reward += 500;
+        if (this.hasGoldenCat && tier === 1) reward += 1500;
         this.addMotivation(reward);
 
         // Урон по боссу от слияния
-        let bossDmg = tierConfig.score * 2.5 * Math.max(1, this.combo * 0.4);
-        if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 2; // Третий глаз
-        if (this.isFeverActive) bossDmg *= 3; // В режиме Fever x3 урона!
-        bossDmg *= this.bossDamageMultiplier;
+        let bossDmg = tierConfig.score * 2.5 * Math.max(1, this.combo * 0.35);
+        if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 3; // Третий глаз Сигмы: x3 урон
+        bossDmg *= feverMult;
+        
+        const bossHunterBonus = 1.0 + (CONFIG.PRESTIGE_PERKS[6]?.level || 0) * 0.5;
+        bossDmg *= this.bossDamageMultiplier * bossHunterBonus;
         this.dealBossDamage(Math.floor(bossDmg));
         this.spawnFloatingText(midX, midY + 16, `-${CONFIG.formatNumber(bossDmg)} HP ⚔️`, '#f43f5e');
 
@@ -777,8 +784,14 @@ class SkufLifeGame {
         }
 
         // Очистка мусора рядом
-        const blastRadius = this.hasChainBlast && tier >= 5 ? 160 : (tier >= 4 ? 90 : 45);
+        const blastRadius = this.hasChainBlast && tier >= 5 ? 170 : (tier >= 4 ? 95 : 50);
         this.physics.cleanseNearbyGarbage(midX, midY, blastRadius);
+
+        // Квантовый резонанс: слияния T6+ сжигают весь мусор
+        if (CONFIG.UPGRADES.brain[7]?.bought && tier >= 6) {
+            this.physics.cleanseNearbyGarbage(this.canvas.width / 2, this.canvas.height / 2, 800);
+            this.ui.setQuote("⚛️ КВАНТОВЫЙ РЕЗОНАНС: Мусор расщеплён!");
+        }
 
         // Пивной щит: Скуф сжигает весь мусор
         if (this.hasBeerShield && tier === 8) {
@@ -804,10 +817,13 @@ class SkufLifeGame {
         } else {
             // Максимальный уровень (Гигачад) дает мега-взрыв
             AudioCtrl.playEndorphinFanfare();
-            this.addMotivation(10000);
-            this.dealBossDamage(15000);
+            const gigachadBonus = 250000;
+            const gigachadBossDmg = 500000 * bossHunterBonus;
+            this.addMotivation(gigachadBonus);
+            this.dealBossDamage(gigachadBossDmg);
             this.roomRenderer.triggerEndorphinFlash();
-            this.spawnFloatingText(midX, midY, `+${CONFIG.formatNumber(10000)} БАЗЫ! 🌌`, "#ff2a85");
+            this.ui.triggerScreenShake();
+            this.spawnFloatingText(midX, midY, `+${CONFIG.formatNumber(gigachadBonus)} БАЗЫ! 🌌`, "#ff2a85");
         }
 
         // Вспышка эндорфинов при высоких тирах
@@ -931,36 +947,45 @@ class SkufLifeGame {
         const roomUpgs = CONFIG.UPGRADES.room;
         const careerUpgs = CONFIG.UPGRADES.career;
 
-        if (roomUpgs[0]?.bought) income += 5;
-        if (roomUpgs[1]?.bought) income += 25;
-        if (roomUpgs[2]?.bought) income += 90;
-        if (roomUpgs[3]?.bought) income += 350;
-        if (roomUpgs[4]?.bought) income += 1400;
-        if (roomUpgs[5]?.bought) income += 6500;
-        if (roomUpgs[6]?.bought) income += 30000;
-        if (roomUpgs[7]?.bought) income += 150000;
+        // Пассивный доход комнаты
+        if (roomUpgs[0]?.bought) income += 12;
+        if (roomUpgs[1]?.bought) income += 65;
+        if (roomUpgs[2]?.bought) income += 320;
+        if (roomUpgs[3]?.bought) income += 1600;
+        if (roomUpgs[4]?.bought) income += 8500;
+        if (roomUpgs[5]?.bought) income += 45000;
+        if (roomUpgs[6]?.bought) income += 250000;
+        if (roomUpgs[7]?.bought) income += 1500000;
+        if (roomUpgs[8]?.bought) income += 12000000;
 
-        if (careerUpgs[0]?.bought) income += 15;
-        if (careerUpgs[1]?.bought) income += 75;
-        if (careerUpgs[2]?.bought) income += 300;
-        if (careerUpgs[3]?.bought) income += 1200;
-        if (careerUpgs[4]?.bought) income += 5000;
-        if (careerUpgs[5]?.bought) income += 22000;
-        if (careerUpgs[6]?.bought) income += 100000;
+        // Пассивный доход карьеры
+        if (careerUpgs[0]?.bought) income += 25;
+        if (careerUpgs[1]?.bought) income += 180;
+        if (careerUpgs[2]?.bought) income += 950;
+        if (careerUpgs[3]?.bought) income += 5000;
+        if (careerUpgs[4]?.bought) income += 30000;
+        if (careerUpgs[5]?.bought) income += 180000;
+        if (careerUpgs[6]?.bought) income += 1100000;
+        if (careerUpgs[7]?.bought) income += 7500000;
+        if (careerUpgs[8]?.bought) income += 55000000;
 
         // Апгрейды мозга
-        if (CONFIG.UPGRADES.brain[0]?.bought) this.physics.expandSkull(18);
-        if (CONFIG.UPGRADES.brain[1]?.bought) this.dropCooldownMs = 260;
-        if (CONFIG.UPGRADES.brain[2]?.bought) this.shakeCooldownMax = 6;
-        if (CONFIG.UPGRADES.brain[4]?.bought) this.physics.expandSkull(42);
+        let skullExpand = 0;
+        if (CONFIG.UPGRADES.brain[0]?.bought) skullExpand += 18;
+        if (CONFIG.UPGRADES.brain[4]?.bought) skullExpand += 26;
+        if (CONFIG.PRESTIGE_PERKS[5]?.level > 0) skullExpand += 25 * CONFIG.PRESTIGE_PERKS[5].level;
+        this.physics.expandSkull(skullExpand);
+
+        this.dropCooldownMs = CONFIG.UPGRADES.brain[1]?.bought ? 240 : 380;
+        this.shakeCooldownMax = CONFIG.UPGRADES.brain[2]?.bought ? 5 : 12;
 
         this.passiveIncome = income;
     }
 
     // --- ПРЕСТИЖ / САНСАРА ---
     calculatePrestigeGain() {
-        const base = Math.floor(Math.sqrt(this.totalMotivationEarned / 1200));
-        const bossBonus = this.bossesDefeated * 2;
+        const base = Math.floor(Math.sqrt(this.totalMotivationEarned / 40000));
+        const bossBonus = this.bossesDefeated * 3;
         return Math.max(1, base + bossBonus);
     }
 
@@ -1106,7 +1131,7 @@ class SkufLifeGame {
     // --- ХАЙП / FEVER MODE ---
     triggerFeverMode() {
         this.isFeverActive = true;
-        this.feverTimer = this.feverDuration;
+        this.feverTimer = CONFIG.UPGRADES.brain[8]?.bought ? 22 : 12;
         this.feverCharge = 100;
         AudioCtrl.playFever();
         this.ui.triggerScreenShake();
@@ -1261,10 +1286,34 @@ class SkufLifeGame {
                 this.addMotivation(this.passiveIncome * dt);
             }
 
+            // Авто-атака Кибернетической Руки (hero[4])
+            if (CONFIG.UPGRADES.hero[4]?.bought) {
+                this.cyberPunchTimer = (this.cyberPunchTimer || 0) + dt;
+                if (this.cyberPunchTimer >= 1.5) {
+                    this.cyberPunchTimer = 0;
+                    const punchDmg = Math.floor(40 * this.bossDamageMultiplier * (1 + (CONFIG.PRESTIGE_PERKS[6]?.level || 0) * 0.5));
+                    this.dealBossDamage(punchDmg);
+                    this.spawnFloatingText(this.canvas.width / 2 + 30, this.roomHeight - 20, `🤖 -${CONFIG.formatNumber(punchDmg)}`, '#00f0ff');
+                }
+            }
+
+            // Пассивная Аура Гигачада (hero[7])
+            if (CONFIG.UPGRADES.hero[7]?.bought) {
+                const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
+                const auraDmg = Math.max(1, Math.floor(currentBoss.hp * 0.005 * dt));
+                this.dealBossDamage(auraDmg);
+            }
+
+            // Титановый экзоскелет (hero[5]): дыхалка не падает до нуля
+            if (CONFIG.UPGRADES.hero[5]?.bought && this.stamina < 25) {
+                this.stamina = 25;
+                this.isExhausted = false;
+            }
+
             // Восстановление дыхалки
             if (this.stamina < this.maxStamina) {
                 let recovery = this.staminaRecoveryRate;
-                if (CONFIG.UPGRADES.hero[2]?.bought) recovery *= 1.8;
+                if (CONFIG.UPGRADES.hero[2]?.bought) recovery *= 2.0;
                 this.stamina = Math.min(this.maxStamina, this.stamina + recovery * dt);
                 if (this.stamina > 30) this.isExhausted = false;
             }
@@ -1425,7 +1474,7 @@ class SkufLifeGame {
         ctx.restore();
     }
 
-    // --- ОТРИСОВКА МЫСЛИ С ДИНАМИЧЕСКИМ РАЗМЕРОМ ФОТО И ОПТИМИЗАЦИЕЙ FX ---
+    // --- ОТРИСОВКА МЫСЛИ С ВЕКТОРНОЙ МОДЕЛЬЮ ПЕРСОНАЖА ---
     drawThoughtBall(ctx, x, y, radius, tier, isAim = false) {
         const conf = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
         ctx.save();
@@ -1433,109 +1482,17 @@ class SkufLifeGame {
 
         const fx = this.fxEnabled;
 
-        // 1. Свечение (только при включенном FX для исключения просадок FPS на слабых устройствах)
+        // 1. Свечение (при включенном FX)
         if (fx && (tier >= 6 || isAim)) {
             ctx.shadowColor = conf.glow || '#3b82f6';
-            ctx.shadowBlur = isAim ? 10 : 8;
+            ctx.shadowBlur = isAim ? 12 : 8;
         }
 
-        // 2. Базовый цветной круг предмета
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-        ctx.fillStyle = conf.color;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        const img = this.charImages[tier];
-        if (img && img.complete && img.naturalWidth > 0) {
-            const nw = img.naturalWidth;
-            const nh = img.naturalHeight;
-
-            // Динамический расчет размера под каждое фото:
-            // Нормирование по диагонали гарантирует, что любое фото (квадратное,
-            // вертикальное или горизонтальное) любого исходного разрешения полностью
-            // помещается внутрь круга, имеет одинаковый визуальный размер и аккуратный отступ!
-            const photoDiag = Math.sqrt(nw * nw + nh * nh) || 1;
-            // Коэффициент 1.54 гарантирует, что расстояние от центра до ЛЮБОГО угла фото
-            // составляет 0.77 * radius. Фото полностью помещается в круг с 23% цветной рамкой!
-            const targetDiag = radius * 1.54;
-            const scale = targetDiag / photoDiag;
-            const dw = nw * scale;
-            const dh = nh * scale;
-            const cornerR = Math.max(3, Math.min(dw, dh) * 0.16);
-
-            // Отрисовка фото со скругленными уголками целиком внутри круга
-            ctx.save();
-            ctx.beginPath();
-            if (ctx.roundRect) {
-                ctx.roundRect(-dw / 2, -dh / 2, dw, dh, cornerR);
-            } else {
-                ctx.rect(-dw / 2, -dh / 2, dw, dh);
-            }
-            ctx.clip();
-            ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
-            ctx.restore();
-
-            // Тонкая аккуратная окантовка вокруг фото
-            if (fx) {
-                ctx.save();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                if (ctx.roundRect) {
-                    ctx.roundRect(-dw / 2, -dh / 2, dw, dh, cornerR);
-                } else {
-                    ctx.rect(-dw / 2, -dh / 2, dw, dh);
-                }
-                ctx.stroke();
-                ctx.restore();
-            }
-        } else {
-            ctx.font = `${Math.floor(radius * 0.92)}px Arial, sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(conf.emoji, 0, 1);
-        }
-
-        // 3. Объемный сферический блик для 3D-глубины (включается только при FX)
-        if (fx) {
-            const shine = ctx.createRadialGradient(-radius * 0.35, -radius * 0.35, 1, 0, 0, radius);
-            shine.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
-            shine.addColorStop(0.3, 'rgba(255, 255, 255, 0.06)');
-            shine.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
-            shine.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
-            ctx.beginPath();
-            ctx.arc(0, 0, radius, 0, Math.PI * 2);
-            ctx.fillStyle = shine;
-            ctx.fill();
-        }
-
-        // 4. Окантовка круга
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-        ctx.lineWidth = isAim ? 2.5 : 1.6;
-        ctx.strokeStyle = isAim ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.45)';
-        ctx.stroke();
-
-        // 5. Мини-бейдж с номером тира
-        if (radius >= 18) {
-            const badgeR = Math.max(7, Math.floor(radius * 0.28));
-            const bx = radius * 0.6;
-            const by = radius * 0.6;
-            ctx.beginPath();
-            ctx.arc(bx, by, badgeR, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(15, 10, 30, 0.88)';
-            ctx.fill();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#ffd700';
-            ctx.stroke();
-
-            ctx.font = `bold ${Math.max(8, Math.floor(badgeR * 1.1))}px system-ui, sans-serif`;
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(tier.toString(), bx, by);
-        }
+        // 2. Векторная отрисовка модели персонажа (чистый Canvas без внешних картинок)
+        CONFIG.drawCharacterVector(ctx, tier, radius, {
+            fx: fx,
+            isAim: isAim
+        });
 
         ctx.restore();
     }

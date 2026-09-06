@@ -532,29 +532,29 @@ class RoomRenderer {
         // Золотая аура Гигачада
         if (hasGigachadAura) {
             ctx.shadowColor = "#ffd700";
-            ctx.shadowBlur = 20;
-            ctx.strokeStyle = "rgba(255, 215, 0, 0.4)";
-            ctx.lineWidth = 2;
+            ctx.shadowBlur = 24;
+            ctx.strokeStyle = "rgba(255, 215, 0, 0.5)";
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.arc(0, -22, 36, 0, Math.PI * 2);
+            ctx.arc(0, -22, 38, 0, Math.PI * 2);
             ctx.stroke();
             ctx.shadowBlur = 0;
         }
 
-        const skufImg = (game.charImages && game.charImages[8]) ? game.charImages[8] : null;
-        if (skufImg && skufImg.complete && skufImg.naturalWidth > 0) {
-            ctx.drawImage(skufImg, -34, -54, 68, 68);
-        } else {
-            ctx.font = "44px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText("🛋️", 0, -20);
-        }
+        // Процедурный каноничный Скуф на диване (Векторная графика!)
+        this.drawSkufSitting(ctx, {
+            isExhausted: game.isExhausted,
+            isIdle: this.idleTimer > 2.5,
+            bounce: this.skufBounce,
+            hasGigachad: hasGigachadAura,
+            stage: this.roomStage,
+            ambientTime: this.ambientTime
+        });
 
         // Индикатор одышки
         if (game.isExhausted) {
             ctx.font = "16px Arial";
-            ctx.fillText("💦", 22, -42);
+            ctx.fillText("💦", 22, -48);
         }
         ctx.restore();
 
@@ -1013,6 +1013,277 @@ class RoomRenderer {
         ctx.font = "bold 8px system-ui, sans-serif";
         ctx.fillStyle = `rgba(186, 230, 253, ${zAlpha})`;
         ctx.fillText("z", 8, -9);
+
+        ctx.restore();
+    }
+
+    // 6. Процедурный каноничный Скуф на диване
+    drawSkufSitting(ctx, options = {}) {
+        const isExhausted = !!options.isExhausted;
+        const isIdle = !!options.isIdle;
+        const bounce = options.bounce || 1.0;
+        const hasGigachad = !!options.hasGigachad;
+        const stage = options.stage || 0;
+        const ambientTime = options.ambientTime || 0;
+
+        ctx.save();
+
+        // 1. Ноги в домашних синих трениках / шортах
+        ctx.fillStyle = stage >= 3 ? "#1e293b" : "#1d4ed8";
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(-24, -4, 20, 16, 6);
+            ctx.roundRect(4, -4, 20, 16, 6);
+        } else {
+            ctx.rect(-24, -4, 20, 16);
+            ctx.rect(4, -4, 20, 16);
+        }
+        ctx.fill();
+
+        // Домашние тапочки
+        ctx.fillStyle = "#334155";
+        ctx.beginPath();
+        ctx.ellipse(-14, 11, 8, 4.5, 0, 0, Math.PI * 2);
+        ctx.ellipse(14, 11, 8, 4.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Тело и пивное пузико
+        ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
+        ctx.beginPath();
+        ctx.ellipse(0, -14, 26, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Майка-алкоголичка (или золотой халат при хай-ранге)
+        const shirtGrad = ctx.createLinearGradient(0, -38, 0, -2);
+        if (stage >= 3 || hasGigachad) {
+            shirtGrad.addColorStop(0, "#fbbf24");
+            shirtGrad.addColorStop(1, "#b45309");
+        } else {
+            shirtGrad.addColorStop(0, "#f8fafc");
+            shirtGrad.addColorStop(0.7, "#e2e8f0");
+            shirtGrad.addColorStop(1, "#cbd5e1");
+        }
+        ctx.fillStyle = shirtGrad;
+        
+        // Торс (округлый силуэт с пузом)
+        ctx.beginPath();
+        ctx.ellipse(0, -18, 23, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Складка на пузе
+        ctx.strokeStyle = stage >= 3 ? "rgba(255, 255, 255, 0.35)" : "rgba(148, 163, 184, 0.45)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(0, -14, 14, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+
+        // Вырез майки
+        ctx.strokeStyle = stage >= 3 ? "#ffd700" : "#94a3b8";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, -32, 11, 0, Math.PI);
+        ctx.stroke();
+
+        // Шея и грудь
+        ctx.fillStyle = "#fed7aa";
+        ctx.beginPath();
+        ctx.arc(0, -32, 10, 0, Math.PI);
+        ctx.fill();
+
+        // Золотая цепочка (при гигачаде или престиже)
+        if (hasGigachad || stage >= 2) {
+            ctx.strokeStyle = "#ffd700";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(0, -29, 9, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+            // Медальон
+            ctx.fillStyle = "#ffd700";
+            ctx.beginPath();
+            ctx.arc(0, -20, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // 3. Руки Скуфа
+        // Левая рука с пультом от телевизора
+        ctx.fillStyle = "#fed7aa";
+        ctx.beginPath();
+        ctx.ellipse(-24, -18, 7, 14, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // Черный пульт
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(-35, -22, 13, 7.5);
+        // Красный диод пульта (мигает)
+        ctx.fillStyle = Math.sin(ambientTime * 6) > 0 ? "#ef4444" : "#991b1b";
+        ctx.beginPath();
+        ctx.arc(-34, -18.5, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Правая рука держит холодную баночку напитка
+        ctx.fillStyle = "#fed7aa";
+        ctx.beginPath();
+        ctx.ellipse(24, -18, 7, 14, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // Баночка с золотой этикеткой
+        const canGrad = ctx.createLinearGradient(23, -27, 33, -27);
+        canGrad.addColorStop(0, "#eab308");
+        canGrad.addColorStop(0.5, "#fef08a");
+        canGrad.addColorStop(1, "#ca8a04");
+        ctx.fillStyle = canGrad;
+        ctx.fillRect(23, -27, 10, 15);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(23, -29, 10, 2.5);
+
+        // 4. Голова и лицо Скуфа
+        const headY = -42;
+        // Двойной подбородок
+        ctx.fillStyle = "#fdba74";
+        ctx.beginPath();
+        ctx.ellipse(0, headY + 12, 15, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Круглая голова
+        const skinGrad = ctx.createRadialGradient(-3, headY - 4, 4, 0, headY, 20);
+        skinGrad.addColorStop(0, "#ffedd5");
+        skinGrad.addColorStop(0.8, "#fed7aa");
+        skinGrad.addColorStop(1, "#fdba74");
+        ctx.fillStyle = skinGrad;
+        ctx.beginPath();
+        ctx.ellipse(0, headY, 18, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 3-дневная щетина / бородка
+        ctx.fillStyle = "rgba(100, 116, 139, 0.35)";
+        ctx.beginPath();
+        ctx.arc(0, headY + 5, 13, 0.1, Math.PI - 0.1);
+        ctx.fill();
+
+        // Волосы: редеющие по бокам с залысиной по центру
+        ctx.fillStyle = "#451a03";
+        ctx.beginPath();
+        ctx.ellipse(-16, headY - 8, 4, 10, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(16, headY - 8, 4, 10, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        // Зачес на залысине
+        ctx.strokeStyle = "#451a03";
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.arc(-4, headY - 14, 10, -0.8, 0.6);
+        ctx.stroke();
+
+        // Корона Гигачада на голове (если открыт Гигачад или стадия 4)
+        if (hasGigachad || stage >= 4) {
+            ctx.fillStyle = "#ffd700";
+            ctx.beginPath();
+            ctx.moveTo(-12, headY - 16);
+            ctx.lineTo(-14, headY - 26);
+            ctx.lineTo(-6, headY - 21);
+            ctx.lineTo(0, headY - 29);
+            ctx.lineTo(6, headY - 21);
+            ctx.lineTo(14, headY - 26);
+            ctx.lineTo(12, headY - 16);
+            ctx.closePath();
+            ctx.fill();
+            ctx.strokeStyle = "#b45309";
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            // Рубин
+            ctx.fillStyle = "#ef4444";
+            ctx.beginPath();
+            ctx.arc(0, headY - 20, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Брови
+        ctx.strokeStyle = "#451a03";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        if (isExhausted) {
+            ctx.moveTo(-11, headY - 6);
+            ctx.lineTo(-3, headY - 8);
+            ctx.moveTo(3, headY - 8);
+            ctx.lineTo(11, headY - 6);
+        } else if (bounce > 1.1) {
+            ctx.moveTo(-11, headY - 10);
+            ctx.lineTo(-3, headY - 9);
+            ctx.moveTo(3, headY - 9);
+            ctx.lineTo(11, headY - 10);
+        } else {
+            ctx.moveTo(-11, headY - 7);
+            ctx.lineTo(-3, headY - 7);
+            ctx.moveTo(3, headY - 7);
+            ctx.lineTo(11, headY - 7);
+        }
+        ctx.stroke();
+
+        // Глаза
+        if (isIdle && !isExhausted) {
+            // Закрытые спящие глаза
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.arc(-7, headY - 3, 4, 0.2, Math.PI - 0.2);
+            ctx.arc(7, headY - 3, 4, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+        } else if (isExhausted) {
+            // Прищуренные уставшие глаза
+            ctx.strokeStyle = "#1e293b";
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(-10, headY - 3);
+            ctx.lineTo(-4, headY - 3);
+            ctx.moveTo(4, headY - 3);
+            ctx.lineTo(10, headY - 3);
+            ctx.stroke();
+        } else {
+            // Открытые глаза с белками и зрачками
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.ellipse(-7, headY - 3, 4.5, 3.5, 0, 0, Math.PI * 2);
+            ctx.ellipse(7, headY - 3, 4.5, 3.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Зрачки (смотрят в сторону экрана ТВ)
+            ctx.fillStyle = "#1e293b";
+            ctx.beginPath();
+            ctx.arc(-8.5, headY - 3, 2, 0, Math.PI * 2);
+            ctx.arc(5.5, headY - 3, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Блики в глазах
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(-9, headY - 4, 0.8, 0, Math.PI * 2);
+            ctx.arc(5, headY - 4, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Нос картошкой
+        ctx.fillStyle = "#fca5a5";
+        ctx.beginPath();
+        ctx.ellipse(0, headY + 1, 3.5, 2.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(225, 29, 72, 0.35)";
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+
+        // Рот
+        ctx.strokeStyle = "#7f1d1d";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        if (bounce > 1.1) {
+            ctx.fillStyle = "#991b1b";
+            ctx.arc(0, headY + 6, 5, 0, Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        } else if (isExhausted) {
+            ctx.fillStyle = "#991b1b";
+            ctx.ellipse(0, headY + 7, 3, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.arc(0, headY + 5, 5, 0.2, Math.PI - 0.2);
+            ctx.stroke();
+        }
 
         ctx.restore();
     }

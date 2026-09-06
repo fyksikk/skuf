@@ -243,40 +243,61 @@ body {
 
 .evo-ball-chip {
     aspect-ratio: 1;
-    border-radius: 8px;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
     cursor: pointer;
-    transition: transform 0.15s, border-color 0.15s;
+    overflow: hidden;
+    padding: 3px;
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 
 .evo-ball-chip:hover {
-    transform: scale(1.08);
-    border-color: #00f0ff;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
+    z-index: 2;
 }
 
 .evo-ball-chip.locked {
-    opacity: 0.35;
-    filter: grayscale(1);
+    opacity: 0.4;
+    filter: grayscale(0.85);
+}
+
+.evo-chip-img {
+    width: 100%;
+    height: 100%;
+    max-width: 38px;
+    max-height: 38px;
+    object-fit: cover;
+    border-radius: 6px;
+    pointer-events: none;
+    display: block;
+}
+
+.evo-ball-chip.locked .evo-chip-img {
+    filter: brightness(0.4) contrast(1.2);
 }
 
 .evo-chip-emoji {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1;
+    pointer-events: none;
 }
 
 .evo-chip-tier {
-    font-size: 8px;
+    font-size: 8.5px;
     font-weight: 800;
     color: #cbd5e1;
     position: absolute;
     bottom: 1px;
     right: 3px;
+    text-shadow: 0 1px 3px #000, 0 0 2px #000;
+    pointer-events: none;
 }
 
 .sidebar-actions-grid {

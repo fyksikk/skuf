@@ -446,6 +446,21 @@
             </div>
         </div>
     </div>
+
+    <!-- Модалка: Подтверждение полного сброса игры -->
+    <div id="reset-overlay" class="modal-backdrop">
+        <div class="modal-box alert glass-panel" style="max-width: 360px;">
+            <h2 class="alert-title" style="color: #ef4444; margin-bottom: 8px;">⚠️ СБРОС ПРОГРЕССА</h2>
+            <p style="color: #cbd5e1; font-size: 12.5px; line-height: 1.5; margin-bottom: 16px;">
+                Вы действительно хотите начать игру с чистого нуля?<br>
+                Все открытые мысли, улучшения, мебель и рекорды будут обнулены.
+            </p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button id="btn-cancel-reset" class="side-btn" style="padding: 10px 8px; font-size: 12px; font-weight: 700;">ОТМЕНА</button>
+                <button id="btn-confirm-reset" class="btn-danger-reset" style="padding: 10px 8px; font-size: 12px; font-weight: 800; background: #dc2626; color: #ffffff;">ДА, СБРОСИТЬ 💥</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="js/config.js"></script>

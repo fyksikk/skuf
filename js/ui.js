@@ -84,6 +84,9 @@ class UIManager {
         this.btnResetGame = document.getElementById('btn-reset-game');
         this.btnSideGuide = document.getElementById('btn-side-guide');
         this.btnSideStats = document.getElementById('btn-side-stats');
+        this.resetOverlay = document.getElementById('reset-overlay');
+        this.btnCancelReset = document.getElementById('btn-cancel-reset');
+        this.btnConfirmReset = document.getElementById('btn-confirm-reset');
 
         this.btnShake = document.getElementById('btn-brain-shake');
         this.btnShakeLabel = document.getElementById('btn-shake-label');
@@ -165,8 +168,22 @@ class UIManager {
             this.openStats();
         });
         this.btnResetGame?.addEventListener('click', () => {
-            if (confirm("⚠️ Вы уверены, что хотите сбросить весь прогресс и начать игру с чистого нуля?\nВсе открытые улучшения, статистика и рекорды будут обнулены.")) {
+            if (this.resetOverlay) {
+                this.resetOverlay.classList.add('active');
+            } else {
                 this.game.resetGame(true);
+            }
+        });
+        this.btnCancelReset?.addEventListener('click', () => {
+            this.resetOverlay?.classList.remove('active');
+        });
+        this.btnConfirmReset?.addEventListener('click', () => {
+            this.resetOverlay?.classList.remove('active');
+            this.game.resetGame(true);
+        });
+        this.resetOverlay?.addEventListener('click', (e) => {
+            if (e.target === this.resetOverlay) {
+                this.resetOverlay.classList.remove('active');
             }
         });
 
@@ -274,11 +291,12 @@ class UIManager {
 
     updateNextThought(tier) {
         const conf = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
-        this.nextThoughtCircle.style.background = conf.color;
-        const img = this.game.charImages && this.game.charImages[tier];
-        if (img && img.complete && img.naturalWidth > 0) {
-            this.nextThoughtCircle.innerHTML = `<img src="${img.src}" style="max-width: 80%; max-height: 80%; object-fit: contain; border-radius: 4px; display: block;" alt="${conf.name}">`;
+        this.nextThoughtCircle.style.background = 'transparent';
+        const dataUrl = CONFIG.getCharacterDataURL(tier, 64);
+        if (dataUrl) {
+            this.nextThoughtCircle.innerHTML = `<img src="${dataUrl}" style="width: 100%; height: 100%; object-fit: contain; display: block;" alt="${conf.name}">`;
         } else {
+            this.nextThoughtCircle.style.background = conf.color;
             this.nextThoughtCircle.textContent = conf.emoji;
         }
     }
@@ -932,12 +950,25 @@ class UIManager {
                 const isUnlocked = t <= highestTier;
                 const chip = document.createElement('div');
                 chip.className = `evo-ball-chip ${isUnlocked ? 'unlocked' : 'locked'}`;
-                chip.title = `T${t}: ${conf.name} (${isUnlocked ? 'Открыто' : 'Ещё не создано'})`;
+                chip.title = `Тир ${t}: ${conf.name} (${isUnlocked ? 'Открыто!' : 'Ещё не создано'})`;
                 chip.style.borderColor = isUnlocked ? conf.color : 'rgba(255, 255, 255, 0.1)';
+                
+                const dataUrl = CONFIG.getCharacterDataURL(t, 48);
+                const emoji = conf.emoji || "❓";
                 chip.innerHTML = `
-                    <span class="evo-chip-emoji">${conf.badge}</span>
+                    <img src="${dataUrl}" alt="${conf.name}" class="evo-chip-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';" />
+                    <span class="evo-chip-emoji" style="display: none;">${emoji}</span>
                     <span class="evo-chip-tier" style="color: ${isUnlocked ? conf.color : '#64748b'}">T${t}</span>
                 `;
+
+                chip.addEventListener('click', () => {
+                    if (isUnlocked) {
+                        this.setQuote(`«Мысль T${t}: ${conf.name} (+${conf.score} очков при слиянии)!»`);
+                    } else {
+                        this.setQuote(`«Мысль T${t} ещё не открыта. Объединяйте сферы в стакане!»`);
+                    }
+                });
+
                 this.sideEvoRow.appendChild(chip);
             }
         }

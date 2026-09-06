@@ -1,3 +1,8 @@
+/**
+ * BrainPhysics - физический движок стакана мыслей на базе Matter.js
+ * Реализует структуру createPhysicsWorld, collisionStart + collisionActive,
+ * limitVelocity, enableSleeping: true, positionIterations: 10, velocityIterations: 8.
+ */
 class BrainPhysics {
     constructor(canvas, onMerge, onGarbageDestroyed) {
         this.canvas = canvas;
@@ -6,16 +11,22 @@ class BrainPhysics {
         this.mergeQueue = [];
         this.cupWidthOffset = 0;
         this.cupTopY = 180;
-        
+        this.maxSpeed = 22; // Защита от туннелирования шаров на высокой скорости
+
         const { Engine } = Matter;
         this.engine = Engine.create({ 
-            gravity: { x: 0, y: 1.25 },
-            positionIterations: 8,
+            enableSleeping: true,
+            gravity: { x: 0, y: 1.35, scale: 0.001 },
+            positionIterations: 10,
             velocityIterations: 8
         });
         this.world = this.engine.world;
         
         this.walls = [];
+        this.leftWall = null;
+        this.rightWall = null;
+        this.floorBody = null;
+
         this.buildCupWalls();
         this.setupCollisionEvents();
     }
@@ -26,18 +37,16 @@ class BrainPhysics {
     }
 
     getCupBounds() {
-        const w = this.canvas.width;
-        // Базовый просторный отступ стакана от краев экрана
+        const w = this.canvas.width || 360;
+        const h = this.canvas.height || 640;
         const baseMargin = 14;
-        // Максимальное расширение оставляет не менее 4px безопасного отступа от краев холста
         const maxExpand = Math.max(0, baseMargin - 4);
-        // Масштабируем offset так, чтобы даже большие значения перков не вылезали за экран
         const expansion = Math.min(maxExpand, Math.max(0, (this.cupWidthOffset || 0) * 0.5));
         
         let leftX = Math.max(8, baseMargin - expansion);
         let rightX = Math.min(w - 8, w - (baseMargin - expansion));
 
-        // На широком экране ПК центрируем стакан и задаем комфортную ширину
+        // На широких экранах центрируем стакан
         const maxCupW = 600 + (this.cupWidthOffset || 0);
         if (w > maxCupW + 40) {
             const extra = Math.floor((w - maxCupW) / 2);
@@ -50,7 +59,7 @@ class BrainPhysics {
             rightX,
             width: rightX - leftX,
             topY: this.cupTopY,
-            bottomY: this.canvas.height - 6
+            bottomY: h - 6
         };
     }
 
@@ -68,42 +77,41 @@ class BrainPhysics {
     buildCupWalls() {
         const { Bodies, World } = Matter;
         
-        if (this.walls.length > 0) {
+        if (this.walls && this.walls.length > 0) {
             World.remove(this.world, this.walls);
             this.walls = [];
         }
         
-        const w = this.canvas.width;
-        const h = this.canvas.height;
+        const w = this.canvas.width || 360;
+        const h = this.canvas.height || 640;
         const bounds = this.getCupBounds();
         const topY = bounds.topY;
-        const thick = 80; // Утолщенные надежные стены, чтобы шары никогда не проскакивали
+        const thick = 90; // Утолщенные стены исключают вылет шаров за пределы колбы
         
         const leftX = bounds.leftX;
         const rightX = bounds.rightX;
-        const wallH = Math.max(100, h - topY + 60);
-        
-        this.walls = [
-            // Пол стакана
-            Bodies.rectangle(w / 2, h + thick / 2 - 4, w + 200, thick, { 
-                isStatic: true, 
-                friction: 0.6,
-                restitution: 0.1
-            }),
-            // Левая стена
-            Bodies.rectangle(leftX - thick / 2, topY + wallH / 2 - 10, thick, wallH, { 
-                isStatic: true, 
-                friction: 0.25,
-                restitution: 0.2
-            }),
-            // Правая стена
-            Bodies.rectangle(rightX + thick / 2, topY + wallH / 2 - 10, thick, wallH, { 
-                isStatic: true, 
-                friction: 0.25,
-                restitution: 0.2
-            })
-        ];
-        
+        const wallH = Math.max(120, h - topY + 80);
+        const floorY = bounds.bottomY;
+
+        this.floorBody = Bodies.rectangle(w / 2, floorY + thick / 2, w + 300, thick, { 
+            isStatic: true, 
+            friction: 0.55,
+            restitution: 0.12
+        });
+
+        this.leftWall = Bodies.rectangle(leftX - thick / 2, topY + wallH / 2 - 10, thick, wallH, { 
+            isStatic: true, 
+            friction: 0.25,
+            restitution: 0.18
+        });
+
+        this.rightWall = Bodies.rectangle(rightX + thick / 2, topY + wallH / 2 - 10, thick, wallH, { 
+            isStatic: true, 
+            friction: 0.25,
+            restitution: 0.18
+        });
+
+        this.walls = [this.floorBody, this.leftWall, this.rightWall];
         World.add(this.world, this.walls);
     }
 
@@ -113,49 +121,69 @@ class BrainPhysics {
     }
 
     setupCollisionEvents() {
-        Matter.Events.on(this.engine, 'collisionStart', (evt) => {
-            evt.pairs.forEach(pair => {
+        const handlePairs = (pairs) => {
+            if (!pairs) return;
+            for (let i = 0; i < pairs.length; i++) {
+                const pair = pairs[i];
                 const a = pair.bodyA;
                 const b = pair.bodyB;
                 
-                if (a.tier && b.tier && a.tier === b.tier && !a.isDead && !b.isDead) {
+                if (a && b && a.tier && b.tier && a.tier === b.tier && !a.isDead && !b.isDead) {
                     a.isDead = true;
                     b.isDead = true;
                     this.mergeQueue.push({ a, b });
                 }
-            });
-        });
+            }
+        };
+
+        // Подписка на collisionStart и collisionActive в точном соответствии с физической спецификацией
+        Matter.Events.on(this.engine, 'collisionStart', (evt) => handlePairs(evt.pairs));
+        Matter.Events.on(this.engine, 'collisionActive', (evt) => handlePairs(evt.pairs));
         
         Matter.Events.on(this.engine, 'afterUpdate', () => {
             while (this.mergeQueue.length > 0) {
                 const pair = this.mergeQueue.shift();
-                this.onMerge(pair.a, pair.b);
+                if (pair.a && pair.b) {
+                    this.onMerge(pair.a, pair.b);
+                }
             }
         });
     }
 
     createThought(x, y, tier) {
         const conf = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
-        
-        const body = Matter.Bodies.circle(x, y, conf.radius, {
-            restitution: 0.18,
-            friction: 0.4,
-            frictionAir: 0.008,
-            density: 0.003 + (tier * 0.0004)
+        const bounds = this.getCupBounds();
+        const r = conf.radius;
+        const clampedX = Math.max(bounds.leftX + r + 2, Math.min(bounds.rightX - r - 2, x));
+        const clampedY = Math.min(y, bounds.bottomY - r);
+
+        // Создание сферического тела с оптимизацией сна (sleepThreshold: 45) и реалистичной упругостью
+        const body = Matter.Bodies.circle(clampedX, clampedY, r, {
+            restitution: 0.16,
+            friction: 0.35,
+            frictionAir: 0.006,
+            density: 0.0025 + (tier * 0.0003),
+            sleepThreshold: 45
         });
         
         body.tier = tier;
         body.isDead = false;
         
-        Matter.World.add(this.world, body);
+        Matter.Composite.add(this.world, body);
         return body;
     }
 
     createGarbage(x, y, garbageData) {
-        const body = Matter.Bodies.circle(x, y, garbageData.radius, {
-            restitution: 0.12,
-            friction: 0.55,
-            density: 0.005
+        const bounds = this.getCupBounds();
+        const r = garbageData.radius || 20;
+        const clampedX = Math.max(bounds.leftX + r + 2, Math.min(bounds.rightX - r - 2, x));
+        const clampedY = Math.min(y, bounds.bottomY - r);
+
+        const body = Matter.Bodies.circle(clampedX, clampedY, r, {
+            restitution: 0.10,
+            friction: 0.60,
+            density: 0.005,
+            sleepThreshold: 45
         });
         
         body.isGarbage = true;
@@ -163,8 +191,38 @@ class BrainPhysics {
         body.garbageColor = garbageData.color;
         body.isDead = false;
         
-        Matter.World.add(this.world, body);
+        Matter.Composite.add(this.world, body);
         return body;
+    }
+
+    addBody(body) {
+        Matter.Composite.add(this.world, body);
+    }
+
+    removeBody(body) {
+        body.isDead = true;
+        Matter.Composite.remove(this.world, body);
+    }
+
+    setVelocity(body, x, y) {
+        Matter.Body.setVelocity(body, { x, y });
+    }
+
+    setPosition(body, x, y) {
+        Matter.Body.setPosition(body, { x, y });
+    }
+
+    setAngle(body, angle) {
+        Matter.Body.setAngle(body, angle);
+    }
+
+    limitVelocity(body, maxSpeed = this.maxSpeed) {
+        if (!body || body.speed <= maxSpeed) return;
+        const ratio = maxSpeed / (body.speed || 1);
+        Matter.Body.setVelocity(body, {
+            x: body.velocity.x * ratio,
+            y: body.velocity.y * ratio
+        });
     }
 
     cleanseNearbyGarbage(midX, midY, radius = 100) {
@@ -176,7 +234,7 @@ class BrainPhysics {
                 
                 if (dist < radius) {
                     b.isDead = true;
-                    Matter.World.remove(this.world, b);
+                    Matter.Composite.remove(this.world, b);
                     this.onGarbageDestroyed(b.position.x, b.position.y, b.garbageName);
                 }
             }
@@ -196,8 +254,10 @@ class BrainPhysics {
                     const dy = bB.position.y - bA.position.y;
                     const dist = Math.hypot(dx, dy);
                     
-                    if (dist > 15 && dist < 220) {
-                        const force = 0.0025;
+                    if (dist > 12 && dist < 240) {
+                        const force = 0.003;
+                        Matter.Sleeping.set(bA, false);
+                        Matter.Sleeping.set(bB, false);
                         
                         Matter.Body.applyForce(bA, bA.position, { 
                             x: (dx / dist) * force, 
@@ -218,18 +278,20 @@ class BrainPhysics {
         const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
         
         bodies.forEach(b => {
+            Matter.Sleeping.set(b, false);
             Matter.Body.applyForce(b, b.position, {
-                x: (Math.random() - 0.5) * 0.14,
-                y: -0.18 - Math.random() * 0.1
+                x: (Math.random() - 0.5) * 0.16,
+                y: -0.22 - Math.random() * 0.12
             });
         });
     }
 
-    explode(centerX, centerY, radius = 140, power = 0.22) {
+    explode(centerX, centerY, radius = 150, power = 0.26) {
         const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
         const destroyed = [];
 
         bodies.forEach(b => {
+            Matter.Sleeping.set(b, false);
             const dx = b.position.x - centerX;
             const dy = b.position.y - centerY;
             const dist = Math.hypot(dx, dy);
@@ -237,21 +299,19 @@ class BrainPhysics {
             if (dist < radius) {
                 if (b.isGarbage) {
                     b.isDead = true;
-                    Matter.World.remove(this.world, b);
+                    Matter.Composite.remove(this.world, b);
                     this.onGarbageDestroyed(b.position.x, b.position.y, b.garbageName);
                     destroyed.push(b);
                 } else if (dist < radius * 0.55 && b.tier && b.tier <= 2) {
-                    // Мелкие шары в эпицентре взрываются в энергию
                     b.isDead = true;
-                    Matter.World.remove(this.world, b);
+                    Matter.Composite.remove(this.world, b);
                     destroyed.push(b);
                 } else {
-                    // Остальные шары мощно отбрасывает ударной волной
                     const normDist = Math.max(15, dist);
                     const force = power * (1 - dist / radius);
                     Matter.Body.applyForce(b, b.position, {
-                        x: (dx / normDist) * force + (Math.random() - 0.5) * 0.05,
-                        y: (dy / normDist) * force - 0.12
+                        x: (dx / normDist) * force + (Math.random() - 0.5) * 0.06,
+                        y: (dy / normDist) * force - 0.14
                     });
                 }
             }
@@ -271,8 +331,10 @@ class BrainPhysics {
                     const dy = bB.position.y - bA.position.y;
                     const dist = Math.hypot(dx, dy);
 
-                    if (dist > 10 && dist < 350) {
-                        const force = 0.008;
+                    if (dist > 10 && dist < 380) {
+                        const force = 0.009;
+                        Matter.Sleeping.set(bA, false);
+                        Matter.Sleeping.set(bB, false);
                         Matter.Body.applyForce(bA, bA.position, {
                             x: (dx / dist) * force,
                             y: (dy / dist) * force
@@ -296,6 +358,10 @@ class BrainPhysics {
 
         for (let i = 0; i < bodies.length; i++) {
             const b = bodies[i];
+            
+            // Ограничение максимальной скорости во избежание артефактов
+            this.limitVelocity(b, this.maxSpeed);
+
             const r = b.circleRadius || 18;
             let corrected = false;
             let nx = b.position.x;
@@ -335,16 +401,21 @@ class BrainPhysics {
     }
 
     microBounce(centerX) {
-        const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic);
+        const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
         bodies.forEach(b => {
-            const dx = (centerX - b.position.x) * 0.00003;
-            const forceY = -0.008 * (b.mass || 1);
+            Matter.Sleeping.set(b, false);
+            const dx = (centerX - b.position.x) * 0.00004;
+            const forceY = -0.01 * (b.mass || 1);
             Matter.Body.applyForce(b, b.position, { x: dx, y: forceY });
         });
     }
 
-    update() {
-        Matter.Engine.update(this.engine, 1000 / 60);
+    stepPhysics(dt) {
+        Matter.Engine.update(this.engine, dt || (1000 / 60));
         this.keepBodiesInBounds();
+    }
+
+    update() {
+        this.stepPhysics(1000 / 60);
     }
 }
