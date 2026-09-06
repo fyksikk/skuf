@@ -75,7 +75,6 @@ class SkufLifeGame {
         // Квесты (Полноценный пул с синхронизацией по 00:00 МСК)
         this.questsDateKey = CONFIG.getMoscowDateKey();
         this.dailyQuests = [];
-        this.initDailyQuestsPool();
 
         // Механика сброса мыслей
         this.nextTier = 1;
@@ -195,7 +194,7 @@ class SkufLifeGame {
         x,
         y
     ) {
-        const now = performance.now();
+        const now = Date.now();
 
         const readyAt =
             this.roomInteractionReadyAt[id] || 0;
@@ -618,7 +617,6 @@ class SkufLifeGame {
             }
         };
         btnShake?.addEventListener('pointerdown', triggerShake);
-        btnShake?.addEventListener('click', triggerShake);
 
         // Кнопки Наклона (Тилт стакана влево/вправо) с поддержкой тач-зажатия и клика
         const btnTiltLeft = document.getElementById('btn-tilt-left');
@@ -654,9 +652,6 @@ class SkufLifeGame {
         btnTiltRight?.addEventListener('pointerdown', applyTiltRight);
         btnTiltRight?.addEventListener('pointerup', releaseTiltRight);
         btnTiltRight?.addEventListener('pointercancel', releaseTiltRight);
-        btnTiltRight?.addEventListener('touchstart', applyTiltRight, { passive: false });
-        btnTiltRight?.addEventListener('touchend', releaseTiltRight, { passive: false });
-        btnTiltRight?.addEventListener('click', applyTiltRight);
 
         // Кнопка переключения Гироскопа
         document.getElementById('btn-toggle-gyro')?.addEventListener('click', () => {
@@ -697,7 +692,9 @@ class SkufLifeGame {
         document.getElementById('slot-energy')?.addEventListener('click', () => {
             if (this.items.energy > 0) {
                 this.items.energy--;
-                this.flashActiveUntil = performance.now() + this.flashDuration;
+                this.flashActiveUntil =
+                    Date.now() +
+                    this.flashDuration;
                 this.physics.engine.timing.timeScale = 0.5;
                 AudioCtrl.playEndorphinFanfare();
                 this.ui.updateConsumables(this.items);
@@ -715,7 +712,8 @@ class SkufLifeGame {
         document.getElementById('slot-magnet')?.addEventListener('click', () => {
             if ((this.items.magnet || 0) > 0) {
                 this.items.magnet--;
-                this.magnetActiveUntil = performance.now() + 6000;
+                this.magnetActiveUntil =
+                    Date.now() + 6000;
                 AudioCtrl.playEndorphinFanfare();
                 this.physics.applySuperMagneticAttraction();
                 this.ui.updateConsumables(this.items);
@@ -3218,6 +3216,9 @@ class SkufLifeGame {
             bossHp:
                 this.bossHp,
 
+            bossBreakTimer:
+                this.bossBreakTimer,
+
             rentTimer:
                 this.rentTimer,
 
@@ -3265,6 +3266,9 @@ class SkufLifeGame {
 
             totalTaps:
                 this.totalTaps,
+
+            dangerTimer:
+                this.dangerTimer,
 
             totalSpins:
                 this.totalSpins,
@@ -3479,6 +3483,17 @@ class SkufLifeGame {
             this.bossHp =
                 data.bossHp ??
                 currentBoss.hp;
+
+            this.dangerTimer =
+                data.dangerTimer ?? 0;
+
+            this.bossBreakTimer =
+                data.bossBreakTimer ??
+                (
+                    this.bossHp <= 0
+                        ? 0.5
+                        : 0
+                );
 
             this.rentTimer =
                 data.rentTimer ??
