@@ -39,7 +39,6 @@ class UIManager {
 
         this.modalObserver = observer;
 
-        syncPauseState();
     }
 
     initDOMElements() {
@@ -557,7 +556,6 @@ class UIManager {
             prestigeBtn.disabled = false;
             prestigeBtn.classList.remove('disabled');
         }
-        document.getElementById('prestige-estimate').textContent = `При сбросе получите: +${CONFIG.formatNumber(estimate)} 🛋️ Золотых Диванов`;
 
         const container = document.getElementById('prestige-perks-container');
         if (container) {

@@ -116,14 +116,6 @@ class SkufLifeGame {
         this.lastTapTime = 0;
         this.lastTapPos = { x: 0, y: 0 };
 
-        // Загрузка спрайтов
-        this.charImages = {};
-        for (let i = 1; i <= 10; i++) {
-            const img = new Image();
-            img.src = `char_${i}.png`;
-            this.charImages[i] = img;
-        }
-
         // Физика
         this.physics = new BrainPhysics(
             this.canvas,
@@ -1153,7 +1145,10 @@ class SkufLifeGame {
 
         // Награда Мотивации
         const tierConfig = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
-        const feverScoreMult = this.isFeverActive ? (CONFIG.UPGRADES.brain[8]?.bought ? 3.0 : 2.0) : 1.0;
+        const feverScoreMult =
+            this.isFeverActive
+                ? this.getFeverScoreMultiplier()
+                : 1;
         let reward = tierConfig.score * Math.max(1, this.combo * 0.4) * this.comboMultiplier * this.globalIncomeMultiplier * feverScoreMult;
         
         if (this.hasGoldenCat && tier === 1) reward += 1500;
@@ -1287,6 +1282,12 @@ class SkufLifeGame {
         this.items.magnet = (this.items.magnet || 0) + 1;
         
         // Сбалансированный шанс колеса фортуны (35% шанс или каждый 3-й босс)
+        const conveyorLevel =
+            CONFIG.PRESTIGE_PERKS[7]?.level || 0;
+
+        const conveyorMultiplier =
+            1 + conveyorLevel * 0.25;
+
         const spinChance =
             Math.min(
                 0.85,
@@ -1669,69 +1670,149 @@ class SkufLifeGame {
     }
 
     triggerPrestige() {
-        const gain = this.calculatePrestigeGain();
+        const gain =
+            this.calculatePrestigeGain();
+
         if (gain <= 0) {
             this.ui.setQuote(
-                "«Сначала одолей хотя бы одного босса!»"
+                "«Сначала победи хотя бы одного босса!»"
             );
 
             return false;
         }
+
         this.prestigeCouches += gain;
         this.prestigeLevel++;
+
+        // Текущий run
         this.runMotivationEarned = 0;
         this.runBossesDefeated = 0;
 
-        // Сброс обычных апгрейдов и забега
-        Object.values(CONFIG.UPGRADES).forEach(cat => cat.forEach(u => u.bought = false));
+        // Обычные upgrades
+        Object
+            .values(CONFIG.UPGRADES)
+            .forEach(category => {
+                category.forEach(
+                    upg => {
+                        upg.bought = false;
+                    }
+                );
+            });
+
+        // Run relics исчезают
         this.activeRelics = [];
+
         this.motivation = 0;
+
         this.day = 1;
         this.currentBossIndex = 1;
-        this.bossHp = CONFIG.BOSSES[1].hp;
-        this.rentTimer = this.rentTimeMax;
 
-        // Применение престижных бонусов
-        if (CONFIG.PRESTIGE_PERKS[2]?.level > 0) {
-            this.maxStamina = 100 * (1 + CONFIG.PRESTIGE_PERKS[2].level);
-            this.stamina = this.maxStamina;
-        }
-        if (CONFIG.PRESTIGE_PERKS[4]?.level > 0) {
-            this.autoDropEnabled = true;
-            this.ui.updateAutoDropBadge(true);
-        }
+        this.bossHp =
+            CONFIG.BOSSES[1].hp;
 
-        // Очистка поля
-        const bodies = Matter.Composite.allBodies(this.physics.world).filter(b => !b.isStatic);
-        bodies.forEach(b => Matter.World.remove(this.physics.world, b));
+        this.rentTimer =
+            this.rentTimeMax;
+
+        this.combo = 0;
+        this.comboTimer = 0;
+
+        this.feverCharge = 0;
+        this.feverTimer = 0;
+        this.isFeverActive = false;
+
+        this.dangerTimer = 0;
+
+        // P5
+        this.autoDropEnabled =
+            (CONFIG.PRESTIGE_PERKS[4]?.level || 0) >
+            0;
 
         this.recalculatePassives();
+
+        this.stamina =
+            this.maxStamina;
+
+        this.isExhausted = false;
+
+        this.physics.clearAllBodies();
+
+        this.seedInitialThoughts();
+
+        this.rollNextTier();
+
+        this.ui.updateAutoDropBadge(
+            this.autoDropEnabled
+        );
+
+        this.ui.updateRelics([]);
+
+        this.ui.prestigeOverlay
+            .classList
+            .remove('active');
+
+        this.updateHUD(true);
+
         this.saveGame();
-        this.ui.prestigeOverlay.classList.remove('active');
-        this.ui.setQuote("«САНСАРА СОВЕРШЕНА! Скуф родился заново с новыми силами!»");
-        this.updateHUD();
+
+        this.ui.setQuote(
+            `«САНСАРА! +${CONFIG.formatNumber(gain)} 🛋️»`
+        );
+
+        return true;
     }
 
     buyPrestigePerk(id) {
-        const perk = CONFIG.PRESTIGE_PERKS.find(p => p.id === id);
-        if (!perk || perk.level >= perk.max) return false;
+        const perk =
+            CONFIG.PRESTIGE_PERKS.find(
+                p => p.id === id
+            );
 
-        if (this.prestigeCouches >= perk.cost) {
-            this.prestigeCouches -= perk.cost;
-            perk.level++;
-            
-            if (id === 'p5') {
-                this.autoDropEnabled = true;
-                this.ui.updateAutoDropBadge(true);
-            }
-            if (id === 'p6') {
-                this.physics.expandSkull(30 * perk.level);
-            }
-
-            this.saveGame();
-            return true;
+        if (
+            !perk ||
+            perk.level >= perk.max
+        ) {
+            return false;
         }
-        return false;
+
+        if (
+            this.prestigeCouches <
+            perk.cost
+        ) {
+            return false;
+        }
+
+        this.prestigeCouches -=
+            perk.cost;
+
+        perk.level++;
+
+        // Автодроп — отдельное состояние
+        if (id === 'p5') {
+            this.autoDropEnabled = true;
+        }
+
+        // Все остальные характеристики
+        // считаются только здесь
+        this.recalculatePassives();
+
+        // После покупки лёгких
+        // сразу заполняем новый максимум
+        if (id === 'p3') {
+            this.stamina =
+                this.maxStamina;
+
+            this.isExhausted = false;
+        }
+
+        this.ui.updateAutoDropBadge(
+            this.autoDropEnabled
+        );
+
+        this.updateHUD(true);
+
+        this.saveGame();
+
+        return true;
     }
 
     // --- КВЕСТЫ (СИНХРОНИЗАЦИЯ ПО 00:00 МСК) ---
@@ -2028,50 +2109,6 @@ class SkufLifeGame {
 
     // --- ЦИКЛ ИГРЫ ---
     gameLoop(now) {
-        this.uiTickAccumulator += dt;
-        if (this.uiTickAccumulator >= 0.1) {
-            this.uiTickAccumulator = 0;
-
-            this.ui.updateStamina(
-                this.stamina,
-                this.maxStamina,
-                this.isExhausted
-            );
-
-            this.ui.updateRouletteTimer(
-                this.rouletteTimer,
-                this.freeSpinsAvailable
-            );
-
-            this.ui.updateFever(
-                this.feverCharge,
-                this.isFeverActive,
-                this.feverTimer,
-                this.getFeverScoreMultiplier()
-            );
-
-            const phaseIndex =
-                Math.min(
-                    5,
-                    Math.ceil(this.day / 4)
-                );
-
-            const phase =
-                CONFIG.PHASES[phaseIndex] ||
-                CONFIG.PHASES[1];
-
-            this.ui.updateRent(
-                this.day,
-                Math.max(0, this.rentTimer),
-                phase.bgTitle
-            );
-
-            this.updateRankSystem();
-
-            if (this.hudDirty) {
-                this.updateHUD(true);
-            }
-        }
         this.rafId = null;
 
         if (
@@ -2100,7 +2137,57 @@ class SkufLifeGame {
             this.playTimeSeconds += dt;
 
             // -----------------------------------------
-            // FIXED 60Hz PHYSICS
+            // UI — обновляем примерно 10 раз в секунду
+            // -----------------------------------------
+
+            this.uiTickAccumulator += dt;
+
+            if (this.uiTickAccumulator >= 0.1) {
+                this.uiTickAccumulator = 0;
+
+                this.ui.updateStamina(
+                    this.stamina,
+                    this.maxStamina,
+                    this.isExhausted
+                );
+
+                this.ui.updateRouletteTimer(
+                    this.rouletteTimer,
+                    this.freeSpinsAvailable
+                );
+
+                this.ui.updateFever(
+                    this.feverCharge,
+                    this.isFeverActive,
+                    this.feverTimer,
+                    this.getFeverScoreMultiplier()
+                );
+
+                const phaseIndex =
+                    Math.min(
+                        5,
+                        Math.ceil(this.day / 4)
+                    );
+
+                const phase =
+                    CONFIG.PHASES[phaseIndex] ||
+                    CONFIG.PHASES[1];
+
+                this.ui.updateRent(
+                    this.day,
+                    Math.max(0, this.rentTimer),
+                    phase.bgTitle
+                );
+
+                this.updateRankSystem();
+
+                if (this.hudDirty) {
+                    this.updateHUD(true);
+                }
+            }
+
+            // -----------------------------------------
+            // FIXED 60 Hz PHYSICS
             // -----------------------------------------
 
             this.physicsAccumulatorMs += frameMs;
@@ -2119,16 +2206,11 @@ class SkufLifeGame {
                 );
 
                 if (this.hasMagnetRelic) {
-                    this.physics
-                        .applyMagneticAttraction();
+                    this.physics.applyMagneticAttraction();
                 }
 
-                if (
-                    this.magnetActiveUntil >
-                    now
-                ) {
-                    this.physics
-                        .applySuperMagneticAttraction();
+                if (this.magnetActiveUntil > now) {
+                    this.physics.applySuperMagneticAttraction();
                 }
 
                 this.physicsAccumulatorMs -=
@@ -2137,25 +2219,12 @@ class SkufLifeGame {
                 physicsSteps++;
             }
 
-            // Не пытаемся догнать 300 кадров
-            // после сильного лага
             if (
-                physicsSteps ===
-                    maxPhysicsSteps &&
+                physicsSteps === maxPhysicsSteps &&
                 this.physicsAccumulatorMs >=
                     this.fixedPhysicsStepMs
             ) {
                 this.physicsAccumulatorMs = 0;
-            }
-
-            // дальше остальные игровые таймеры...
-            if (this.hasMagnetRelic) {
-                this.physics.applyMagneticAttraction();
-            }
-
-            // Действие Сигма-Магнита
-            if (this.magnetActiveUntil > now) {
-                this.physics.applySuperMagneticAttraction();
             }
 
             // Обновление таймеров
@@ -2195,10 +2264,6 @@ class SkufLifeGame {
                     this.ui.setQuote("🎡 Бесплатный спин Колеса Фортуны готов!");
                 }
             }
-            this.ui.updateRouletteTimer(this.rouletteTimer, this.freeSpinsAvailable);
-
-            // Обновление Ранга
-            this.updateRankSystem();
 
             // Пассивный доход
             if (this.passiveIncome > 0) {
@@ -2491,8 +2556,19 @@ class SkufLifeGame {
             this.ctx.restore();
 
             // Превью мысли на прицеле с Aspect-Ratio Cover
-            const conf = CONFIG.TIERS[this.nextTier] || CONFIG.TIERS[1];
-            this.drawThoughtBall(this.ctx, this.aimX, this.dropY, conf.radius, this.nextTier, true);
+            const previewRadius =
+                this.physics.getTierRadius(
+                    this.nextTier
+                );
+
+            this.drawThoughtBall(
+                this.ctx,
+                this.aimX,
+                this.dropY,
+                previewRadius,
+                this.nextTier,
+                true
+            );
         }
 
         // 4. Отрисовка тел мыслей и мусора
@@ -2606,14 +2682,39 @@ class SkufLifeGame {
     // --- ПОЛНЫЙ СБРОС СТАТИСТИКИ И ПРОГРЕССА (СТАРТ С ЧИСТОГО НУЛЯ) ---
     resetGame(manual = true) {
         try {
-            localStorage.removeItem('skuf_save_v2');
-            localStorage.removeItem('skuf_save_v1');
-            localStorage.removeItem('skuf_stats_v1');
+            const keysToRemove = [
+                CONFIG.STORAGE_KEYS.SAVE,
+                CONFIG.STORAGE_KEYS.LEGACY_SAVE_V2,
+                CONFIG.STORAGE_KEYS.LEGACY_SAVE_V1,
+                CONFIG.STORAGE_KEYS.STATS,
+                CONFIG.STORAGE_KEYS.HIGH_SCORE,
+                CONFIG.STORAGE_KEYS.LOCAL_LB
+            ];
+
+            for (const key of keysToRemove) {
+                localStorage.removeItem(key);
+            }
         } catch (e) {
             console.warn("Error clearing storage", e);
         }
 
         // Обнуление всех числовых и игровых показателей
+        this.totalTaps = 0;
+        this.totalSpins = 0;
+
+        this.runMotivationEarned = 0;
+        this.runBossesDefeated = 0;
+
+        this.tierCreatedCounts = {};
+
+        this.highestTierUnlocked = 1;
+
+        this.rouletteTimer = 90;
+
+        this.feverTimer = 0;
+
+        this.dangerTimer = 0;
+        this.bossBreakTimer = 0;
         this.motivation = 0;
         this.totalMotivationEarned = 0;
         this.passiveIncome = 0;
@@ -2642,7 +2743,12 @@ class SkufLifeGame {
         this.activeRelics = [];
         this.highestTierUnlocked = 1;
         this.activeConsumableMode = null;
-        this.dailyQuests = this.initDailyQuests ? this.initDailyQuests() : [];
+        this.questsDateKey =
+            CONFIG.getMoscowDateKey();
+
+        this.dailyQuests = [];
+
+        this.initDailyQuestsPool();
 
         // Сброс дерева апгрейдов во всех 4 ветках
         if (CONFIG.UPGRADES) {
@@ -2660,10 +2766,8 @@ class SkufLifeGame {
         if (this.physics) {
             this.physics.clearAllBodies();
             const bounds = this.physics.getCupBounds();
-            setTimeout(() => {
-                this.physics.createThought(bounds.leftX + bounds.width * 0.38, this.dropY + 40, 1);
-                this.physics.createThought(bounds.leftX + bounds.width * 0.62, this.dropY + 40, 1);
-            }, 120);
+            this.physics.clearAllBodies();
+            this.seedInitialThoughts();
         }
 
         this.recalculatePassives();
@@ -2785,77 +2889,269 @@ class SkufLifeGame {
     // --- СОХРАНЕНИЕ И ЗАГРУЗКА ---
     saveGame() {
         const data = {
-            version: 2,
-            motivation: this.motivation,
-            totalMotivationEarned: this.totalMotivationEarned,
-            day: this.day,
-            currentBossIndex: this.currentBossIndex,
-            bossHp: this.bossHp,
-            prestigeCouches: this.prestigeCouches,
-            prestigeLevel: this.prestigeLevel,
-            autoDropEnabled: this.autoDropEnabled,
-            freeSpinsAvailable: this.freeSpinsAvailable,
-            items: this.items,
-            totalMerges: this.totalMerges,
-            gigachadsCreated: this.gigachadsCreated,
-            bossesDefeated: this.bossesDefeated,
-            trashDestroyed: this.trashDestroyed,
-            maxCombo: this.maxCombo,
-            playTimeSeconds: this.playTimeSeconds,
-            unlockedAchievements: this.unlockedAchievements,
-            dailyQuests: this.dailyQuests,
-            questsDateKey: this.questsDateKey,
+            version: 3,
+
+            motivation:
+                this.motivation,
+
+            totalMotivationEarned:
+                this.totalMotivationEarned,
+
+            runMotivationEarned:
+                this.runMotivationEarned,
+
+            day:
+                this.day,
+
+            currentBossIndex:
+                this.currentBossIndex,
+
+            bossHp:
+                this.bossHp,
+
+            rentTimer:
+                this.rentTimer,
+
+            stamina:
+                this.stamina,
+
+            isExhausted:
+                this.isExhausted,
+
+            prestigeCouches:
+                this.prestigeCouches,
+
+            prestigeLevel:
+                this.prestigeLevel,
+
+            autoDropEnabled:
+                this.autoDropEnabled,
+
+            freeSpinsAvailable:
+                this.freeSpinsAvailable,
+
+            rouletteTimer:
+                this.rouletteTimer,
+
+            items:
+                { ...this.items },
+
+            totalMerges:
+                this.totalMerges,
+
+            gigachadsCreated:
+                this.gigachadsCreated,
+
+            bossesDefeated:
+                this.bossesDefeated,
+
+            runBossesDefeated:
+                this.runBossesDefeated,
+
+            trashDestroyed:
+                this.trashDestroyed,
+
+            maxCombo:
+                this.maxCombo,
+
+            totalTaps:
+                this.totalTaps,
+
+            totalSpins:
+                this.totalSpins,
+
+            tierCreatedCounts:
+                { ...this.tierCreatedCounts },
+
+            highestTierUnlocked:
+                this.highestTierUnlocked || 1,
+
+            playTimeSeconds:
+                this.playTimeSeconds,
+
+            unlockedAchievements:
+                [...this.unlockedAchievements],
+
+            activeRelicIds:
+                this.activeRelics
+                    .map(r => r.id),
+
+            feverCharge:
+                this.feverCharge,
+
+            nextTier:
+                this.nextTier,
+
+            dailyQuests:
+                this.dailyQuests,
+
+            questsDateKey:
+                this.questsDateKey,
+
             upgrades: {
-                hero: CONFIG.UPGRADES.hero.map(u => ({ id: u.id, bought: u.bought })),
-                room: CONFIG.UPGRADES.room.map(u => ({ id: u.id, bought: u.bought })),
-                brain: CONFIG.UPGRADES.brain.map(u => ({ id: u.id, bought: u.bought })),
-                career: CONFIG.UPGRADES.career.map(u => ({ id: u.id, bought: u.bought }))
+                hero:
+                    CONFIG.UPGRADES.hero.map(
+                        u => ({
+                            id: u.id,
+                            bought: u.bought
+                        })
+                    ),
+
+                room:
+                    CONFIG.UPGRADES.room.map(
+                        u => ({
+                            id: u.id,
+                            bought: u.bought
+                        })
+                    ),
+
+                brain:
+                    CONFIG.UPGRADES.brain.map(
+                        u => ({
+                            id: u.id,
+                            bought: u.bought
+                        })
+                    ),
+
+                career:
+                    CONFIG.UPGRADES.career.map(
+                        u => ({
+                            id: u.id,
+                            bought: u.bought
+                        })
+                    )
             },
-            prestigePerks: CONFIG.PRESTIGE_PERKS.map(p => ({ id: p.id, level: p.level })),
-            lastSavedTime: Date.now()
+
+            prestigePerks:
+                CONFIG.PRESTIGE_PERKS.map(
+                    p => ({
+                        id: p.id,
+                        level: p.level
+                    })
+                ),
+
+            worldState:
+                this.physics
+                    ?.serializeDynamicBodies?.() ||
+                [],
+
+            lastSavedTime:
+                Date.now()
         };
 
         try {
-            localStorage.setItem('skuf_save_v2', JSON.stringify(data));
+            localStorage.setItem(
+                CONFIG.STORAGE_KEYS.SAVE,
+                JSON.stringify(data)
+            );
         } catch (e) {
-            console.warn("Storage full or unavailable", e);
+            console.warn(
+                'Save failed:',
+                e
+            );
         }
+    }
+
+    migrateSave(data) {
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+
+        const migrated = {
+            ...data
+        };
+
+        const oldVersion =
+            migrated.version || 1;
+
+        if (oldVersion < 3) {
+            migrated.rentTimer ??=
+                this.rentTimeMax;
+
+            migrated.stamina ??=
+                100;
+
+            migrated.totalTaps ??=
+                0;
+
+            migrated.totalSpins ??=
+                0;
+
+            migrated.runMotivationEarned ??=
+                0;
+
+            migrated.runBossesDefeated ??=
+                0;
+
+            migrated.tierCreatedCounts ??=
+                {};
+
+            migrated.highestTierUnlocked ??=
+                1;
+
+            migrated.activeRelicIds ??=
+                [];
+
+            migrated.worldState ??=
+                [];
+        }
+
+        migrated.version = 3;
+
+        return migrated;
     }
 
     loadGame() {
         try {
-            // Проверка сброса статистики по запросу игрока (старт с нуля)
-            const cleanStartFlag = 'skuf_reset_to_zero_v5';
-            if (localStorage.getItem(cleanStartFlag) !== 'done') {
-                localStorage.setItem(cleanStartFlag, 'done');
-                this.resetGame(false);
-                return;
-            }
+            const raw =
+                localStorage.getItem(
+                    CONFIG.STORAGE_KEYS.SAVE
+                ) ||
+                localStorage.getItem(
+                    CONFIG.STORAGE_KEYS
+                        .LEGACY_SAVE_V2
+                ) ||
+                localStorage.getItem(
+                    CONFIG.STORAGE_KEYS
+                        .LEGACY_SAVE_V1
+                );
 
-            const raw = localStorage.getItem('skuf_save_v2');
             if (!raw) {
                 this.checkDailyQuestsDate(true);
                 this.rollNextTier();
                 return;
             }
 
-            const data = JSON.parse(raw);
-            this.motivation = data.motivation || 0;
-            this.totalMotivationEarned = data.totalMotivationEarned || 0;
-            this.day = data.day || 1;
-            this.currentBossIndex = data.currentBossIndex || 1;
-            this.bossHp = data.bossHp || CONFIG.BOSSES[1].hp;
-            this.prestigeCouches = data.prestigeCouches || 0;
-            this.prestigeLevel = data.prestigeLevel || 0;
+            const parsed =
+                JSON.parse(raw);
+
+            const data =
+                this.migrateSave(parsed);
+
+            if (!data) {
+                throw new Error(
+                    'Invalid save'
+                );
+            }
+
+            this.motivation = data.motivation ?? 0;
+            this.totalMotivationEarned = data.totalMotivationEarned ?? 0;
+            this.runMotivationEarned = data.runMotivationEarned ?? 0;
+            this.day = data.day ?? 1;
+            this.currentBossIndex = data.currentBossIndex ?? 1;
+            const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
+            this.bossHp = data.bossHp ?? currentBoss.hp;
+            this.prestigeCouches = data.prestigeCouches ?? 0;
+            this.prestigeLevel = data.prestigeLevel ?? 0;
             this.autoDropEnabled = !!data.autoDropEnabled;
             this.freeSpinsAvailable = data.freeSpinsAvailable !== undefined ? data.freeSpinsAvailable : 1;
             this.items = Object.assign({ beer: 1, script: 1, energy: 1, bomb: 1, magnet: 1 }, data.items || {});
-            this.totalMerges = data.totalMerges || 0;
-            this.gigachadsCreated = data.gigachadsCreated || 0;
-            this.bossesDefeated = data.bossesDefeated || 0;
-            this.trashDestroyed = data.trashDestroyed || 0;
-            this.maxCombo = data.maxCombo || 0;
-            this.playTimeSeconds = data.playTimeSeconds || 0;
+            this.totalMerges = data.totalMerges ?? 0;
+            this.gigachadsCreated = data.gigachadsCreated ?? 0;
+            this.bossesDefeated = data.bossesDefeated ?? 0;
+            this.trashDestroyed = data.trashDestroyed ?? 0;
+            this.maxCombo = data.maxCombo ?? 0;
+            this.playTimeSeconds = data.playTimeSeconds ?? 0;
             this.unlockedAchievements = data.unlockedAchievements || [];
 
             this.questsDateKey = data.questsDateKey || CONFIG.getMoscowDateKey();
@@ -2917,6 +3213,7 @@ class SkufLifeGame {
             console.error("Failed to load save", e);
             this.rollNextTier();
         }
+        this.saveGame();
     }
 }
 

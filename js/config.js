@@ -81,6 +81,25 @@ const CONFIG = {
         { id: "procrastination", name: "Прокрастинация", color: "#172554", highlight: "#1e3a8a", hazardColor: "#818cf8", glow: "#6366f1", radius: 21 }
     ],
 
+    STORAGE_KEYS: {
+        SAVE: 'skuf_save_v3',
+
+        LEGACY_SAVE_V2:
+            'skuf_save_v2',
+
+        LEGACY_SAVE_V1:
+            'skuf_save_v1',
+
+        STATS:
+            'skuf_stats_v1',
+
+        HIGH_SCORE:
+            'cyber_skuf_high_score',
+
+        LOCAL_LB:
+            'cyber_skuf_local_lb'
+    },
+
     // РЕЛИКВИИ ЗАБЕГА (выбираются при победе над боссом)
     RELICS_POOL: [
         {
@@ -115,7 +134,7 @@ const CONFIG = {
             id: "relic_skull_wall",
             badge: "🧠",
             name: "Стены из гипса",
-            desc: "Череп расширяется на +24px навсегда",
+            desc: "Череп расширяется на +24px до конца текущего забега",
             apply: (g) => { g.physics.expandSkull(g.physics.cupWidthOffset + 24); }
         },
         {

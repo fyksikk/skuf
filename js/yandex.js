@@ -309,10 +309,6 @@ class YandexManager {
                 Math.floor(score)
             );
 
-        this.updateLocalScore(
-            numericScore
-        );
-
         this.pendingScore =
             Math.max(
                 this.pendingScore,
@@ -451,8 +447,19 @@ class YandexManager {
                             if (callbacks.onClose) callbacks.onClose();
                         },
                         onError: (e) => {
-                            console.warn('Ошибка показа Rewarded Video Яндекс:', e);
-                            if (callbacks.onError) callbacks.onError(e);
+                            console.warn(
+                                'Ошибка показа Rewarded Video Яндекс:',
+                                e
+                            );
+
+                            if (callbacks.onError) {
+                                callbacks.onError(e);
+                            }
+
+                            // Обязательно освобождаем gameplay
+                            if (callbacks.onClose) {
+                                callbacks.onClose();
+                            }
                         }
                     }
                 });

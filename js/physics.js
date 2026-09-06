@@ -12,6 +12,7 @@ class BrainPhysics {
         this.cupWidthOffset = 0;
         this.cupTopY = 180;
         this.maxSpeed = 22; // Защита от туннелирования шаров на высокой скорости
+        this.radiusScale = 1;
 
         const { Engine } = Matter;
         this.engine = Engine.create({ 
@@ -63,6 +64,63 @@ class BrainPhysics {
         };
     }
 
+    getTierRadius(tier) {
+        const conf =
+            CONFIG.TIERS[tier] ||
+            CONFIG.TIERS[1];
+
+        return conf.radius *
+            this.radiusScale;
+    }
+
+    setRadiusScale(scale) {
+        const nextScale =
+            Math.max(
+                0.52,
+                Math.min(
+                    1,
+                    scale
+                )
+            );
+
+        const oldScale =
+            this.radiusScale || 1;
+
+        if (
+            Math.abs(
+                nextScale - oldScale
+            ) < 0.01
+        ) {
+            return;
+        }
+
+        const ratio =
+            nextScale /
+            oldScale;
+
+        this.radiusScale =
+            nextScale;
+
+        const bodies =
+            Matter.Composite
+                .allBodies(this.world)
+                .filter(
+                    b =>
+                        !b.isStatic &&
+                        !b.isDead
+                );
+
+        bodies.forEach(body => {
+            Matter.Body.scale(
+                body,
+                ratio,
+                ratio
+            );
+        });
+
+        this.keepBodiesInBounds();
+    }
+
     clearAllBodies() {
         const bodies = Matter.Composite.allBodies(this.world);
         bodies.forEach(b => {
@@ -72,6 +130,166 @@ class BrainPhysics {
             }
         });
         this.mergeQueue = [];
+    }
+
+    serializeDynamicBodies() {
+        const bounds =
+            this.getCupBounds();
+
+        const cupHeight =
+            Math.max(
+                1,
+                bounds.bottomY - bounds.topY
+            );
+
+        return Matter.Composite
+            .allBodies(this.world)
+            .filter(
+                body =>
+                    !body.isStatic &&
+                    !body.isDead
+            )
+            .map(body => ({
+                kind:
+                    body.isGarbage
+                        ? 'garbage'
+                        : 'thought',
+
+                tier:
+                    body.tier || null,
+
+                garbageId:
+                    body.garbageId || null,
+
+                // Сохраняем относительно размеров стакана
+                nx:
+                    (body.position.x -
+                        bounds.leftX) /
+                    bounds.width,
+
+                ny:
+                    (body.position.y -
+                        bounds.topY) /
+                    cupHeight,
+
+                vx:
+                    body.velocity.x,
+
+                vy:
+                    body.velocity.y,
+
+                angle:
+                    body.angle,
+
+                angularVelocity:
+                    body.angularVelocity
+            }));
+    }
+
+    restoreDynamicBodies(
+        savedBodies = []
+    ) {
+        this.clearAllBodies();
+
+        if (
+            !Array.isArray(savedBodies) ||
+            savedBodies.length === 0
+        ) {
+            return;
+        }
+
+        const bounds =
+            this.getCupBounds();
+
+        const cupHeight =
+            Math.max(
+                1,
+                bounds.bottomY - bounds.topY
+            );
+
+        for (const saved of savedBodies) {
+            const x =
+                bounds.leftX +
+                Math.max(
+                    0.02,
+                    Math.min(
+                        0.98,
+                        saved.nx ?? 0.5
+                    )
+                ) *
+                bounds.width;
+
+            const y =
+                bounds.topY +
+                Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        saved.ny ?? 0.1
+                    )
+                ) *
+                cupHeight;
+
+            let body = null;
+
+            if (
+                saved.kind ===
+                'garbage'
+            ) {
+                const garbage =
+                    CONFIG.GARBAGE_TYPES.find(
+                        item =>
+                            item.id ===
+                            saved.garbageId
+                    );
+
+                if (!garbage) continue;
+
+                body =
+                    this.createGarbage(
+                        x,
+                        y,
+                        garbage
+                    );
+
+            } else {
+                const tier =
+                    Math.max(
+                        1,
+                        Math.min(
+                            10,
+                            saved.tier || 1
+                        )
+                    );
+
+                body =
+                    this.createThought(
+                        x,
+                        y,
+                        tier
+                    );
+            }
+
+            if (!body) continue;
+
+            Matter.Body.setVelocity(
+                body,
+                {
+                    x: saved.vx || 0,
+                    y: saved.vy || 0
+                }
+            );
+
+            Matter.Body.setAngle(
+                body,
+                saved.angle || 0
+            );
+
+            Matter.Body.setAngularVelocity(
+                body,
+                saved.angularVelocity || 0
+            );
+        }
     }
 
     buildCupWalls() {
@@ -153,7 +371,7 @@ class BrainPhysics {
     createThought(x, y, tier) {
         const conf = CONFIG.TIERS[tier] || CONFIG.TIERS[1];
         const bounds = this.getCupBounds();
-        const r = conf.radius;
+        const r = this.getTierRadius(tier);
         const clampedX = Math.max(bounds.leftX + r + 2, Math.min(bounds.rightX - r - 2, x));
         const clampedY = Math.min(y, bounds.bottomY - r);
 
@@ -175,7 +393,9 @@ class BrainPhysics {
 
     createGarbage(x, y, garbageData) {
         const bounds = this.getCupBounds();
-        const r = garbageData.radius || 21;
+        const r =
+            (garbageData.radius || 21) *
+            this.radiusScale;
         const clampedX = Math.max(bounds.leftX + r + 2, Math.min(bounds.rightX - r - 2, x));
         const clampedY = Math.min(y, bounds.bottomY - r);
 

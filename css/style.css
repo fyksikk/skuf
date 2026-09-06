@@ -2226,3 +2226,23 @@ body {
     color: var(--gold-neon);
 }
 
+@media (max-width: 480px) {
+    .motivation-box .label,
+    .stamina-box .label,
+    .hud-mini-btn .hud-btn-caption,
+    .rent-day-tag,
+    .day-pill,
+    .auto-drop-badge {
+        font-size: 10px;
+    }
+
+    .hud-nav-btn .btn-text {
+        font-size: 10px;
+    }
+
+    #passive-counter,
+    #boss-hp-text,
+    #rent-timer-display {
+        font-size: 11px;
+    }
+}
