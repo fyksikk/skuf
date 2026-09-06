@@ -107,84 +107,72 @@ const CONFIG = {
             badge: "☕",
             name: "Эспрессо-пулемёт",
             desc: "Сброс мыслей быстрее на 35%. Очки комбо х2",
-            apply: (g) => { g.comboMultiplier *= 2; g.dropCooldownMs = Math.max(140, Math.floor(g.dropCooldownMs * 0.65)); }
         },
         {
             id: "relic_beer_shield",
             badge: "🍺",
             name: "Пивной щит",
             desc: "Слияние T8 (Скуф) сжигает весь мусор на поле",
-            apply: (g) => { g.hasBeerShield = true; }
         },
         {
             id: "relic_magnet",
             badge: "🧲",
             name: "Нейро-магнит",
             desc: "Мысли T1-T3 сами притягиваются друг к другу",
-            apply: (g) => { g.hasMagnetRelic = true; }
         },
         {
             id: "relic_iron_lungs",
             badge: "🫁",
             name: "Железные лёгкие",
             desc: "Дыхалка Скуфа восстанавливается в 2.5 раза быстрее",
-            apply: (g) => { g.staminaRecoveryRate *= 2.5; }
         },
         {
             id: "relic_skull_wall",
             badge: "🧠",
             name: "Стены из гипса",
             desc: "Череп расширяется на +24px до конца текущего забега",
-            apply: (g) => { g.physics.expandSkull(g.physics.cupWidthOffset + 24); }
         },
         {
             id: "relic_stream_rig",
             badge: "💻",
             name: "Спонсорский контракт",
             desc: "Пассивный доход моментально +250/сек",
-            apply: (g) => { g.passiveIncome += 250; }
         },
         {
             id: "relic_pillow",
             badge: "🛌",
             name: "Ортопедическая подушка",
             desc: "Максимальная выносливость +50%, усталость наступает реже",
-            apply: (g) => { g.maxStamina = (g.maxStamina || 100) + 50; g.stamina = g.maxStamina; }
         },
         {
             id: "relic_golden_cat",
             badge: "🐱",
             name: "Золотой Квадробер",
             desc: "Слияние T1 дает +1,500 Мотивации и пассив +300/сек",
-            apply: (g) => { g.passiveIncome += 300; g.hasGoldenCat = true; }
         },
         {
             id: "relic_flash_master",
             badge: "⚡",
             name: "Повелитель времени",
             desc: "Расходник «Флэш» длится 25 секунд вместо 12",
-            apply: (g) => { g.flashDuration = 25000; }
         },
         {
             id: "relic_chain_blast",
             badge: "💥",
             name: "Цепной взрыв",
             desc: "Слияния T5+ вызывают ударную волну, очищающую экран от мусора",
-            apply: (g) => { g.hasChainBlast = true; }
         },
         {
             id: "relic_banker",
             badge: "💎",
             name: "Швейцарский счет",
             desc: "Весь доход от слияний и кликов умножается на х1.5",
-            apply: (g) => { g.globalIncomeMultiplier = (g.globalIncomeMultiplier || 1.0) * 1.5; }
         },
         {
             id: "relic_boss_hunter",
             badge: "🎯",
             name: "Охотник на боссов",
             desc: "Урон по боссу увеличен на +75%",
-            apply: (g) => { g.bossDamageMultiplier = (g.bossDamageMultiplier || 1.0) * 1.75; }
         }
     ],
 

@@ -151,6 +151,7 @@ class SkufLifeGame {
         this.resizeCanvas();
         this.loadGame();
         this.ensureInitialBodies();
+        this.boundHandleOrientation = this.handleOrientation.bind(this);
         window.addEventListener('resize', () => this.resizeCanvas());
 
         if (window.ResizeObserver && this.container) {
@@ -262,41 +263,201 @@ class SkufLifeGame {
     }
 
     resizeCanvas() {
-        const rect = this.container.getBoundingClientRect();
-        const w = Math.round(rect.width || this.container.clientWidth || window.innerWidth || 360);
-        const h = Math.round(rect.height || this.container.clientHeight || (window.innerHeight - 160) || 540);
+        const rect =
+            this.container
+                .getBoundingClientRect();
 
-        if (w > 0 && h > 0) {
-            this.canvas.width = w;
-            this.canvas.height = h;
+        const w =
+            Math.round(
+                rect.width ||
+                this.container.clientWidth ||
+                window.innerWidth ||
+                360
+            );
 
-            // Определение ориентации (горизонтальная/пейзаж при перевороте телефона или на широком экране)
-            const isLandscape = (w > h) || (w / h > 1.12) || (h <= 500);
+        const h =
+            Math.round(
+                rect.height ||
+                this.container.clientHeight ||
+                window.innerHeight ||
+                540
+            );
 
-            if (isLandscape) {
-                // На широком экране/ПК комната Скуфа увеличена вниз, чтобы персонаж и комната были отлично видны
-                const targetRoomH = Math.floor(h * 0.35);
-                this.roomHeight = Math.max(190, Math.min(265, targetRoomH));
-                this.brainTopY = this.roomHeight + 24;
-                this.dropY = this.brainTopY + 22;
-                this.dangerLineY = this.brainTopY + 48;
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+
+        this.canvas.width = w;
+        this.canvas.height = h;
+
+        // -----------------------------------------
+        // ОРИЕНТАЦИЯ
+        // -----------------------------------------
+
+        const isLandscape =
+            w > h ||
+            w / h > 1.12;
+
+        // -----------------------------------------
+        // КОМНАТА
+        // -----------------------------------------
+
+        if (isLandscape) {
+
+            // Низкие мобильные landscape
+            if (h < 420) {
+                this.roomHeight =
+                    Math.max(
+                        84,
+                        Math.min(
+                            125,
+                            Math.floor(
+                                h * 0.28
+                            )
+                        )
+                    );
+            } else if (h < 600) {
+                this.roomHeight =
+                    Math.max(
+                        115,
+                        Math.min(
+                            170,
+                            Math.floor(
+                                h * 0.30
+                            )
+                        )
+                    );
             } else {
-                // Портретный режим
-                const maxRoomAllowed = Math.floor(h * 0.28);
-                this.roomHeight = Math.max(120, Math.min(170, maxRoomAllowed));
-                this.brainTopY = this.roomHeight + 20;
-                this.dropY = this.brainTopY + 20;
-                this.dangerLineY = this.brainTopY + 44;
+                this.roomHeight =
+                    Math.max(
+                        170,
+                        Math.min(
+                            265,
+                            Math.floor(
+                                h * 0.35
+                            )
+                        )
+                    );
             }
 
-            this.physics.setDimensions(this.roomHeight);
-            const bounds = this.physics.getCupBounds();
+            this.brainTopY =
+                this.roomHeight + 20;
 
-            if (!this.aimX || this.aimX <= 0 || this.aimX > w) {
-                this.aimX = w / 2;
+            this.dropY =
+                this.brainTopY + 20;
+
+            this.dangerLineY =
+                this.brainTopY + 44;
+
+        } else {
+
+            // -----------------------------------------
+            // PORTRAIT
+            // -----------------------------------------
+
+            if (h < 420) {
+                this.roomHeight = 72;
+
+            } else if (h < 520) {
+                this.roomHeight = 88;
+
+            } else if (h < 650) {
+                this.roomHeight = 105;
+
             } else {
-                this.aimX = Math.max(bounds.leftX + 16, Math.min(bounds.rightX - 16, this.aimX));
+                const maxRoomAllowed =
+                    Math.floor(
+                        h * 0.28
+                    );
+
+                this.roomHeight =
+                    Math.max(
+                        120,
+                        Math.min(
+                            170,
+                            maxRoomAllowed
+                        )
+                    );
             }
+
+            this.brainTopY =
+                this.roomHeight + 20;
+
+            this.dropY =
+                this.brainTopY + 20;
+
+            this.dangerLineY =
+                this.brainTopY + 44;
+        }
+
+        // -----------------------------------------
+        // ОБНОВЛЯЕМ СТЕНКИ
+        // -----------------------------------------
+
+        this.physics.setDimensions(
+            this.roomHeight
+        );
+
+        // -----------------------------------------
+        // SCALE ШАРОВ
+        // -----------------------------------------
+
+        const bottomY =
+            this.canvas.height - 6;
+
+        const usableBelowDanger =
+            Math.max(
+                70,
+                bottomY -
+                    this.dangerLineY
+            );
+
+        /*
+            T10 radius = 86 px.
+            Диаметр ≈172px.
+            Добавляем небольшой запас.
+        */
+
+        const radiusScale =
+            Math.min(
+                1,
+                usableBelowDanger /
+                    184
+            );
+
+        this.physics.setRadiusScale(
+            radiusScale
+        );
+
+        // На случай изменения ориентации
+        this.physics.keepBodiesInBounds();
+
+        // -----------------------------------------
+        // AIM
+        // -----------------------------------------
+
+        const bounds =
+            this.physics
+                .getCupBounds();
+
+        if (
+            !this.aimX ||
+            this.aimX <= 0 ||
+            this.aimX > w
+        ) {
+            this.aimX =
+                w / 2;
+
+        } else {
+            this.aimX =
+                Math.max(
+                    bounds.leftX + 16,
+
+                    Math.min(
+                        bounds.rightX - 16,
+                        this.aimX
+                    )
+                );
         }
     }
 
@@ -476,9 +637,6 @@ class SkufLifeGame {
         btnTiltLeft?.addEventListener('pointerdown', applyTiltLeft);
         btnTiltLeft?.addEventListener('pointerup', releaseTiltLeft);
         btnTiltLeft?.addEventListener('pointercancel', releaseTiltLeft);
-        btnTiltLeft?.addEventListener('touchstart', applyTiltLeft, { passive: false });
-        btnTiltLeft?.addEventListener('touchend', releaseTiltLeft, { passive: false });
-        btnTiltLeft?.addEventListener('click', applyTiltLeft);
 
         const btnTiltRight = document.getElementById('btn-tilt-right');
         const applyTiltRight = (e) => {
@@ -717,27 +875,86 @@ class SkufLifeGame {
     }
 
     toggleGyroscope() {
-        this.gyroEnabled = !this.gyroEnabled;
-        const btn = document.getElementById('btn-toggle-gyro');
-        if (btn) {
-            btn.classList.toggle('active', this.gyroEnabled);
-        }
+        this.gyroEnabled =
+            !this.gyroEnabled;
+
+        const btn =
+            document.getElementById(
+                'btn-toggle-gyro'
+            );
+
+        btn?.classList.toggle(
+            'active',
+            this.gyroEnabled
+        );
+
         if (this.gyroEnabled) {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(state => {
-                    if (state === 'granted') {
-                        window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
-                    }
-                }).catch(() => {});
+
+            const enableHandler = () => {
+                // На всякий случай не создаём дубль
+                window.removeEventListener(
+                    'deviceorientation',
+                    this.boundHandleOrientation
+                );
+
+                window.addEventListener(
+                    'deviceorientation',
+                    this.boundHandleOrientation
+                );
+            };
+
+            if (
+                typeof DeviceOrientationEvent !==
+                    'undefined' &&
+                typeof DeviceOrientationEvent
+                    .requestPermission ===
+                    'function'
+            ) {
+                DeviceOrientationEvent
+                    .requestPermission()
+                    .then(state => {
+                        if (
+                            state === 'granted' &&
+                            this.gyroEnabled
+                        ) {
+                            enableHandler();
+                        }
+                    })
+                    .catch(() => {
+                        this.gyroEnabled = false;
+
+                        btn?.classList.remove(
+                            'active'
+                        );
+                    });
+
             } else {
-                window.addEventListener('deviceorientation', this.handleOrientation.bind(this));
+                enableHandler();
             }
-            this.ui.setQuote("🧭 Гироскоп включен! Наклоняйте телефон влево/вправо!");
-            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, "🧭 ГИРОСКОП АКТИВЕН", "#00f0ff");
+
+            this.ui.setQuote(
+                "🧭 Гироскоп включен! Наклоняйте телефон влево/вправо!"
+            );
+
+            this.spawnFloatingText(
+                this.canvas.width / 2,
+                this.roomHeight + 40,
+                "🧭 ГИРОСКОП АКТИВЕН",
+                "#00f0ff"
+            );
+
         } else {
-            window.removeEventListener('deviceorientation', this.handleOrientation.bind(this));
+
+            window.removeEventListener(
+                'deviceorientation',
+                this.boundHandleOrientation
+            );
+
             this.physics.setGravityTilt(0);
-            this.ui.setQuote("🧭 Гироскоп выключен.");
+
+            this.ui.setQuote(
+                "🧭 Гироскоп выключен."
+            );
         }
     }
 
@@ -1722,6 +1939,29 @@ class SkufLifeGame {
 
         this.dangerTimer = 0;
 
+        this.bossBreakTimer = 0;
+
+        this.activeConsumableMode = null;
+
+        this.flashActiveUntil = 0;
+        this.magnetActiveUntil = 0;
+
+        this.dropCooldown = 0;
+        this.shakeCooldown = 0;
+        this.autoDropTimer = 0;
+
+        this.tiltTimer = 0;
+
+        this.physics.engine.timing.timeScale =
+            1;
+
+        if (!this.gyroEnabled) {
+            this.physics.setGravityTilt(0);
+        }
+
+        this.roomInteractionReadyAt =
+            Object.create(null);
+
         // P5
         this.autoDropEnabled =
             (CONFIG.PRESTIGE_PERKS[4]?.level || 0) >
@@ -1739,6 +1979,40 @@ class SkufLifeGame {
         this.seedInitialThoughts();
 
         this.rollNextTier();
+
+        const boss =
+            CONFIG.BOSSES[1];
+
+        this.ui.updateBoss(
+            boss,
+            this.bossHp,
+            1,
+            this.maxDays
+        );
+
+        this.ui.updateRent(
+            1,
+            this.rentTimer,
+            CONFIG.PHASES[1].bgTitle
+        );
+
+        this.ui.updateStamina(
+            this.stamina,
+            this.maxStamina,
+            false
+        );
+
+        this.ui.updateFever(
+            0,
+            false,
+            0,
+            this.getFeverScoreMultiplier()
+        );
+
+        if (this.roomRenderer) {
+            this.roomRenderer
+                .updateRoomStage(0);
+        }
 
         this.ui.updateAutoDropBadge(
             this.autoDropEnabled
@@ -2721,7 +2995,7 @@ class SkufLifeGame {
         this.day = 1;
         this.currentBossIndex = 1;
         this.bossHp = CONFIG.BOSSES[1].hp;
-        this.rentTimer = 120;
+        this.rentTimer = this.rentTimeMax;
         this.prestigeCouches = 0;
         this.prestigeLevel = 0;
         this.autoDropEnabled = false;
@@ -2743,6 +3017,24 @@ class SkufLifeGame {
         this.activeRelics = [];
         this.highestTierUnlocked = 1;
         this.activeConsumableMode = null;
+        this.flashActiveUntil = 0;
+        this.magnetActiveUntil = 0;
+
+        this.dropCooldown = 0;
+        this.shakeCooldown = 0;
+        this.autoDropTimer = 0;
+
+        this.tiltTimer = 0;
+
+        this.roomInteractionReadyAt =
+            Object.create(null);
+
+        if (this.physics) {
+            this.physics.engine.timing.timeScale =
+                1;
+
+            this.physics.setGravityTilt(0);
+        }
         this.questsDateKey =
             CONFIG.getMoscowDateKey();
 
@@ -2765,8 +3057,6 @@ class SkufLifeGame {
         // Очистка стакана от всех старых мыслей и мусора
         if (this.physics) {
             this.physics.clearAllBodies();
-            const bounds = this.physics.getCupBounds();
-            this.physics.clearAllBodies();
             this.seedInitialThoughts();
         }
 
@@ -2776,7 +3066,7 @@ class SkufLifeGame {
         const boss = CONFIG.BOSSES[1];
         this.ui.updateMotivation(0, 0);
         this.ui.updateBoss(boss, boss.hp, 1, this.maxDays);
-        this.ui.updateRent(1, 120, CONFIG.PHASES[1].bgTitle);
+        this.ui.updateRent(1, this.rentTimeMax, CONFIG.PHASES[1].bgTitle);
         this.ui.updateAutoDropBadge(false);
         this.ui.updateConsumables(this.items);
         this.ui.updateRelics([]);
@@ -2830,6 +3120,25 @@ class SkufLifeGame {
 
         this.dangerTimer = 0;
         this.bossBreakTimer = 0;
+
+        this.flashActiveUntil = 0;
+        this.magnetActiveUntil = 0;
+
+        this.dropCooldown = 0;
+        this.shakeCooldown = 0;
+        this.autoDropTimer = 0;
+
+        this.tiltTimer = 0;
+
+        this.physics.engine.timing.timeScale =
+            1;
+
+        if (!this.gyroEnabled) {
+            this.physics.setGravityTilt(0);
+        }
+
+        this.roomInteractionReadyAt =
+            Object.create(null);
 
         this.recalculatePassives();
 
@@ -3108,17 +3417,25 @@ class SkufLifeGame {
                     CONFIG.STORAGE_KEYS.SAVE
                 ) ||
                 localStorage.getItem(
-                    CONFIG.STORAGE_KEYS
-                        .LEGACY_SAVE_V2
+                    CONFIG.STORAGE_KEYS.LEGACY_SAVE_V2
                 ) ||
                 localStorage.getItem(
-                    CONFIG.STORAGE_KEYS
-                        .LEGACY_SAVE_V1
+                    CONFIG.STORAGE_KEYS.LEGACY_SAVE_V1
                 );
 
+            // --------------------------------------------------
+            // НОВАЯ ИГРА
+            // --------------------------------------------------
+
             if (!raw) {
-                this.checkDailyQuestsDate(true);
+                this.questsDateKey =
+                    CONFIG.getMoscowDateKey();
+
+                this.dailyQuests = [];
+                this.initDailyQuestsPool();
+
                 this.rollNextTier();
+
                 return;
             }
 
@@ -3134,86 +3451,455 @@ class SkufLifeGame {
                 );
             }
 
-            this.motivation = data.motivation ?? 0;
-            this.totalMotivationEarned = data.totalMotivationEarned ?? 0;
-            this.runMotivationEarned = data.runMotivationEarned ?? 0;
-            this.day = data.day ?? 1;
-            this.currentBossIndex = data.currentBossIndex ?? 1;
-            const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-            this.bossHp = data.bossHp ?? currentBoss.hp;
-            this.prestigeCouches = data.prestigeCouches ?? 0;
-            this.prestigeLevel = data.prestigeLevel ?? 0;
-            this.autoDropEnabled = !!data.autoDropEnabled;
-            this.freeSpinsAvailable = data.freeSpinsAvailable !== undefined ? data.freeSpinsAvailable : 1;
-            this.items = Object.assign({ beer: 1, script: 1, energy: 1, bomb: 1, magnet: 1 }, data.items || {});
-            this.totalMerges = data.totalMerges ?? 0;
-            this.gigachadsCreated = data.gigachadsCreated ?? 0;
-            this.bossesDefeated = data.bossesDefeated ?? 0;
-            this.trashDestroyed = data.trashDestroyed ?? 0;
-            this.maxCombo = data.maxCombo ?? 0;
-            this.playTimeSeconds = data.playTimeSeconds ?? 0;
-            this.unlockedAchievements = data.unlockedAchievements || [];
+            // --------------------------------------------------
+            // ОСНОВНОЕ СОСТОЯНИЕ
+            // --------------------------------------------------
 
-            this.questsDateKey = data.questsDateKey || CONFIG.getMoscowDateKey();
-            if (data.dailyQuests) this.dailyQuests = data.dailyQuests;
-            this.checkDailyQuestsDate();
+            this.motivation =
+                data.motivation ?? 0;
 
-            // Восстановление апгрейдов
+            this.totalMotivationEarned =
+                data.totalMotivationEarned ?? 0;
+
+            this.runMotivationEarned =
+                data.runMotivationEarned ?? 0;
+
+            this.day =
+                data.day ?? 1;
+
+            this.currentBossIndex =
+                data.currentBossIndex ?? 1;
+
+            const currentBoss =
+                CONFIG.BOSSES[
+                    this.currentBossIndex
+                ] ||
+                CONFIG.BOSSES[1];
+
+            this.bossHp =
+                data.bossHp ??
+                currentBoss.hp;
+
+            this.rentTimer =
+                data.rentTimer ??
+                this.rentTimeMax;
+
+            // Stamina окончательно ограничим
+            // после recalculatePassives()
+            const savedStamina =
+                data.stamina;
+
+            this.isExhausted =
+                !!data.isExhausted;
+
+            // --------------------------------------------------
+            // PRESTIGE
+            // --------------------------------------------------
+
+            this.prestigeCouches =
+                data.prestigeCouches ?? 0;
+
+            this.prestigeLevel =
+                data.prestigeLevel ?? 0;
+
+            this.autoDropEnabled =
+                !!data.autoDropEnabled;
+
+            // --------------------------------------------------
+            // РУЛЕТКА
+            // --------------------------------------------------
+
+            this.freeSpinsAvailable =
+                data.freeSpinsAvailable ?? 1;
+
+            this.rouletteTimer =
+                data.rouletteTimer ?? 90;
+
+            // --------------------------------------------------
+            // ПРЕДМЕТЫ
+            // --------------------------------------------------
+
+            this.items =
+                Object.assign(
+                    {
+                        beer: 1,
+                        script: 1,
+                        energy: 1,
+                        bomb: 1,
+                        magnet: 1
+                    },
+                    data.items || {}
+                );
+
+            // --------------------------------------------------
+            // СТАТИСТИКА
+            // --------------------------------------------------
+
+            this.totalMerges =
+                data.totalMerges ?? 0;
+
+            this.gigachadsCreated =
+                data.gigachadsCreated ?? 0;
+
+            this.bossesDefeated =
+                data.bossesDefeated ?? 0;
+
+            this.runBossesDefeated =
+                data.runBossesDefeated ?? 0;
+
+            this.trashDestroyed =
+                data.trashDestroyed ?? 0;
+
+            this.maxCombo =
+                data.maxCombo ?? 0;
+
+            this.totalTaps =
+                data.totalTaps ?? 0;
+
+            this.totalSpins =
+                data.totalSpins ?? 0;
+
+            this.tierCreatedCounts =
+                data.tierCreatedCounts || {};
+
+            this.highestTierUnlocked =
+                data.highestTierUnlocked ?? 1;
+
+            this.playTimeSeconds =
+                data.playTimeSeconds ?? 0;
+
+            this.unlockedAchievements =
+                Array.isArray(
+                    data.unlockedAchievements
+                )
+                    ? data.unlockedAchievements
+                    : [];
+
+            // --------------------------------------------------
+            // FEVER
+            // --------------------------------------------------
+
+            this.feverCharge =
+                data.feverCharge ?? 0;
+
+            this.isFeverActive = false;
+            this.feverTimer = 0;
+
+            // --------------------------------------------------
+            // NEXT THOUGHT
+            // --------------------------------------------------
+
+            const savedNextTier =
+                Number(data.nextTier);
+
+            if (
+                Number.isInteger(savedNextTier) &&
+                savedNextTier >= 1 &&
+                savedNextTier <= 10
+            ) {
+                this.nextTier =
+                    savedNextTier;
+            } else {
+                this.nextTier = 1;
+            }
+
+            // --------------------------------------------------
+            // DAILY QUESTS
+            // --------------------------------------------------
+
+            this.questsDateKey =
+                data.questsDateKey ||
+                CONFIG.getMoscowDateKey();
+
+            this.dailyQuests =
+                Array.isArray(data.dailyQuests)
+                    ? data.dailyQuests
+                    : [];
+
+            // Важно:
+            // здесь НЕ вызываем checkDailyQuestsDate(),
+            // потому что она умеет сразу saveGame(),
+            // а стакан мы ещё не восстановили.
+
+            const todayKey =
+                CONFIG.getMoscowDateKey();
+
+            if (
+                this.questsDateKey !== todayKey ||
+                this.dailyQuests.length === 0
+            ) {
+                this.questsDateKey =
+                    todayKey;
+
+                this.initDailyQuestsPool();
+            }
+
+            // --------------------------------------------------
+            // UPGRADES
+            // --------------------------------------------------
+
             if (data.upgrades) {
-                Object.keys(data.upgrades).forEach(cat => {
-                    if (CONFIG.UPGRADES[cat]) {
-                        data.upgrades[cat].forEach(savedUpg => {
-                            const found = CONFIG.UPGRADES[cat].find(u => u.id === savedUpg.id);
-                            if (found) found.bought = savedUpg.bought;
+                Object
+                    .keys(data.upgrades)
+                    .forEach(category => {
+                        const currentCategory =
+                            CONFIG.UPGRADES[
+                                category
+                            ];
+
+                        if (!currentCategory) {
+                            return;
+                        }
+
+                        data.upgrades[
+                            category
+                        ].forEach(savedUpg => {
+                            const found =
+                                currentCategory.find(
+                                    upg =>
+                                        upg.id ===
+                                        savedUpg.id
+                                );
+
+                            if (found) {
+                                found.bought =
+                                    !!savedUpg.bought;
+                            }
                         });
-                    }
-                });
+                    });
             }
 
-            // Восстановление престиж-перков
-            if (data.prestigePerks) {
-                data.prestigePerks.forEach(sp => {
-                    const found = CONFIG.PRESTIGE_PERKS.find(p => p.id === sp.id);
-                    if (found) found.level = sp.level;
-                });
+            // --------------------------------------------------
+            // PRESTIGE PERKS
+            // --------------------------------------------------
+
+            if (
+                Array.isArray(
+                    data.prestigePerks
+                )
+            ) {
+                data.prestigePerks
+                    .forEach(savedPerk => {
+                        const found =
+                            CONFIG
+                                .PRESTIGE_PERKS
+                                .find(
+                                    perk =>
+                                        perk.id ===
+                                        savedPerk.id
+                                );
+
+                        if (found) {
+                            found.level =
+                                Math.max(
+                                    0,
+                                    Math.min(
+                                        found.max,
+                                        savedPerk.level || 0
+                                    )
+                                );
+                        }
+                    });
             }
+
+            // --------------------------------------------------
+            // RELICS
+            // --------------------------------------------------
+
+            const relicIds =
+                Array.isArray(
+                    data.activeRelicIds
+                )
+                    ? data.activeRelicIds
+                    : [];
+
+            this.activeRelics =
+                relicIds
+                    .map(id =>
+                        CONFIG
+                            .RELICS_POOL
+                            .find(
+                                relic =>
+                                    relic.id === id
+                            )
+                    )
+                    .filter(Boolean);
+
+            // --------------------------------------------------
+            // СЧИТАЕМ ВСЕ ХАРАКТЕРИСТИКИ
+            // --------------------------------------------------
 
             this.recalculatePassives();
 
-            // Расчет оффлайн дохода
-            if (data.lastSavedTime) {
-                const now = Date.now();
-                const offlineSeconds = Math.floor((now - data.lastSavedTime) / 1000);
-                const maxOfflineHours = 8 + (CONFIG.PRESTIGE_PERKS[3]?.level * 4); // до 24 часов
-                const cappedSeconds = Math.min(maxOfflineHours * 3600, offlineSeconds);
+            this.stamina =
+                Math.min(
+                    savedStamina ??
+                        this.maxStamina,
 
-                if (cappedSeconds > 60 && this.passiveIncome > 0) {
-                    const offlineRate = 0.8 + (CONFIG.PRESTIGE_PERKS[3]?.level * 0.05);
-                    const offlineEarned = cappedSeconds * this.passiveIncome * offlineRate;
-                    this.addMotivation(offlineEarned);
-                    this.ui.showOfflineIncome(cappedSeconds, offlineEarned);
+                    this.maxStamina
+                );
+
+            // --------------------------------------------------
+            // ВОССТАНАВЛИВАЕМ СТАКАН
+            // --------------------------------------------------
+
+            this.physics
+                .restoreDynamicBodies(
+                    data.worldState || []
+                );
+
+            // --------------------------------------------------
+            // OFFLINE INCOME
+            // --------------------------------------------------
+
+            if (data.lastSavedTime) {
+                const now =
+                    Date.now();
+
+                const offlineSeconds =
+                    Math.max(
+                        0,
+                        Math.floor(
+                            (
+                                now -
+                                data.lastSavedTime
+                            ) / 1000
+                        )
+                    );
+
+                const offlineLevel =
+                    CONFIG
+                        .PRESTIGE_PERKS[3]
+                        ?.level || 0;
+
+                const maxOfflineHours =
+                    8 +
+                    offlineLevel * 4;
+
+                const cappedSeconds =
+                    Math.min(
+                        maxOfflineHours *
+                            3600,
+
+                        offlineSeconds
+                    );
+
+                if (
+                    cappedSeconds > 60 &&
+                    this.passiveIncome > 0
+                ) {
+                    const offlineRate =
+                        0.8 +
+                        offlineLevel * 0.05;
+
+                    const offlineEarned =
+                        cappedSeconds *
+                        this.passiveIncome *
+                        offlineRate;
+
+                    this.addMotivation(
+                        offlineEarned
+                    );
+
+                    this.ui.showOfflineIncome(
+                        cappedSeconds,
+                        offlineEarned
+                    );
                 }
             }
 
-            const boss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-            this.ui.updateBoss(boss, this.bossHp, this.day, this.maxDays);
-            this.ui.updateAutoDropBadge(this.autoDropEnabled);
-            this.rollNextTier();
-            this.updateHUD();
+            // --------------------------------------------------
+            // UI
+            // --------------------------------------------------
 
-            const phaseIndex = Math.min(5, Math.ceil(this.day / 4));
-            const phase = CONFIG.PHASES[phaseIndex] || CONFIG.PHASES[1];
-            if (this.roomRenderer && phase) {
-                this.roomRenderer.updateRoomStage(phase.roomStage);
-            }
-            if (this.ui && phase) {
-                this.ui.updateRent(this.day, Math.max(0, this.rentTimer), phase.bgTitle);
-            }
-        } catch (e) {
-            console.error("Failed to load save", e);
+            const boss =
+                CONFIG.BOSSES[
+                    this.currentBossIndex
+                ] ||
+                CONFIG.BOSSES[1];
+
+            this.ui.updateBoss(
+                boss,
+                this.bossHp,
+                this.day,
+                this.maxDays
+            );
+
+            this.ui.updateAutoDropBadge(
+                this.autoDropEnabled
+            );
+
+            this.ui.updateConsumables(
+                this.items
+            );
+
+            this.ui.updateRelics(
+                this.activeRelics
+            );
+
+            this.ui.updateStamina(
+                this.stamina,
+                this.maxStamina,
+                this.isExhausted
+            );
+
+            this.ui.updateFever(
+                this.feverCharge,
+                false,
+                0,
+                this.getFeverScoreMultiplier()
+            );
+
+            this.ui.updateNextThought(
+                this.nextTier
+            );
+
+            const phaseIndex =
+                Math.min(
+                    5,
+                    Math.ceil(
+                        this.day / 4
+                    )
+                );
+
+            const phase =
+                CONFIG.PHASES[
+                    phaseIndex
+                ] ||
+                CONFIG.PHASES[1];
+
+            this.roomRenderer
+                ?.updateRoomStage(
+                    phase.roomStage
+                );
+
+            this.ui.updateRent(
+                this.day,
+                Math.max(
+                    0,
+                    this.rentTimer
+                ),
+                phase.bgTitle
+            );
+
+            this.updateHUD(true);
+
+            // --------------------------------------------------
+            // SAVE MIGRATION
+            // --------------------------------------------------
+
+            // Только СЕЙЧАС.
+            // Стакан уже восстановлен.
+            this.saveGame();
+
+        } catch (error) {
+            console.error(
+                'Failed to load save:',
+                error
+            );
+
             this.rollNextTier();
         }
-        this.saveGame();
     }
 }
 
