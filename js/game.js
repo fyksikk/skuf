@@ -1,5 +1,5 @@
 class SkufLifeGame {
-    constructor() {
+    constructor(initialSaveData = null) {
         this.canvas = document.getElementById('mainCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.container = document.getElementById('canvas-wrapper');
@@ -164,7 +164,9 @@ class SkufLifeGame {
         this.setupInputHandlers();
         this.applyFxState();
         this.resizeCanvas();
-        this.loadGame();
+        this.loadGame(
+            initialSaveData
+        );
         this.ensureInitialBodies();
         this.render();
         this.boundHandleOrientation = this.handleOrientation.bind(this);
@@ -174,22 +176,37 @@ class SkufLifeGame {
             new ResizeObserver(() => this.resizeCanvas()).observe(this.container);
         }
 
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.pause('visibility');
-            } else {
-                this.resume('visibility');
-            }
-        });
+        document.addEventListener(
+            'visibilitychange',
+            () => {
+                if (document.hidden) {
+                    this.saveGame({
+                        cloudFlush: true
+                    });
 
-        window.addEventListener('pagehide', () => {
-            this.saveGame();
-        });
+                    this.pause(
+                        'visibility'
+                    );
+
+                } else {
+                    this.resume(
+                        'visibility'
+                    );
+                }
+            }
+        );
+
+        window.addEventListener(
+            'pagehide',
+            () => {
+                this.saveGame({
+                    cloudFlush: true
+                });
+            }
+        );
 
         // Авто-сохранение каждые 4 секунды
         setInterval(() => this.saveGame(), 4000);
-        window.YandexBridge
-            ?.markGameReady?.();
     }
 
     scheduleNextFrame() {
@@ -238,23 +255,40 @@ class SkufLifeGame {
         return true;
     }
 
-    pause(reason = 'manual') {
+    pause(
+        reason = 'manual',
+        {
+            skipSdk = false
+        } = {}
+    ) {
         this.pauseReasons.add(reason);
         this.isPaused = true;
 
         if (this.rafId !== null) {
-            cancelAnimationFrame(this.rafId);
+            cancelAnimationFrame(
+                this.rafId
+            );
+
             this.rafId = null;
         }
 
-        if (this.hasStarted) {
-            window.YandexBridge?.gameplayStop?.();
+        if (
+            this.hasStarted &&
+            !skipSdk
+        ) {
+            window.YandexBridge
+                ?.gameplayStop?.();
         }
 
         AudioCtrl.suspend?.();
     }
 
-    resume(reason = 'manual') {
+    resume(
+        reason = 'manual',
+        {
+            skipSdk = false
+        } = {}
+    ) {
         this.pauseReasons.delete(reason);
 
         if (
@@ -268,10 +302,15 @@ class SkufLifeGame {
         this.isPaused = false;
         this.isRunning = true;
 
-        this.lastTime = performance.now();
+        this.lastTime =
+            performance.now();
+
         this.physicsAccumulatorMs = 0;
 
-        window.YandexBridge?.gameplayStart?.();
+        if (!skipSdk) {
+            window.YandexBridge
+                ?.gameplayStart?.();
+        }
 
         AudioCtrl.resume?.();
 
@@ -1655,6 +1694,9 @@ class SkufLifeGame {
 
         // Запуск фазы передышки / кулдауна перед следующим боссом (очередь боссов)
         this.bossBreakTimer = 3.5;
+        this.saveGame({
+            cloudFlush: true
+        });
 
         // Награда за босса
         const jackpot = this.day * 1500;
@@ -4241,7 +4283,11 @@ class SkufLifeGame {
     }
 
     // --- СОХРАНЕНИЕ И ЗАГРУЗКА ---
-    saveGame() {
+    saveGame(
+        {
+            cloudFlush = false
+        } = {}
+    ) {
         const data = {
             version: 3,
 
@@ -4396,6 +4442,8 @@ class SkufLifeGame {
                 [],
 
             lastSavedTime:
+                window.YandexBridge
+                    ?.now?.() ??
                 Date.now()
         };
 
@@ -4405,7 +4453,13 @@ class SkufLifeGame {
                 JSON.stringify(data)
             );
             // Блок 6: Облачные сохранения Яндекс Игр
-            window.YandexBridge?.saveCloudData?.(data);
+            window.YandexBridge
+                ?.queueCloudSave?.(
+                    data,
+                    {
+                        flush: cloudFlush
+                    }
+                );
         } catch (e) {
             console.warn(
                 'Save failed:',
@@ -4463,18 +4517,26 @@ class SkufLifeGame {
         return migrated;
     }
 
-    loadGame() {
+    loadGame(initialSaveData = null) {
         try {
             const raw =
-                localStorage.getItem(
-                    CONFIG.STORAGE_KEYS.SAVE
-                ) ||
-                localStorage.getItem(
-                    CONFIG.STORAGE_KEYS.LEGACY_SAVE_V2
-                ) ||
-                localStorage.getItem(
-                    CONFIG.STORAGE_KEYS.LEGACY_SAVE_V1
-                );
+                initialSaveData
+                    ? JSON.stringify(
+                        initialSaveData
+                    )
+                    : (
+                        localStorage.getItem(
+                            CONFIG.STORAGE_KEYS.SAVE
+                        ) ||
+                        localStorage.getItem(
+                            CONFIG.STORAGE_KEYS
+                                .LEGACY_SAVE_V2
+                        ) ||
+                        localStorage.getItem(
+                            CONFIG.STORAGE_KEYS
+                                .LEGACY_SAVE_V1
+                        )
+                    );
 
             // --------------------------------------------------
             // НОВАЯ ИГРА
@@ -4861,7 +4923,7 @@ class SkufLifeGame {
                         this.passiveIncome *
                         offlineRate);
 
-                    this.pendingOfflineAmount = offlineEarned;
+                    this.pendingOfflineAmount += offlineEarned;
 
                     this.ui.showOfflineIncome(
                         cappedSeconds,
@@ -4965,11 +5027,233 @@ class SkufLifeGame {
     }
 }
 
-// Надежный запуск игры в любых браузерах, iframes и окружениях
-function initGame() {
-    if (!window.gameInstance) {
-        window.gameInstance = new SkufLifeGame();
+function readLocalSaveForBoot() {
+    const keys = [
+        CONFIG.STORAGE_KEYS.SAVE,
+        CONFIG.STORAGE_KEYS
+            .LEGACY_SAVE_V2,
+        CONFIG.STORAGE_KEYS
+            .LEGACY_SAVE_V1
+    ];
+
+    for (const key of keys) {
+        try {
+            const raw =
+                localStorage.getItem(
+                    key
+                );
+
+            if (!raw) continue;
+
+            const data =
+                JSON.parse(raw);
+
+            if (
+                data &&
+                typeof data === 'object'
+            ) {
+                return data;
+            }
+
+        } catch (e) {
+            console.warn(
+                'Local save parse error:',
+                e
+            );
+        }
     }
+
+    return null;
+}
+
+function compareSaveProgress(
+    a,
+    b
+) {
+    if (!a && !b) return 0;
+    if (a && !b) return 1;
+    if (!a && b) return -1;
+
+    // Если один прогресс был сознательно
+    // сброшен позднее — уважать reset.
+    const resetA =
+        Number(
+            a.progressResetAt || 0
+        );
+
+    const resetB =
+        Number(
+            b.progressResetAt || 0
+        );
+
+    if (resetA !== resetB) {
+        return resetA - resetB;
+    }
+
+    const vectorA = [
+        Number(
+            a.prestigeLevel || 0
+        ),
+        Number(
+            a.bossesDefeated || 0
+        ),
+        Number(
+            a.highestTierUnlocked || 1
+        ),
+        Number(
+            a.totalMotivationEarned || 0
+        ),
+        Number(
+            a.day || 1
+        )
+    ];
+
+    const vectorB = [
+        Number(
+            b.prestigeLevel || 0
+        ),
+        Number(
+            b.bossesDefeated || 0
+        ),
+        Number(
+            b.highestTierUnlocked || 1
+        ),
+        Number(
+            b.totalMotivationEarned || 0
+        ),
+        Number(
+            b.day || 1
+        )
+    ];
+
+    for (
+        let i = 0;
+        i < vectorA.length;
+        i++
+    ) {
+        if (
+            vectorA[i] !==
+            vectorB[i]
+        ) {
+            return (
+                vectorA[i] -
+                vectorB[i]
+            );
+        }
+    }
+
+    return (
+        Number(
+            a.lastSavedTime || 0
+        ) -
+        Number(
+            b.lastSavedTime || 0
+        )
+    );
+}
+
+async function initGame() {
+    if (window.gameInstance) {
+        return;
+    }
+
+    const startButton =
+        document.getElementById(
+            'btn-start-game'
+        );
+
+    const guideButton =
+        document.getElementById(
+            'btn-open-guide'
+        );
+
+    if (startButton) {
+        startButton.disabled = true;
+        startButton.textContent =
+            'СИНХРОНИЗАЦИЯ...';
+    }
+
+    if (guideButton) {
+        guideButton.disabled = true;
+    }
+
+    // -----------------------------------------
+    // WAIT YANDEX SDK
+    // -----------------------------------------
+
+    await window.YandexBridge
+        ?.whenReady?.();
+
+    const cloudPayload =
+        await window.YandexBridge
+            ?.loadCloudData?.();
+
+    const cloudSave =
+        cloudPayload?.data ||
+        null;
+
+    const localSave =
+        readLocalSaveForBoot();
+
+    let initialSave =
+        localSave;
+
+    if (
+        compareSaveProgress(
+            cloudSave,
+            localSave
+        ) > 0
+    ) {
+        initialSave =
+            cloudSave;
+    }
+
+    // -----------------------------------------
+    // CREATE GAME
+    // -----------------------------------------
+
+    window.gameInstance =
+        new SkufLifeGame(
+            initialSave
+        );
+
+    if (
+        window.YandexBridge
+            ?.platformPaused
+    ) {
+        window.gameInstance.pause(
+            'yandex-platform',
+            {
+                skipSdk: true
+            }
+        );
+    }
+
+    if (startButton) {
+        startButton.disabled = false;
+        startButton.textContent =
+            'ВЫЙТИ ИЗ СПЯЧКИ';
+    }
+
+    if (guideButton) {
+        guideButton.disabled = false;
+    }
+
+    // Menu + save + Canvas are now ready.
+    window.YandexBridge
+        ?.markGameReady?.();
+}
+
+if (
+    document.readyState ===
+    'loading'
+) {
+    document.addEventListener(
+        'DOMContentLoaded',
+        initGame
+    );
+} else {
+    initGame();
 }
 
 if (document.readyState === 'loading') {

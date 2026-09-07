@@ -145,7 +145,44 @@ class YandexManager {
 
         this.boosts = this.rewardsCatalog;
 
-        this.init();
+        this.language = 'ru';
+
+        this.platformPaused = false;
+
+        this.pendingCloudData = null;
+        this.cloudSaveTimer = null;
+
+        this.adStateKey =
+            'skuf_yandex_ad_state_v1';
+
+        this.loadAdState();
+
+        this.readyPromise =
+            this.init();
+    }
+
+    async whenReady() {
+        try {
+            await this.readyPromise;
+        } catch (e) {
+            console.warn(
+                'Yandex SDK ready error:',
+                e
+            );
+        }
+
+        return this;
+    }
+
+    now() {
+        try {
+            return (
+                this.ysdk?.serverTime?.() ??
+                Date.now()
+            );
+        } catch {
+            return Date.now();
+        }
     }
 
     async init() {
@@ -161,6 +198,39 @@ class YandexManager {
         try {
             this.ysdk =
                 await YaGames.init();
+            
+            // -----------------------------------------
+            // AUTOMATIC LANGUAGE DETECTION
+            // -----------------------------------------
+
+            const detectedLanguage =
+                this.ysdk
+                    ?.environment
+                    ?.i18n
+                    ?.lang ||
+                'ru';
+
+            // Сейчас игра имеет русскую локализацию.
+            // Для неизвестных языков остаёмся на RU.
+            const supportedLanguages = [
+                'ru'
+            ];
+
+            this.language =
+                supportedLanguages.includes(
+                    detectedLanguage
+                )
+                    ? detectedLanguage
+                    : 'ru';
+
+            window.GAME_LANG =
+                this.language;
+
+            document.documentElement.lang =
+                this.language;
+
+            document.documentElement.dataset.platformLang =
+                detectedLanguage;
 
             this.isInitialized = true;
 
@@ -170,9 +240,17 @@ class YandexManager {
 
             try {
                 this.player =
-                    await this.ysdk.getPlayer({
-                        scopes: false
-                    });
+                    try {
+                        this.player =
+                            await this.ysdk.getPlayer();
+                    } catch (e) {
+                        console.warn(
+                            'Player init failed:',
+                            e
+                        );
+
+                        this.player = null;
+                    }
             } catch (e) {
                 console.log(
                     'Гостевой режим Яндекс Игр'
@@ -195,19 +273,98 @@ class YandexManager {
         }
     }
 
-    // --- БЛОК 6: ОБЛАЧНЫЕ СОХРАНЕНИЯ (YANDEX CLOUD SAVES) ---
-    async saveCloudData(data) {
+    queueCloudSave(
+        data,
+        {
+            flush = false
+        } = {}
+    ) {
         if (!data) return;
+
+        // saveGame каждый раз создаёт новый object,
+        // поэтому ссылку можно безопасно заменить.
+        this.pendingCloudData =
+            data;
+
+        if (flush) {
+            return this.flushCloudSave(
+                true
+            );
+        }
+
+        if (this.cloudSaveTimer) {
+            return;
+        }
+
+        // Максимум примерно один cloud write
+        // в 15 секунд.
+        this.cloudSaveTimer =
+            setTimeout(
+                () => {
+                    this.flushCloudSave(
+                        false
+                    );
+                },
+                15000
+            );
+    }
+
+    async flushCloudSave(
+        flush = true
+    ) {
+        if (this.cloudSaveTimer) {
+            clearTimeout(
+                this.cloudSaveTimer
+            );
+
+            this.cloudSaveTimer = null;
+        }
+
+        const data =
+            this.pendingCloudData;
+
+        if (!data) {
+            return false;
+        }
+
+        if (
+            !this.isInitialized ||
+            !this.player ||
+            typeof this.player.setData !==
+                'function'
+        ) {
+            return false;
+        }
+
+        this.pendingCloudData = null;
+
         try {
-            if (this.isInitialized && this.player && typeof this.player.setData === 'function') {
-                await this.player.setData({
-                    saveData: JSON.stringify(data),
-                    savedAt: Date.now()
-                }, true);
-                console.log('☁️ Сохранение успешно отправлено в Яндекс Облако');
-            }
+            await this.player.setData(
+                {
+                    saveData:
+                        JSON.stringify(
+                            data
+                        ),
+
+                    savedAt:
+                        this.now()
+                },
+                flush
+            );
+
+            return true;
+
         } catch (e) {
-            console.warn('Ошибка отправки в облако Яндекс:', e);
+            // Не теряем последнее состояние.
+            this.pendingCloudData =
+                data;
+
+            console.warn(
+                'Cloud save failed:',
+                e
+            );
+
+            return false;
         }
     }
 
@@ -370,6 +527,55 @@ class YandexManager {
             userRank:
                 this.getUserLocalRank()
         };
+    }
+
+    async loadCloudData() {
+        if (
+            !this.isInitialized ||
+            !this.player ||
+            typeof this.player.getData !==
+                'function'
+        ) {
+            return null;
+        }
+
+        try {
+            const res =
+                await this.player.getData(
+                    [
+                        'saveData',
+                        'savedAt'
+                    ]
+                );
+
+            if (!res?.saveData) {
+                return null;
+            }
+
+            const parsed =
+                JSON.parse(
+                    res.saveData
+                );
+
+            return {
+                data: parsed,
+
+                savedAt:
+                    Number(
+                        res.savedAt ||
+                        parsed.lastSavedTime ||
+                        0
+                    )
+            };
+
+        } catch (e) {
+            console.warn(
+                'Cloud load failed:',
+                e
+            );
+
+            return null;
+        }
     }
 
     async getLeaderboardEntries(quantity = 15) {
