@@ -9,6 +9,92 @@
     <meta property="og:title" content="Встань с дивана: Эволюция Скуфа">
     <meta property="og:description" content="Аркадный физический дроп-мердж и симулятор превозмогания бытия.">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Mission HUD polish: эффект дня получает собственную строку,
+           а технический индикатор автосброса больше не занимает место. */
+        #auto-drop-badge {
+            display: none !important;
+        }
+
+        .mission-top-row {
+            margin-bottom: 4px;
+        }
+
+        .mission-left {
+            overflow: visible !important;
+            flex: 1 1 auto;
+        }
+
+        .mission-right {
+            flex: 0 0 auto;
+        }
+
+        .mission-effect-row {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: start;
+            gap: 5px;
+            width: 100%;
+            margin: 0 0 5px;
+        }
+
+        .mission-effect-label {
+            flex-shrink: 0;
+            padding: 2px 5px;
+            border-radius: 6px;
+            border: 1px solid rgba(168, 85, 247, 0.32);
+            background: rgba(168, 85, 247, 0.10);
+            color: #c4b5fd;
+            font-size: 8px;
+            font-weight: 900;
+            line-height: 1.25;
+            letter-spacing: 0.35px;
+        }
+
+        #daily-mod-badge.daily-mod-tag {
+            display: block;
+            min-width: 0;
+            width: 100%;
+            padding: 2px 6px;
+            border-radius: 6px;
+            white-space: normal;
+            overflow: hidden;
+            color: #e9d5ff;
+            line-height: 1.25;
+            cursor: pointer;
+        }
+
+        #daily-mod-badge.daily-mod-tag::after {
+            content: " — " attr(title);
+            color: #aeb9cc;
+            font-weight: 600;
+        }
+
+        /* Настройки звука находятся именно в левом верхнем углу комнаты. */
+        .room-quick-settings {
+            left: 8px !important;
+            right: auto !important;
+        }
+
+        @media (max-width: 520px) {
+            .room-quick-settings {
+                top: 28px !important;
+                left: 7px !important;
+            }
+
+            .mission-effect-row {
+                gap: 4px;
+            }
+
+            .mission-effect-label {
+                font-size: 7.5px;
+            }
+
+            #daily-mod-badge.daily-mod-tag {
+                font-size: 8px;
+            }
+        }
+    </style>
     <script src="js/matter.min.js"></script>
 </head>
 <body>
@@ -156,13 +242,18 @@
             <div class="mission-left">
                 <span class="rent-day-tag" id="rent-day-label">ДЕНЬ 1</span>
                 <span class="crisis-tag" id="crisis-badge">СТАБИЛЬНОСТЬ</span>
-                <span class="daily-mod-tag" id="daily-mod-badge" title="Ежедневный модификатор">⚡ МОД</span>
             </div>
 
             <div class="mission-right">
-                <span id="auto-drop-badge" class="auto-drop-badge hidden">АВТО</span>
+                <!-- Сохраняем технический id для текущего JS, но сам бейдж больше не показываем. -->
+                <span id="auto-drop-badge" class="auto-drop-badge hidden" aria-hidden="true"></span>
                 <span class="rent-timer" id="rent-timer-display">⏳ 02:00</span>
             </div>
+        </div>
+
+        <div class="mission-effect-row">
+            <span class="mission-effect-label">ЭФФЕКТ ДНЯ</span>
+            <span class="daily-mod-tag" id="daily-mod-badge" title="Ежедневный модификатор">⚡ Модификатор загружается…</span>
         </div>
 
         <div class="boss-info">
@@ -347,9 +438,9 @@
                 <span class="action-icon">🧠</span>
                 <span id="btn-shake-label">Встряска</span>
             </button>
-            <button id="btn-toggle-autodrop" class="action-btn autodrop-btn" title="Вкл/Выкл Авто-сброс мыслей">
+            <button id="btn-toggle-autodrop" class="action-btn autodrop-btn" title="Вкл/Выкл автоматический сброс мыслей">
                 <span class="action-icon">🤖</span>
-                <span id="btn-autodrop-label">Авто</span>
+                <span id="btn-autodrop-label">Автосброс</span>
             </button>
             <button id="btn-tilt-left" class="action-btn tilt-btn" title="Наклонить стакан влево (A / ←)">
                 <span class="action-icon">⤹</span>
@@ -611,11 +702,23 @@
 </div>
 
 <script src="js/config.js"></script>
+<script>
+    /* Первый запуск: BGM включён по умолчанию, но стартует только после
+       явного клика «Выйти из спячки», поэтому Web Audio autoplay policy соблюдается. */
+    try {
+        if (localStorage.getItem('skuf_bgm_enabled') === null) {
+            localStorage.setItem('skuf_bgm_enabled', 'true');
+        }
+    } catch (e) {
+        // localStorage может быть недоступен в редких privacy-режимах.
+    }
+</script>
 <script src="js/audio.js"></script>
 <script src="js/physics.js"></script>
 <script src="js/yandex.js"></script>
 <script src="js/room.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>
+<script src="js/polish.js"></script>
 </body>
 </html>
