@@ -6,7 +6,7 @@
 (() => {
     'use strict';
 
-    const CONTENT_VERSION = '12plus-1.0.1';
+    const CONTENT_VERSION = '12plus-1.0.2';
 
     function cleanText(value) {
         if (typeof value !== 'string' || !value) return value;
@@ -79,7 +79,13 @@
             'btn-boss-nuke-ad':'📺 РЕКЛАМА → -15% HP',
             'btn-spin-wheel-ad':'📺 РЕКЛАМА → ЕЩЁ СПИН'
         };
-        Object.entries(labels).forEach(([id,text])=>{const b=document.getElementById(id);if(b){b.textContent=text;b.setAttribute('aria-label',text.replace('📺 ',''));}});
+        Object.entries(labels).forEach(([id,text])=>{
+            const b=document.getElementById(id);
+            if(!b) return;
+            if(b.textContent!==text) b.textContent=text;
+            const aria=text.replace('📺 ', '');
+            if(b.getAttribute('aria-label')!==aria) b.setAttribute('aria-label',aria);
+        });
         document.querySelectorAll('.boost-btn').forEach(b=>{if(/СМОТРЕТЬ|ADS/i.test(b.textContent||'')) b.textContent='📺 РЕКЛАМА → ПОЛУЧИТЬ БУСТ';});
         document.querySelectorAll('.quest-claim-btn').forEach(b=>{if(/2X НАГРАДА/i.test(b.textContent||'')) b.textContent='📺 РЕКЛАМА → НАГРАДА ×2';});
     }
@@ -89,7 +95,13 @@
         const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
         nodes.forEach(n=>{const next=cleanText(n.nodeValue); if(next!==n.nodeValue) n.nodeValue=next;});
         root.querySelectorAll?.('[title]').forEach(el=>{const old=el.getAttribute('title');const next=cleanText(old);if(next!==old) el.setAttribute('title',next);});
-        const slot=document.getElementById('slot-beer'); if(slot){slot.title='Лимонад: растворить выбранную мысль или мусор'; const e=slot.querySelector('.slot-emoji'); if(e) e.textContent='🥤';}
+        const slot=document.getElementById('slot-beer');
+        if(slot){
+            const title='Лимонад: растворить выбранную мысль или мусор';
+            if(slot.title!==title) slot.title=title;
+            const e=slot.querySelector('.slot-emoji');
+            if(e&&e.textContent!=='🥤') e.textContent='🥤';
+        }
         labelRewardedButtons();
     }
 
