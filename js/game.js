@@ -7,6 +7,7 @@ class SkufLifeGame {
         this.ui = new UIManager(this);
         this.roomRenderer = new RoomRenderer();
 
+        this.pauseReasons = new Set(['start-menu']);
         this.runMotivationEarned = 0;
         this.mergeWaves = [];
         this.runBossesDefeated = 0;
@@ -32,6 +33,8 @@ class SkufLifeGame {
         this.rentTimeMax = 120;
         this.rentTimer = this.rentTimeMax;
         this.isGameOver = false;
+        this.hasRevivedThisRun = false;
+        this.pendingOfflineAmount = 0;
 
         // Престиж / Сансара
         this.prestigeCouches = 0;
@@ -102,6 +105,17 @@ class SkufLifeGame {
         // Настройка спецэффектов (FX)
         const savedFx = localStorage.getItem('skuf_fx_enabled');
         this.fxEnabled = savedFx !== null ? savedFx === 'true' : true;
+
+        // Новые переменные для Блоков 1-6
+        this.bossAttackTimer = 14;
+        this.chainComboCount = 0;
+        this.lastMergeTime = 0;
+        this.isBasementMode = false;
+        this.basementDay = 0;
+        this.tapBonusUntil = 0;
+        this.cryptoBonusUntil = 0;
+        this.activeDailyMod = null;
+        this.initDailyModifier();
 
         // Размеры
         this.roomHeight = 160;
@@ -670,7 +684,7 @@ class SkufLifeGame {
             this.toggleGyroscope();
         });
 
-        // Управление с клавиатуры (Стрелки / A / D / Пробел)
+        // Управление с клавиатуры (Стрелки / A / D / Пробел / Z)
         window.addEventListener('keydown', (e) => {
             if (e.target.tagName === 'INPUT') return;
             if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
@@ -684,6 +698,9 @@ class SkufLifeGame {
             } else if (e.code === 'Space') {
                 e.preventDefault();
                 this.dropThought();
+            } else if (e.code === 'KeyZ') {
+                e.preventDefault();
+                this.toggleAutoDrop();
             }
         });
 
@@ -758,10 +775,11 @@ class SkufLifeGame {
             const radius = target.radius || 24;
             if (dist <= radius) {
                 if (target.id === 'cat') {
+                    const catCooldown = (this.activeDailyMod?.id === 'wednesday_cat') ? 5000 : 15000;
                     if (
                         !this.tryRoomInteractionCooldown(
                             'cat',
-                            15000,
+                            catCooldown,
                             target.x,
                             target.y
                         )
@@ -773,9 +791,20 @@ class SkufLifeGame {
                     this.stamina = Math.min(this.maxStamina, this.stamina + 25);
                     this.isExhausted = false;
                     this.addMotivation(250);
-                    this.ui.setQuote("«Котейка довольно мурчит: МЯУ! 🐾 +25 Дыхалка!»");
+
+                    // Блок 2: Кот также убирает мусор/тревогу со стакана
+                    const removedGarbage = this.physics.removeRandomGarbage(1);
+                    if (removedGarbage) {
+                        AudioCtrl.playCatClean();
+                        this.addMotivation(500);
+                        this.spawnFloatingText(target.x, target.y - 32, "🐾 КОТ СЪЕЛ ТРЕВОГУ!", "#f472b6");
+                        this.ui.setQuote("«Котейка сцапал тревожную мысль лапкой: МЯУ! -1 Мусор!»");
+                    } else {
+                        this.ui.setQuote("«Котейка довольно мурчит: МЯУ! 🐾 +25 Дыхалка!»");
+                    }
+
                     this.spawnFloatingText(target.x, target.y - 15, "МЯУ! +25 ⚡", "#f472b6");
-                    this.spawnParticles(target.x, target.y, "#f472b6", 12);
+                    this.spawnParticles(target.x, target.y, "#f472b6", 14);
                     return;
                 }
                 if (target.id === 'tv') {
@@ -784,17 +813,39 @@ class SkufLifeGame {
                     if (
                         this.tryRoomInteractionCooldown(
                             'tv_reward',
-                            30000,
+                            25000,
                             target.x,
                             target.y
                         )
                     ) {
-                        this.addMotivation(150);
-                        this.feverCharge =
-                            Math.min(
-                                100,
-                                this.feverCharge + 8
-                            );
+                        this.addMotivation(200);
+                        this.feverCharge = Math.min(100, this.feverCharge + 10);
+
+                        // Блок 2: Реальные тактические баффы от телепередач
+                        if (chan) {
+                            if (chan.id === 0) { // СПАРТАК
+                                this.tapBonusUntil = Date.now() + 20000;
+                                this.spawnFloatingText(target.x, target.y - 30, "⚽ ТАП-УРОН +50%!", "#22c55e");
+                            } else if (chan.id === 1) { // УЛИЦЫ ФОНАРЕЙ
+                                const bossDmg = Math.max(250, Math.floor(this.bossHp * 0.05));
+                                this.dealBossDamage(bossDmg);
+                                this.spawnFloatingText(target.x, target.y - 30, `🚓 ОМОН: -${CONFIG.formatNumber(bossDmg)} HP!`, "#38bdf8");
+                            } else if (chan.id === 2) { // КРИПТО-ПАМП
+                                this.cryptoBonusUntil = Date.now() + 25000;
+                                this.addMotivation(500);
+                                this.spawnFloatingText(target.x, target.y - 30, "📈 КРИПТО-БУСТ +50%!", "#ffd700");
+                            } else if (chan.id === 3) { // СТРИМ АЛЬТУШКИ
+                                this.stamina = this.maxStamina;
+                                this.feverCharge = Math.min(100, this.feverCharge + 25);
+                                this.spawnFloatingText(target.x, target.y - 30, "🎀 100% ДЫХАЛКА + ХАЙП!", "#ec4899");
+                            } else if (chan.id === 4) { // МАГАЗИН НА ДИВАНЕ
+                                const itemKeys = ['beer', 'script', 'energy', 'bomb', 'magnet'];
+                                const giftedItem = itemKeys[Math.floor(Math.random() * itemKeys.length)];
+                                this.items[giftedItem] = (this.items[giftedItem] || 0) + 1;
+                                this.ui.updateConsumables(this.items);
+                                this.spawnFloatingText(target.x, target.y - 30, `🎁 +1 ${giftedItem.toUpperCase()} С ДИВАНА!`, "#a855f7");
+                            }
+                        }
                     }
                     if (chan) {
                         this.ui.setQuote(chan.quote);
@@ -1431,6 +1482,22 @@ class SkufLifeGame {
         if (this.combo > this.maxCombo) this.maxCombo = this.combo;
         this.ui.showCombo(this.combo);
 
+        // Блок 3: Цепные комбо (Chain Combos)
+        const nowWall = Date.now();
+        if (nowWall - this.lastMergeTime < 700) {
+            this.chainComboCount++;
+        } else {
+            this.chainComboCount = 1;
+        }
+        this.lastMergeTime = nowWall;
+
+        let chainMultiplier = 1.0;
+        if (this.chainComboCount >= 2) {
+            chainMultiplier = 1 + (this.chainComboCount - 1) * 0.4;
+            AudioCtrl.playComboChain(this.chainComboCount);
+            this.spawnFloatingText(midX, midY - 32, `🔥 ЦЕПЬ x${this.chainComboCount}!`, "#f97316");
+        }
+
         // Начисление заряда Хайпа (Fever): требует цепочек слияний и мастерства
         this.addFeverCharge(3.0 + Math.min(8, tier * 0.8 + this.combo * 0.5));
 
@@ -1440,15 +1507,15 @@ class SkufLifeGame {
             this.isFeverActive
                 ? this.getFeverScoreMultiplier()
                 : 1;
-        let reward = tierConfig.score * Math.max(1, this.combo * 0.4) * this.comboMultiplier * this.globalIncomeMultiplier * feverScoreMult;
+        
+        let mondayMult = (this.activeDailyMod?.id === 'monday_grind') ? 2.0 : 1.0;
+        let reward = tierConfig.score * Math.max(1, this.combo * 0.4) * this.comboMultiplier * this.globalIncomeMultiplier * feverScoreMult * chainMultiplier * mondayMult;
         
         if (this.hasGoldenCat && tier === 1) reward += 1500;
         this.addMotivation(reward);
 
         // Урон по боссу от слияния:
-        // Во время Лихорадки урон по боссу сбалансирован (0.7x), чтобы босс не умирал мгновенно,
-        // позволяя игроку насладиться хайпом, серией комбо и набором Мотивации
-        let bossDmg = tierConfig.score * 2.2 * Math.max(1, this.combo * 0.3);
+        let bossDmg = tierConfig.score * 2.2 * Math.max(1, this.combo * 0.3) * chainMultiplier;
         if (CONFIG.UPGRADES.brain[6]?.bought) bossDmg *= 3.0; // Третий глаз Сигмы
         
         const feverBossDmgMult = this.isFeverActive ? 0.70 : 1.0;
@@ -1485,7 +1552,10 @@ class SkufLifeGame {
         }
 
         // Очистка мусора рядом
-        const blastRadius = this.hasChainBlast && tier >= 5 ? 170 : (tier >= 4 ? 95 : 50);
+        let blastRadius = this.hasChainBlast && tier >= 5 ? 170 : (tier >= 4 ? 95 : 50);
+        if (this.activeDailyMod?.id === 'thursday_clean') {
+            blastRadius = Math.floor(blastRadius * 1.5);
+        }
         this.physics.cleanseNearbyGarbage(midX, midY, blastRadius);
 
         // Квантовый резонанс: слияния T6+ сжигают весь мусор
@@ -1570,6 +1640,10 @@ class SkufLifeGame {
         if (this.bossHp <= 0) {
             this.onBossDefeated();
         }
+    }
+
+    damageBoss(amount) {
+        this.dealBossDamage(amount);
     }
 
     onBossDefeated() {
@@ -1681,7 +1755,13 @@ class SkufLifeGame {
                 );
 
                 this.saveGame();
+
+                // Межстраничная реклама после победы над боссом (с защитой кулдауна 180с)
+                window.YandexBridge?.showFullscreenAdv();
             });
+        } else {
+            // Если реликвий нет в пуле
+            window.YandexBridge?.showFullscreenAdv();
         }
     }
 
@@ -1979,7 +2059,7 @@ class SkufLifeGame {
         );
     }
 
-    triggerPrestige() {
+    triggerPrestige(withSuperBonus = false) {
         const gain =
             this.calculatePrestigeGain();
 
@@ -1993,6 +2073,7 @@ class SkufLifeGame {
 
         this.prestigeCouches += gain;
         this.prestigeLevel++;
+        this.hasRevivedThisRun = false;
 
         // Текущий run
         this.runMotivationEarned = 0;
@@ -2012,7 +2093,15 @@ class SkufLifeGame {
         // Run relics исчезают
         this.activeRelics = [];
 
-        this.motivation = 0;
+        this.motivation = withSuperBonus ? 50000 : 0;
+        if (withSuperBonus) {
+            this.items.beer = (this.items.beer || 0) + 2;
+            this.items.script = (this.items.script || 0) + 2;
+            this.items.energy = (this.items.energy || 0) + 2;
+            this.items.bomb = (this.items.bomb || 0) + 2;
+            this.items.magnet = (this.items.magnet || 0) + 2;
+            this.ui.updateConsumables(this.items);
+        }
 
         this.day = 1;
         this.currentBossIndex = 1;
@@ -2223,16 +2312,86 @@ class SkufLifeGame {
         });
     }
 
-    claimQuest(id) {
+    claimQuest(id, doubleReward = false) {
         const q = this.dailyQuests.find(item => item.id === id);
         if (!q || q.claimed || (q.progress || 0) < q.goal) return;
 
         q.claimed = true;
-        this.addMotivation(q.reward);
+        const finalReward = doubleReward ? q.reward * 2 : q.reward;
+        this.addMotivation(finalReward);
         if (q.rewardItem && this.items[q.rewardItem] !== undefined) {
-            this.items[q.rewardItem]++;
+            const count = doubleReward ? 2 : 1;
+            this.items[q.rewardItem] += count;
             this.ui.updateConsumables(this.items);
         }
+        if (doubleReward) {
+            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, `🎁 2X НАГРАДА: +${CONFIG.formatNumber(finalReward)}!`, "#ffd700");
+        }
+        this.saveGame();
+    }
+
+    // --- МОНЕТИЗАЦИЯ & REWARDED МЕХАНИКИ ---
+
+    revivePlayer() {
+        this.hasRevivedThisRun = true;
+        this.isGameOver = false;
+        this.pauseReasons.delete('gameover');
+        this.dangerTimer = 0;
+        this.stamina = Math.max(this.stamina, this.maxStamina * 0.5);
+        this.isExhausted = false;
+        this.rentTimer = Math.max(this.rentTimer, 45); // Даем 45с на спасение
+        
+        // Очистка опасных мыслей сверху
+        this.physics.cleanseAllGarbage();
+        this.physics.removeUpperThoughts(0.35);
+        
+        this.ui.hideGameOver();
+        if (this.pauseReasons.size === 0) {
+            this.resumeGame();
+        }
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, "🔥 ВТОРОЕ ДЫХАНИЕ! ЗАБЕГ ПРОДОЛЖАЕТСЯ!", "#00e5ff");
+        AudioCtrl.playLevelUp();
+        this.saveGame();
+    }
+
+    claimOfflineIncome(isDouble = false) {
+        const base = this.pendingOfflineAmount || 0;
+        const finalAmount = isDouble ? base * 2 : base;
+        if (finalAmount > 0) {
+            this.addMotivation(finalAmount);
+            if (isDouble) {
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, `💰 2X ОФФЛАЙН: +${CONFIG.formatNumber(finalAmount)}!`, "#ffd700");
+            }
+            AudioCtrl.playEndorphinFanfare();
+        }
+        this.pendingOfflineAmount = 0;
+        this.saveGame();
+    }
+
+    claimShopAid() {
+        this.items.beer = (this.items.beer || 0) + 1;
+        this.items.script = (this.items.script || 0) + 1;
+        this.items.energy = (this.items.energy || 0) + 1;
+        this.items.bomb = (this.items.bomb || 0) + 1;
+        this.items.magnet = (this.items.magnet || 0) + 1;
+        this.ui.updateConsumables(this.items);
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, "📦 ГУМАНИТАРНАЯ ПОМОЩЬ: +1 ВСЕХ РАСХОДНИКОВ!", "#4ade80");
+        AudioCtrl.playLevelUp();
+        this.saveGame();
+    }
+
+    applyBossFreeze() {
+        this.rentTimer = Math.min(this.rentTimeMax + 60, this.rentTimer + 35);
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, "⏳ ЗАМОРОЗКА: +35с АРЕНДЫ!", "#00e5ff");
+        AudioCtrl.playUpgrade();
+    }
+
+    applyBossNuke() {
+        const boss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
+        const dmg = Math.max(10, Math.floor(boss.hp * 0.15));
+        this.damageBoss(dmg);
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, `💥 ТАКТИЧЕСКИЙ УДАР: -${CONFIG.formatNumber(dmg)} HP!`, "#ef4444");
+        AudioCtrl.playBossDamage();
     }
 
     // --- СИСТЕМА ДОСТИЖЕНИЙ (ACHIEVEMENTS) ---
@@ -2686,6 +2845,17 @@ class SkufLifeGame {
                 if (this.stamina > 30) this.isExhausted = false;
             }
 
+            // Блок 1: Активные атаки босса
+            if (this.bossBreakTimer <= 0 && !this.isGameOver) {
+                this.bossAttackTimer -= dt;
+                if (this.bossAttackTimer <= 0) {
+                    this.executeBossAttack();
+                }
+            }
+
+            // Блок 3: Анти-застревание предметов
+            this.physics.checkStuckBodies(dt);
+
             // Передышка между боссами (Очередь боссов с кулдауном)
             if (this.bossBreakTimer > 0) {
                 this.bossBreakTimer -= dt;
@@ -2699,6 +2869,7 @@ class SkufLifeGame {
             if (Math.random() < 0.05) {
                 this.checkDailyQuestsDate();
                 this.checkAchievements();
+                this.updateRivalGhostSystem();
             }
 
             // Таймер комбо
@@ -2723,7 +2894,8 @@ class SkufLifeGame {
             // Авто-сброс мыслей
             if (this.autoDropEnabled) {
                 this.autoDropTimer += dt;
-                if (this.autoDropTimer >= 1.6 && this.dropCooldown <= 0) {
+                const autoDropInterval = (this.activeDailyMod?.id === 'tuesday_fever') ? 0.9 : 1.4;
+                if (this.autoDropTimer >= autoDropInterval && this.dropCooldown <= 0) {
                     this.autoDropTimer = 0;
                     this.aimX = 50 + Math.random() * (this.canvas.width - 100);
                     this.dropThought();
@@ -2797,6 +2969,121 @@ class SkufLifeGame {
         this.ui.showGameOver(reason, this.day);
     }
 
+    // --- БЛОК 5: ЕЖЕДНЕВНЫЕ МОДИФИКАТОРЫ ---
+    initDailyModifier() {
+        const dayOfWeek = new Date().getDay(); // 0 = Воскресенье, 1 = Понедельник...
+        this.activeDailyMod = (CONFIG.DAILY_MODIFIERS && (CONFIG.DAILY_MODIFIERS[dayOfWeek] || CONFIG.DAILY_MODIFIERS[1])) || null;
+        if (this.ui && this.activeDailyMod) {
+            this.ui.updateDailyModifier(this.activeDailyMod);
+        }
+    }
+
+    // --- БЛОК 1: АКТИВНЫЕ АТАКИ БОССА ---
+    executeBossAttack() {
+        const boss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
+        const attackTypes = ['earthquake', 'garbage_drop', 'corrupt_thought'];
+        const attackType = attackTypes[Math.floor(Math.random() * attackTypes.length)];
+
+        const bossBar = document.getElementById('boss-progress-bar');
+        if (bossBar) {
+            bossBar.classList.add('boss-attack-flash');
+            setTimeout(() => bossBar.classList.remove('boss-attack-flash'), 1000);
+        }
+
+        AudioCtrl.playBossAttack();
+        this.ui.triggerScreenShake();
+
+        if (attackType === 'earthquake') {
+            const intensity = 1.0 + Math.min(1.5, this.day * 0.05);
+            this.physics.triggerEarthquake(intensity);
+            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: ЗЕМЛЕТРЯСЕНИЕ!`, "#ef4444");
+            this.ui.setQuote(`«${boss.name} сотрясает реальность! Мысли перемешались!»`);
+        } else if (attackType === 'garbage_drop') {
+            const dropCount = this.day >= 10 ? 2 : 1;
+            for (let i = 0; i < dropCount; i++) {
+                const rx = this.canvas.width * 0.3 + Math.random() * (this.canvas.width * 0.4);
+                this.physics.spawnGarbageItem(rx, this.dropY - 10, 'boss_trash');
+            }
+            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: ВБРОС МУСОРА!`, "#f59e0b");
+            this.ui.setQuote(`«${boss.name} закидывает тебя бытовыми проблемами!»`);
+        } else if (attackType === 'corrupt_thought') {
+            const corrupted = this.physics.convertRandomToGarbage(1);
+            if (corrupted && corrupted.length > 0) {
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: ЗАРАЖЕНИЕ МЫСЛИ!`, "#a855f7");
+                this.ui.setQuote(`«${boss.name} осквернил твою светлую мысль!»`);
+            } else {
+                this.physics.triggerEarthquake(1.2);
+                this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: УДАР ПО СТАКАНУ!`, "#ef4444");
+            }
+        }
+
+        // Перезапуск таймера атаки
+        let baseCooldown = Math.max(9, 17 - this.day * 0.35) + Math.random() * 4;
+        if (this.activeDailyMod?.id === 'monday_grind') {
+            baseCooldown *= 0.75; // Боссы чаще атакуют в понедельник
+        }
+        this.bossAttackTimer = baseCooldown;
+    }
+
+    // --- БЛОК 3: УЛЬТИМЕЙТ МЕГА-ГИГАЧАДА ---
+    triggerMegaChadShockwave(midX, midY) {
+        AudioCtrl.playMegaChad();
+        this.roomRenderer.triggerEndorphinFlash();
+        this.ui.triggerScreenShake();
+
+        // Очищаем весь мусор на поле
+        const cleansedCount = this.physics.cleanseAllGarbage();
+
+        // Наносим колоссальный сокрушительный урон боссу
+        const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
+        const bossDmg = Math.max(300000, Math.floor(currentBoss.hp * 0.40));
+        this.dealBossDamage(bossDmg);
+
+        this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 45, "👑 УЛЬТИМЕЙТ ГИГАЧАДА!", "#ffd700");
+        if (cleansedCount > 0) {
+            this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 70, `✨ ОЧИЩЕНО МУСОРА: ${cleansedCount}!`, "#00f0ff");
+        }
+        this.ui.setQuote("«ГИГАЧАД ПРОБУЖДЁН! Полная ясность разума и сокрушение босса!»");
+        this.spawnParticles(midX, midY, "#ffd700", 35);
+    }
+
+    // --- БЛОК 6: АВТО-СБРОС МЫСЛЕЙ ---
+    toggleAutoDrop() {
+        this.autoDropEnabled = !this.autoDropEnabled;
+        if (this.ui) {
+            this.ui.updateAutoDrop(this.autoDropEnabled);
+        }
+        if (this.autoDropEnabled) {
+            this.ui.setQuote("🤖 Авто-сброс мыслей включён! Синапсы работают сами.");
+        } else {
+            this.ui.setQuote("🛑 Авто-сброс отключён. Ручное управление.");
+        }
+        this.saveGame();
+    }
+
+    // --- БЛОК 5: ПРИЗРАК СОПЕРНИКА В ЛИДЕРБОРДЕ ---
+    updateRivalGhostSystem() {
+        if (!this.ui) return;
+        const myScore = Math.floor(this.totalMotivationEarned);
+        const rivals = [
+            { name: "Скуф-Новичок", score: 5000 },
+            { name: "Пивной Магистр", score: 25000 },
+            { name: "Тайный Донатер", score: 75000 },
+            { name: "Скуф 2077", score: 200000 },
+            { name: "Кибер-Майнер", score: 600000 },
+            { name: "Альтушка из Топа", score: 1500000 },
+            { name: "Сверх-Сигма", score: 5000000 },
+            { name: "Истинный Гигачад", score: 15000000 }
+        ];
+
+        let nextRival = rivals.find(r => r.score > myScore);
+        if (nextRival) {
+            const diff = nextRival.score - myScore;
+            this.ui.updateRivalGhost(nextRival.name, diff);
+        } else {
+            this.ui.updateRivalGhost("Легенда #1", 0);
+        }
+    }
     
     // --- ОТРИСОВКА СТАКАНА МЫСЛЕЙ (КИБЕР-КОЛБА) ---
     drawCup(ctx, w, h) {
@@ -3848,6 +4135,7 @@ class SkufLifeGame {
     restart() {
         // Новый забег
         this.isGameOver = false;
+        this.hasRevivedThisRun = false;
         this.isRunning = false;
 
         this.pauseReasons.delete('gameover');
@@ -4116,6 +4404,8 @@ class SkufLifeGame {
                 CONFIG.STORAGE_KEYS.SAVE,
                 JSON.stringify(data)
             );
+            // Блок 6: Облачные сохранения Яндекс Игр
+            window.YandexBridge?.saveCloudData?.(data);
         } catch (e) {
             console.warn(
                 'Save failed:',
@@ -4567,13 +4857,11 @@ class SkufLifeGame {
                         offlineLevel * 0.05;
 
                     const offlineEarned =
-                        cappedSeconds *
+                        Math.floor(cappedSeconds *
                         this.passiveIncome *
-                        offlineRate;
+                        offlineRate);
 
-                    this.addMotivation(
-                        offlineEarned
-                    );
+                    this.pendingOfflineAmount = offlineEarned;
 
                     this.ui.showOfflineIncome(
                         cappedSeconds,

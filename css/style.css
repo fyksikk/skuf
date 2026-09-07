@@ -2874,3 +2874,155 @@ and (orientation: landscape) {
         font-size: 14px;
     }
 }
+
+/* --- ЕЖЕДНЕВНЫЙ МОДИФИКАТОР & АВТО-ДРОП СТИЛИ --- */
+.daily-mod-tag {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: rgba(168, 85, 247, 0.2);
+    border: 1px solid rgba(168, 85, 247, 0.45);
+    color: #e9d5ff;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.daily-mod-tag:hover {
+    background: rgba(168, 85, 247, 0.35);
+    border-color: #c084fc;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.autodrop-btn.active {
+    background: rgba(16, 185, 129, 0.25) !important;
+    border-color: #10b981 !important;
+    color: #6ee7b7 !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4) !important;
+}
+
+.autodrop-btn.active .action-icon {
+    animation: autoDropPulse 1.2s infinite alternate;
+}
+
+@keyframes autoDropPulse {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.25); filter: drop-shadow(0 0 4px #10b981); }
+}
+
+.boss-attack-flash {
+    animation: bossAttackShake 0.4s ease-out;
+}
+
+@keyframes bossAttackShake {
+    0%, 100% { transform: translate(0, 0); }
+    20%, 60% { transform: translate(-4px, 3px); }
+    40%, 80% { transform: translate(4px, -3px); }
+}
+
+/* =========================================================
+   MONETIZATION & REWARDED ADS STYLES (CYBER-SKUF EDITION)
+   ========================================================= */
+
+.btn-ad-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    color: #030712;
+    background: linear-gradient(135deg, #ffd700 0%, #ffaa00 50%, #f59e0b 100%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-ad-cta:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.btn-ad-cta:active:not(:disabled) {
+    transform: translateY(1px);
+    filter: brightness(0.95);
+}
+
+.btn-ad-cta:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+}
+
+.btn-ad-tag {
+    font-size: 14px;
+    line-height: 1;
+    display: inline-block;
+}
+
+.boss-tactical-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 5px;
+    width: 100%;
+}
+
+.tactical-ad-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #e2e8f0;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+}
+
+.tactical-ad-btn:hover:not(:disabled) {
+    background: rgba(0, 240, 255, 0.18);
+    border-color: #00f0ff;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+.tactical-ad-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.quest-ad-claim-btn {
+    margin-left: 6px;
+    padding: 6px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #041019;
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.quest-ad-claim-btn:hover {
+    transform: scale(1.03);
+    filter: brightness(1.1);
+}
+

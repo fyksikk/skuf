@@ -289,8 +289,9 @@ class BrainPhysics {
                 body,
                 saved.angularVelocity || 0
             );
+
+            body.visualScale = 1;
         }
-        body.visualScale = 1;
     }
 
     buildCupWalls() {
@@ -420,6 +421,27 @@ class BrainPhysics {
         return body;
     }
 
+    spawnGarbageItem(x, y, garbageTypeOrId = null) {
+        let garbageData = null;
+        if (typeof garbageTypeOrId === 'string') {
+            garbageData = CONFIG.GARBAGE_TYPES.find(g => g.id === garbageTypeOrId || g.name === garbageTypeOrId);
+        } else if (typeof garbageTypeOrId === 'object' && garbageTypeOrId !== null) {
+            garbageData = garbageTypeOrId;
+        }
+
+        if (!garbageData) {
+            const types = CONFIG.GARBAGE_TYPES || [];
+            garbageData = types[Math.floor(Math.random() * types.length)] || {
+                id: 'procrastination',
+                name: 'Прокрастинация',
+                color: '#172554',
+                radius: 21
+            };
+        }
+
+        return this.createGarbage(x, y, garbageData);
+    }
+
     addBody(body) {
         Matter.Composite.add(this.world, body);
     }
@@ -495,6 +517,117 @@ class BrainPhysics {
                         });
                     }
                 }
+            }
+        }
+    }
+
+    // Блок 1: Землетрясение от активного босса
+    triggerEarthquake(intensity = 1.0) {
+        const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
+        bodies.forEach(b => {
+            Matter.Sleeping.set(b, false);
+            const impulseX = (Math.random() - 0.5) * 0.22 * intensity;
+            const impulseY = (-0.18 - Math.random() * 0.25) * intensity;
+            Matter.Body.applyForce(b, b.position, {
+                x: impulseX,
+                y: impulseY
+            });
+        });
+    }
+
+    // Блок 1: Заражение мыслей / Превращение мыслей в мусор
+    convertRandomToGarbage(count = 1) {
+        const thoughts = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead && !b.isGarbage && b.tier && b.tier <= 4);
+        if (thoughts.length === 0) return [];
+        
+        const converted = [];
+        // Перемешиваем массив мыслей
+        const shuffled = [...thoughts].sort(() => Math.random() - 0.5);
+        const toConvert = shuffled.slice(0, Math.min(count, shuffled.length));
+
+        toConvert.forEach(body => {
+            const posX = body.position.x;
+            const posY = body.position.y;
+            const velX = body.velocity.x;
+            const velY = body.velocity.y;
+
+            // Удаляем старое тело
+            body.isDead = true;
+            Matter.Composite.remove(this.world, body);
+
+            // Случайный тип мусора
+            const garbageTypes = CONFIG.GARBAGE_TYPES || [];
+            const randomType = garbageTypes[Math.floor(Math.random() * garbageTypes.length)] || { name: 'Тревога', color: '#2e1065', radius: 21 };
+            
+            const garbageBody = this.createGarbage(posX, posY, randomType);
+            if (garbageBody) {
+                Matter.Body.setVelocity(garbageBody, { x: velX, y: velY });
+                converted.push({ x: posX, y: posY, name: randomType.name });
+            }
+        });
+
+        return converted;
+    }
+
+    // Блок 2: Кот убирает 1 случайный мусор со стакана
+    removeRandomGarbage(count = 1) {
+        const garbageList = Matter.Composite.allBodies(this.world).filter(b => b.isGarbage && !b.isDead);
+        if (garbageList.length === 0) return null;
+
+        const target = garbageList[Math.floor(Math.random() * garbageList.length)];
+        target.isDead = true;
+        Matter.Composite.remove(this.world, target);
+        this.onGarbageDestroyed(target.position.x, target.position.y, target.garbageName || 'Мусор');
+        return { x: target.position.x, y: target.position.y, name: target.garbageName };
+    }
+
+    // Блок 3: Полная очистка мусора для Ульты Мега-Чада и Возрождения
+    cleanseAllGarbage() {
+        const garbageList = Matter.Composite.allBodies(this.world).filter(b => b.isGarbage && !b.isDead);
+        const count = garbageList.length;
+        garbageList.forEach(b => {
+            b.isDead = true;
+            Matter.Composite.remove(this.world, b);
+            this.onGarbageDestroyed(b.position.x, b.position.y, b.garbageName || 'Мусор');
+        });
+        return count;
+    }
+
+    // Очистка верхней части мыслей (для Второго Дыхания / Revive)
+    removeUpperThoughts(fraction = 0.40) {
+        const bounds = this.getCupBounds();
+        const thresholdY = bounds.topY + (bounds.bottomY - bounds.topY) * fraction;
+        const dynamicBodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
+        let removed = 0;
+        dynamicBodies.forEach(b => {
+            if (b.position.y <= thresholdY) {
+                b.isDead = true;
+                Matter.Composite.remove(this.world, b);
+                removed++;
+            }
+        });
+        return removed;
+    }
+
+    // Блок 3: Anti-stuck логика — выявление застрявших неподвижных тел
+    checkStuckBodies(dt = 0.1) {
+        const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
+        const bounds = this.getCupBounds();
+
+        for (const b of bodies) {
+            const speed = Math.hypot(b.velocity.x, b.velocity.y);
+            if (speed < 0.08 && b.position.y < bounds.bottomY - 40) {
+                b.stuckTimer = (b.stuckTimer || 0) + dt;
+                if (b.stuckTimer >= 4.5) {
+                    b.stuckTimer = 0;
+                    Matter.Sleeping.set(b, false);
+                    // Мягкий микро-толчок для освобождения заклинивания
+                    const nudgeX = (Math.random() - 0.5) * 0.04;
+                    const nudgeY = -0.05 - Math.random() * 0.04;
+                    Matter.Body.applyForce(b, b.position, { x: nudgeX, y: nudgeY });
+                }
+            } else {
+                b.stuckTimer = Math.max(0, (b.stuckTimer || 0) - dt * 2);
             }
         }
     }

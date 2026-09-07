@@ -118,6 +118,9 @@
                 <button id="btn-toggle-sound" class="hud-mini-btn icon-only" title="Вкл/Выкл звук">
                     <span id="sound-icon" class="hud-emoji">🔊</span>
                 </button>
+                <button id="btn-toggle-bgm" class="hud-mini-btn icon-only" title="Фоновая Кибер-Музыка (BGM)">
+                    <span id="bgm-icon" class="hud-emoji">🎵</span>
+                </button>
                 <button id="btn-toggle-fx" class="hud-mini-btn icon-only" title="Спецэффекты FX">
                     <span id="fx-icon" class="hud-emoji">✨</span>
                 </button>
@@ -163,6 +166,7 @@
                 <span id="rent-day-label" class="rent-day-tag">ДЕНЬ 1</span>
                 <span id="crisis-badge" class="crisis-tag">Хрущёвка</span>
                 <span id="boss-day-tag" class="day-pill">Босс 1/20</span>
+                <span id="daily-mod-badge" class="daily-mod-tag" title="Ежедневный модификатор дня">📅 Модификатор</span>
             </div>
             <div class="mission-right">
                 <span id="auto-drop-badge" class="auto-drop-badge hidden">АВТО</span>
@@ -197,6 +201,16 @@
 
                 <div id="boss-quote-bubble">
                     «Аренда сама себя не заплатит, вставай!»
+                </div>
+
+                <!-- Тактическая помощь при боссе (Rewarded Ads) -->
+                <div id="boss-tactical-assist" class="boss-tactical-row">
+                    <button id="btn-boss-freeze-ad" class="tactical-ad-btn" title="Заморозить аренду на +35с за просмотр видео">
+                        <span class="btn-ad-tag">📺</span> ⏳ +35с Аренды
+                    </button>
+                    <button id="btn-boss-nuke-ad" class="tactical-ad-btn" title="Нанести 15% урона боссу за просмотр видео">
+                        <span class="btn-ad-tag">📺</span> 💥 -15% HP Босса
+                    </button>
                 </div>
 
             </div>
@@ -302,6 +316,10 @@
                 <span class="side-metric-lbl">🧹 Мусора сбито:</span>
                 <span class="side-metric-val" id="side-trash-stat">0</span>
             </div>
+            <div class="side-metric-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 4px; margin-top: 2px;">
+                <span class="side-metric-lbl">🎯 Соперник:</span>
+                <span class="side-metric-val" id="side-rival-stat" style="color: #ffd700; font-size: 11px;">#10 Скуф</span>
+            </div>
         </div>
 
         <!-- Линейка эволюции мыслей -->
@@ -344,6 +362,10 @@
             <button id="btn-brain-shake" class="action-btn shake-btn" title="Встряска: растолкать мысли">
                 <span class="action-icon">🧠</span>
                 <span id="btn-shake-label">Встряска</span>
+            </button>
+            <button id="btn-toggle-autodrop" class="action-btn autodrop-btn" title="Вкл/Выкл Авто-сброс мыслей">
+                <span class="action-icon">🤖</span>
+                <span id="btn-autodrop-label">Авто</span>
             </button>
             <button id="btn-tilt-left" class="action-btn tilt-btn" title="Наклонить стакан влево (A / ←)">
                 <span class="action-icon">⤹</span>
@@ -409,7 +431,8 @@
             <h2 style="color: #ffd700; font-size: 18px;">С ВОЗВРАЩЕНИЕМ НА ДИВАН!</h2>
             <p id="offline-desc" style="color: #cbd5e1; font-size: 12.5px; line-height: 1.5;">Пока вы спали, накопился пассивный доход:</p>
             <div id="offline-amount" style="font-size: 26px; font-weight: 900; color: #10b981; margin: 8px 0;">+0</div>
-            <button id="btn-claim-offline" class="btn-cta" style="width: 100%;">ЗАБРАТЬ МОТИВАЦИЮ</button>
+            <button id="btn-claim-offline-x2" class="btn-ad-cta" style="width: 100%; margin-bottom: 8px;">📺 ЗАБРАТЬ 2X ЗА РЕКЛАМУ</button>
+            <button id="btn-claim-offline" class="btn-cta" style="width: 100%; background: #334155; color: #cbd5e1;">Обычная награда (1x)</button>
         </div>
     </div>
 
@@ -433,6 +456,11 @@
             <div class="modal-top">
                 <h3>ДЕРЕВО ЭВОЛЮЦИИ СКУФА</h3>
                 <button id="btn-close-shop" class="close-x">✕</button>
+            </div>
+            <div class="shop-ad-banner" style="margin-bottom: 8px;">
+                <button id="btn-shop-aid-ad" class="btn-ad-cta" style="width: 100%; font-size: 11.5px; padding: 7px 10px;">
+                    <span class="btn-ad-tag">📺</span> 📦 Гуманитарная Помощь (+1 всех расходников)
+                </button>
             </div>
             <div class="tabs-nav">
                 <button class="shop-tab active" data-category="hero">ТЕЛО</button>
@@ -473,7 +501,10 @@
             <div id="prestige-perks-container" class="cards-scroll"></div>
             <div class="prestige-action-box">
                 <div id="prestige-estimate" style="font-size: 12px; color: #ffd700; margin-bottom: 6px;">При сбросе получите: +0 Диванов</div>
-                <button id="btn-do-prestige" class="btn-cta" style="width: 100%;">ВСТАТЬ С ДИВАНА (ПЕРЕРОЖДЕНИЕ)</button>
+                <button id="btn-do-prestige-ad" class="btn-ad-cta" style="width: 100%; margin-bottom: 8px;">
+                    <span class="btn-ad-tag">📺</span> 🌀 ПЕРЕРОДИТЬСЯ + СУПЕР-БОНУС (50k + Расходники)
+                </button>
+                <button id="btn-do-prestige" class="btn-cta" style="width: 100%; background: #334155; color: #cbd5e1;">Обычный сброс (Перерождение)</button>
             </div>
         </div>
     </div>
@@ -532,6 +563,9 @@
             </div>
             <div id="roulette-prize" class="roulette-prize-banner">Готовы сорвать куш?</div>
             <button id="btn-spin-wheel" class="roulette-spin-btn">КРУТИТЬ КОЛЕСО!</button>
+            <button id="btn-spin-wheel-ad" class="btn-ad-cta" style="width: 100%; margin-top: 6px; display: none;">
+                <span class="btn-ad-tag">📺</span> 🎡 КРУТИТЬ ЗА РЕКЛАМУ!
+            </button>
         </div>
     </div>
 
@@ -545,7 +579,10 @@
                 <span class="lock-icon">🔒</span>
                 <span id="gameover-lock-text" class="lock-text">Защита от клика: <b>1.0с</b></span>
             </div>
-            <button id="btn-retry" class="btn-cta locked-choices">ПРОБОВАТЬ СНОВА</button>
+            <button id="btn-revive-ad" class="btn-ad-cta" style="width: 100%; margin-bottom: 8px;">
+                <span class="btn-ad-tag">📺</span> 🔄 ВТОРОЕ ДЫХАНИЕ (Спасти забег!)
+            </button>
+            <button id="btn-retry" class="btn-cta locked-choices" style="width: 100%; background: #334155; color: #cbd5e1;">СДАТЬСЯ И НАЧАТЬ ЗАНОВО</button>
         </div>
     </div>
 

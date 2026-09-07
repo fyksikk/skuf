@@ -13,17 +13,103 @@ class YandexManager {
         this.scoreFlushTimer = null;
 
         this.gameReadyRequested = false;
+        this.isBannerVisible = false;
+        
+        // Cooldown для полноэкранной рекламы (между показами минимум 180 секунд = 3 минуты)
+        this.lastInterstitialTime = 0;
+        this.interstitialCooldown = 180000; // 180s в мс
         
         // Локальное кэширование рекордов для оффлайн/тестового режима
         this.localLeaderboard = this.loadLocalLeaderboard();
         
-        // Бусты рекламы
-        this.boosts = {
+        // Реестр всех наград и бустов за просмотр рекламы (Rewarded Video)
+        this.rewardsCatalog = {
+            // 1. Возрождение в забеге
+            revive: {
+                id: 'revive',
+                title: 'Второе Дыхание',
+                desc: 'Восстановление 50% Дыхалки, очистка завала и +45с таймера',
+                cooldown: 0,
+                lastUsed: 0,
+                color: '#38bdf8',
+                icon: '🔄'
+            },
+            // 2. Умножение оффлайн дохода
+            offline_x2: {
+                id: 'offline_x2',
+                title: '2x Оффлайн Доход',
+                desc: 'Удвоение накопленной за время отсутствия Мотивации',
+                cooldown: 0,
+                lastUsed: 0,
+                color: '#ffd700',
+                icon: '💰'
+            },
+            // 3. Дополнительный спин рулетки
+            roulette_spin: {
+                id: 'roulette_spin',
+                title: 'Фриспин Фортуны',
+                desc: 'Мгновенный бесплатный запуск Колеса Фортуны',
+                cooldown: 0,
+                lastUsed: 0,
+                color: '#a855f7',
+                icon: '🎡'
+            },
+            // 4. Набор расходников в магазине
+            consumable_pack: {
+                id: 'consumable_pack',
+                title: 'Гуманитарная Помощь',
+                desc: 'Бесплатный комплект: +1 каждого из 5 расходников',
+                cooldown: 40,
+                lastUsed: 0,
+                color: '#4ade80',
+                icon: '📦'
+            },
+            // 5. Тактическая помощь боссу: Заморозка
+            boss_freeze: {
+                id: 'boss_freeze',
+                title: 'Заморозка Аренды',
+                desc: '+35 секунд к таймеру выселения хозяйки',
+                cooldown: 35,
+                lastUsed: 0,
+                color: '#00e5ff',
+                icon: '⏳'
+            },
+            // 5. Тактическая помощь боссу: Удар
+            boss_nuke: {
+                id: 'boss_nuke',
+                title: 'Тактический Авиаудар',
+                desc: 'Мгновенно сносит 15% от максимального HP босса',
+                cooldown: 45,
+                lastUsed: 0,
+                color: '#ef4444',
+                icon: '💥'
+            },
+            // 6. Удвоение награды за квест
+            quest_x2: {
+                id: 'quest_x2',
+                title: '2x Награда Квеста',
+                desc: 'Удвоение полученной Мотивации за выполненное задание',
+                cooldown: 0,
+                lastUsed: 0,
+                color: '#f59e0b',
+                icon: '🎁'
+            },
+            // 7. Супер-бонус при перерождении
+            prestige_boost: {
+                id: 'prestige_boost',
+                title: 'Супер-Старт Сансары',
+                desc: '+50 000 стартовой Мотивации и комплект расходников',
+                cooldown: 0,
+                lastUsed: 0,
+                color: '#ec4899',
+                icon: '🌀'
+            },
+            // Пользовательские бусты из меню
             turbo: {
                 id: 'turbo',
                 title: 'Турбо-Хайп',
                 desc: 'Мгновенный вход в Лихорадку (16с) + 100% Дыхалка',
-                cooldown: 45, // сек
+                cooldown: 45,
                 lastUsed: 0,
                 color: '#ec4899',
                 icon: '⚡'
@@ -56,6 +142,8 @@ class YandexManager {
                 icon: '💣'
             }
         };
+
+        this.boosts = this.rewardsCatalog;
 
         this.init();
     }
@@ -105,6 +193,38 @@ class YandexManager {
 
             this.isFallbackMode = true;
         }
+    }
+
+    // --- БЛОК 6: ОБЛАЧНЫЕ СОХРАНЕНИЯ (YANDEX CLOUD SAVES) ---
+    async saveCloudData(data) {
+        if (!data) return;
+        try {
+            if (this.isInitialized && this.player && typeof this.player.setData === 'function') {
+                await this.player.setData({
+                    saveData: JSON.stringify(data),
+                    savedAt: Date.now()
+                }, true);
+                console.log('☁️ Сохранение успешно отправлено в Яндекс Облако');
+            }
+        } catch (e) {
+            console.warn('Ошибка отправки в облако Яндекс:', e);
+        }
+    }
+
+    async loadCloudData() {
+        if (this.isInitialized && this.player && typeof this.player.getData === 'function') {
+            try {
+                const res = await this.player.getData(['saveData', 'savedAt']);
+                if (res && res.saveData) {
+                    const parsed = JSON.parse(res.saveData);
+                    console.log('☁️ Облачное сохранение загружено');
+                    return parsed;
+                }
+            } catch (e) {
+                console.warn('Ошибка загрузки из облака Яндекс:', e);
+            }
+        }
+        return null;
     }
 
     // --- ЛИДЕРБОРД ---
@@ -256,100 +376,54 @@ class YandexManager {
         return this.getLeaderboard(quantity, 3);
     }
 
-    showRewardedVideo(boostId, onRewarded, onClose) {
-        this.showRewardedBoost(boostId, {
-            onRewarded: onRewarded,
-            onClose: onClose
-        });
-    }
-
     gameplayStart() {
         if (!this.isInitialized) return;
-
         try {
-            this.ysdk?.features
-                ?.GameplayAPI
-                ?.start();
+            this.ysdk?.features?.GameplayAPI?.start();
         } catch (e) {
-            console.warn(
-                'GameplayAPI.start error:',
-                e
-            );
+            console.warn('GameplayAPI.start error:', e);
         }
     }
 
     gameplayStop() {
         if (!this.isInitialized) return;
-
         try {
-            this.ysdk?.features
-                ?.GameplayAPI
-                ?.stop();
+            this.ysdk?.features?.GameplayAPI?.stop();
         } catch (e) {
-            console.warn(
-                'GameplayAPI.stop error:',
-                e
-            );
+            console.warn('GameplayAPI.stop error:', e);
         }
     }
 
     queueScore(score) {
-        const numericScore =
-            Math.max(
-                0,
-                Math.floor(score)
-            );
-
-        this.pendingScore =
-            Math.max(
-                this.pendingScore,
-                numericScore
-            );
+        const numericScore = Math.max(0, Math.floor(score));
+        this.pendingScore = Math.max(this.pendingScore, numericScore);
 
         if (this.scoreFlushTimer) {
             return;
         }
 
         // Запас относительно лимита Яндекса 1 req/sec
-        this.scoreFlushTimer =
-            setTimeout(async () => {
-                this.scoreFlushTimer = null;
-
-                const scoreToSend =
-                    this.pendingScore;
-
-                this.pendingScore = 0;
-
-                await this.submitScore(
-                    scoreToSend
-                );
-            }, 1500);
+        this.scoreFlushTimer = setTimeout(async () => {
+            this.scoreFlushTimer = null;
+            const scoreToSend = this.pendingScore;
+            this.pendingScore = 0;
+            await this.submitScore(scoreToSend);
+        }, 1500);
     }
 
     markGameReady() {
         this.gameReadyRequested = true;
-
         this.flushGameReady();
     }
 
     flushGameReady() {
-        if (
-            !this.gameReadyRequested ||
-            !this.isInitialized ||
-            !this.ysdk
-        ) {
+        if (!this.gameReadyRequested || !this.isInitialized || !this.ysdk) {
             return;
         }
-
         try {
-            this.ysdk.features
-                ?.LoadingAPI
-                ?.ready();
+            this.ysdk.features?.LoadingAPI?.ready();
         } catch (e) {
-            console.warn(
-                'LoadingAPI.ready error:',
-                e
-            );
+            console.warn('LoadingAPI.ready error:', e);
         }
     }
 
@@ -359,7 +433,6 @@ class YandexManager {
         if (saved) {
             try { return JSON.parse(saved); } catch (e) {}
         }
-        // Начальный реалистичный список лидеров
         return [
             { rank: 1, name: "Сигма-Лорд 3000", score: 45000000000, title: "Абсолютный Гигачад" },
             { rank: 2, name: "Виктор Превозмогатель", score: 18500000000, title: "Сигма Мастер" },
@@ -409,75 +482,234 @@ class YandexManager {
         return idx !== -1 ? idx + 1 : list.length;
     }
 
-    // --- РЕКЛАМНЫЕ БУСТЫ (Rewarded Video) ---
-    showRewardedBoost(boostId, callbacks = {}) {
-        const boost = this.boosts[boostId];
-        if (!boost) return;
-
+    // =========================================================
+    // МЕХАНИКА 1: ПОЛНОЭКРАННАЯ МЕЖСТРАНИЧНАЯ РЕКЛАМА (INTERSTITIAL)
+    // Cooldown 180с между показами. Безопасная пауза игры и звука.
+    // =========================================================
+    canShowInterstitial() {
         const now = Date.now();
-        const elapsed = (now - boost.lastUsed) / 1000;
-        if (elapsed < boost.cooldown) {
-            const left = Math.ceil(boost.cooldown - elapsed);
-            if (callbacks.onCooldown) callbacks.onCooldown(left);
+        return (now - this.lastInterstitialTime) >= this.interstitialCooldown;
+    }
+
+    getInterstitialCooldownLeft() {
+        const now = Date.now();
+        const elapsed = now - this.lastInterstitialTime;
+        return Math.max(0, Math.ceil((this.interstitialCooldown - elapsed) / 1000));
+    }
+
+    showFullscreenAdv(callbacks = {}) {
+        if (!this.canShowInterstitial()) {
+            console.log(`ℹ️ Межстраничная реклама на кулдауне (${this.getInterstitialCooldownLeft()}с осталось)`);
+            if (typeof callbacks.onClose === 'function') callbacks.onClose(false);
             return;
         }
 
-        if (this.ysdk && this.isInitialized && this.ysdk.adv) {
-            // Настоящий вызов Rewarded Video Яндекс Игр
+        console.log('🎬 Запуск Interstitial рекламы...');
+        
+        // Пауза игры и музыки
+        if (window.gameInstance && typeof window.gameInstance.pause === 'function') {
+            window.gameInstance.pause('interstitial-ad');
+        }
+        if (typeof AudioCtrl !== 'undefined' && typeof AudioCtrl.pauseBGMForAd === 'function') {
+            AudioCtrl.pauseBGMForAd();
+        }
+
+        const resumeEverything = (wasShown = true) => {
+            this.lastInterstitialTime = Date.now();
+            if (window.gameInstance && typeof window.gameInstance.resume === 'function') {
+                window.gameInstance.resume('interstitial-ad');
+            }
+            if (typeof AudioCtrl !== 'undefined' && typeof AudioCtrl.resumeBGMForAd === 'function') {
+                AudioCtrl.resumeBGMForAd();
+            }
+            if (typeof callbacks.onClose === 'function') {
+                callbacks.onClose(wasShown);
+            }
+        };
+
+        if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.showFullscreenAdv === 'function') {
+            try {
+                this.ysdk.adv.showFullscreenAdv({
+                    callbacks: {
+                        onOpen: () => {
+                            if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
+                        },
+                        onClose: (wasShown) => {
+                            resumeEverything(wasShown);
+                        },
+                        onError: (e) => {
+                            console.warn('Ошибка вызова showFullscreenAdv SDK:', e);
+                            if (typeof callbacks.onError === 'function') callbacks.onError(e);
+                            resumeEverything(false);
+                        }
+                    }
+                });
+                return;
+            } catch (err) {
+                console.warn('Исключение при вызове showFullscreenAdv:', err);
+                resumeEverything(false);
+                return;
+            }
+        }
+
+        // Fallback-режим: быстрая имитация межстраничной плашки
+        this.simulateInterstitialModal(callbacks, resumeEverything);
+    }
+
+    simulateInterstitialModal(callbacks, onComplete) {
+        if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-backdrop active';
+        modal.style.zIndex = '999999';
+        modal.innerHTML = `
+            <div class="modal-box alert glass-panel" style="max-width: 320px; text-align: center; border-color: #ffd700;">
+                <div style="font-size: 38px; margin-bottom: 6px;">📺</div>
+                <h3 style="color: #ffd700; font-size: 16px; margin-bottom: 4px;">РЕКЛАМА ЯНДЕКС ИГР</h3>
+                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">Спонсор кибер-отдыха</p>
+                <div class="lock-progress-track" style="height: 6px; margin-bottom: 10px;">
+                    <div id="inter-sim-bar" class="lock-progress-bar" style="width: 0%; background: #ffd700; transition: width 1.2s linear;"></div>
+                </div>
+                <div id="inter-sim-label" style="font-size: 12px; font-weight: 700; color: #94a3b8;">Загрузка...</div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        setTimeout(() => {
+            const bar = document.getElementById('inter-sim-bar');
+            if (bar) bar.style.width = '100%';
+        }, 50);
+
+        setTimeout(() => {
+            if (modal.parentNode) modal.parentNode.removeChild(modal);
+            onComplete(true);
+        }, 1300);
+    }
+
+    // =========================================================
+    // МЕХАНИКА 2: REWARDED VIDEO (7 ТОЧЕК НАГРАД + БУСТЫ)
+    // Начисление строго в onRewarded. Безопасная пауза и возобновление.
+    // =========================================================
+    showRewardedVideo(rewardType, onRewardedOrCallbacks, onCloseFallback) {
+        let callbacks = {};
+        if (typeof onRewardedOrCallbacks === 'function') {
+            callbacks = {
+                onRewarded: onRewardedOrCallbacks,
+                onClose: onCloseFallback
+            };
+        } else if (typeof onRewardedOrCallbacks === 'object' && onRewardedOrCallbacks !== null) {
+            callbacks = onRewardedOrCallbacks;
+        }
+
+        const reward = this.rewardsCatalog[rewardType] || {
+            id: rewardType,
+            title: 'Бонус за просмотр',
+            desc: 'Награда за активность в игре',
+            cooldown: 0,
+            lastUsed: 0,
+            color: '#00f0ff',
+            icon: '🎁'
+        };
+
+        const now = Date.now();
+        if (reward.cooldown > 0) {
+            const elapsed = (now - reward.lastUsed) / 1000;
+            if (elapsed < reward.cooldown) {
+                const left = Math.ceil(reward.cooldown - elapsed);
+                if (typeof callbacks.onCooldown === 'function') {
+                    callbacks.onCooldown(left);
+                }
+                return;
+            }
+        }
+
+        // Пауза игры и музыки
+        if (window.gameInstance && typeof window.gameInstance.pause === 'function') {
+            window.gameInstance.pause('rewarded-ad');
+        }
+        if (typeof AudioCtrl !== 'undefined' && typeof AudioCtrl.pauseBGMForAd === 'function') {
+            AudioCtrl.pauseBGMForAd();
+        }
+
+        let userEarnedReward = false;
+
+        const cleanupAndResume = () => {
+            if (window.gameInstance && typeof window.gameInstance.resume === 'function') {
+                window.gameInstance.resume('rewarded-ad');
+            }
+            if (typeof AudioCtrl !== 'undefined' && typeof AudioCtrl.resumeBGMForAd === 'function') {
+                AudioCtrl.resumeBGMForAd();
+            }
+            if (typeof callbacks.onClose === 'function') {
+                callbacks.onClose(userEarnedReward);
+            }
+        };
+
+        if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.showRewardedVideo === 'function') {
             try {
                 this.ysdk.adv.showRewardedVideo({
                     callbacks: {
                         onOpen: () => {
-                            if (callbacks.onOpen) callbacks.onOpen();
+                            if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
                         },
                         onRewarded: () => {
-                            boost.lastUsed = Date.now();
-                            if (callbacks.onRewarded) callbacks.onRewarded(boostId);
+                            userEarnedReward = true;
+                            reward.lastUsed = Date.now();
+                            try {
+                                if (typeof callbacks.onRewarded === 'function') {
+                                    callbacks.onRewarded(reward.id);
+                                }
+                            } catch (rewardErr) {
+                                console.error('Ошибка в обработчике onRewarded:', rewardErr);
+                            }
                         },
                         onClose: () => {
-                            if (callbacks.onClose) callbacks.onClose();
+                            cleanupAndResume();
                         },
                         onError: (e) => {
-                            console.warn(
-                                'Ошибка показа Rewarded Video Яндекс:',
-                                e
-                            );
-
-                            if (callbacks.onError) {
-                                callbacks.onError(e);
-                            }
-
-                            // Обязательно освобождаем gameplay
-                            if (callbacks.onClose) {
-                                callbacks.onClose();
-                            }
+                            console.warn('Ошибка вызова showRewardedVideo SDK:', e);
+                            if (typeof callbacks.onError === 'function') callbacks.onError(e);
+                            cleanupAndResume();
                         }
                     }
                 });
                 return;
             } catch (err) {
                 console.warn('Исключение при вызове showRewardedVideo:', err);
+                cleanupAndResume();
+                return;
             }
         }
 
-        // Fallback-режим (симуляция просмотра промо 3 секунды с наградой)
-        this.simulateAdModal(boost, callbacks);
+        // Fallback-режим (симуляция просмотра промо 3 секунды)
+        this.simulateRewardedModal(reward, callbacks, () => {
+            userEarnedReward = true;
+            reward.lastUsed = Date.now();
+            try {
+                if (typeof callbacks.onRewarded === 'function') {
+                    callbacks.onRewarded(reward.id);
+                }
+            } catch (rewardErr) {
+                console.error('Ошибка в обработчике onRewarded (fallback):', rewardErr);
+            }
+            cleanupAndResume();
+        });
     }
 
-    simulateAdModal(boost, callbacks) {
-        if (callbacks.onOpen) callbacks.onOpen();
+    simulateRewardedModal(reward, callbacks, onRewardedComplete) {
+        if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
         
         let secondsLeft = 3;
         const modal = document.createElement('div');
         modal.className = 'modal-backdrop active';
-        modal.style.zIndex = '99999';
+        modal.style.zIndex = '999999';
         modal.innerHTML = `
-            <div class="modal-box alert glass-panel" style="max-width: 320px; text-align: center; border-color: ${boost.color};">
-                <div style="font-size: 36px; margin-bottom: 6px;">🎬</div>
+            <div class="modal-box alert glass-panel" style="max-width: 320px; text-align: center; border-color: ${reward.color}; box-shadow: 0 0 25px ${reward.color}44;">
+                <div style="font-size: 36px; margin-bottom: 6px;">${reward.icon || '🎬'}</div>
                 <h3 style="color: #ffd700; font-size: 16px; margin-bottom: 4px;">РЕКЛАМА ЯНДЕКС ИГР</h3>
-                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">Получение буста: <b>${boost.title}</b></p>
+                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">Получение: <b>${reward.title}</b></p>
                 <div class="lock-progress-track" style="height: 8px; margin-bottom: 12px;">
-                    <div id="ad-sim-bar" class="lock-progress-bar" style="width: 0%; background: ${boost.color}; transition: width 3s linear;"></div>
+                    <div id="ad-sim-bar" class="lock-progress-bar" style="width: 0%; background: ${reward.color}; transition: width 3s linear;"></div>
                 </div>
                 <div id="ad-sim-timer" style="font-size: 14px; font-weight: 800; color: #00f0ff;">Просмотр: ${secondsLeft}с</div>
             </div>
@@ -498,18 +730,60 @@ class YandexManager {
             if (secondsLeft <= 0) {
                 clearInterval(interval);
                 if (modal.parentNode) modal.parentNode.removeChild(modal);
-                boost.lastUsed = Date.now();
-                if (callbacks.onRewarded) callbacks.onRewarded(boost.id);
-                if (callbacks.onClose) callbacks.onClose();
+                onRewardedComplete();
             }
         }, 1000);
     }
 
+    // Совместимость со старым методом
+    showRewardedBoost(boostId, callbacks = {}) {
+        this.showRewardedVideo(boostId, callbacks);
+    }
+
     getBoostCooldownLeft(boostId) {
-        const boost = this.boosts[boostId];
-        if (!boost) return 0;
-        const elapsed = (Date.now() - boost.lastUsed) / 1000;
-        return Math.max(0, Math.ceil(boost.cooldown - elapsed));
+        const reward = this.rewardsCatalog[boostId];
+        if (!reward) return 0;
+        const elapsed = (Date.now() - reward.lastUsed) / 1000;
+        return Math.max(0, Math.ceil(reward.cooldown - elapsed));
+    }
+
+    // =========================================================
+    // МЕХАНИКА 3: БАННЕРНАЯ РЕКЛАМА (BANNER ADS / STICKY BANNER)
+    // Показывается ТОЛЬКО на пассивных экранах (Меню, Магазин, Лидерборд, Статы)
+    // Скрывается во время активного геймплея и боссфайтов.
+    // =========================================================
+    showBannerAdv() {
+        if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.showBannerAdv === 'function') {
+            try {
+                this.ysdk.adv.showBannerAdv().then(({ sticky }) => {
+                    this.isBannerVisible = true;
+                    console.log('📌 Баннер показан, sticky:', sticky);
+                }).catch(e => {
+                    console.warn('showBannerAdv warning:', e);
+                });
+            } catch (e) {
+                console.warn('showBannerAdv error:', e);
+            }
+        } else {
+            this.isBannerVisible = true;
+        }
+    }
+
+    hideBannerAdv() {
+        if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.hideBannerAdv === 'function') {
+            try {
+                this.ysdk.adv.hideBannerAdv().then(() => {
+                    this.isBannerVisible = false;
+                    console.log('📌 Баннер скрыт');
+                }).catch(e => {
+                    console.warn('hideBannerAdv warning:', e);
+                });
+            } catch (e) {
+                console.warn('hideBannerAdv error:', e);
+            }
+        } else {
+            this.isBannerVisible = false;
+        }
     }
 }
 

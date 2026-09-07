@@ -99,9 +99,18 @@ class UIManager {
         this.rouletteCtx = this.rouletteCanvas ? this.rouletteCanvas.getContext('2d') : null;
         this.rouletteBadge = document.getElementById('roulette-badge');
         this.btnSpinWheel = document.getElementById('btn-spin-wheel');
+        this.btnSpinWheelAd = document.getElementById('btn-spin-wheel-ad');
         this.roulettePrize = document.getElementById('roulette-prize');
         this.wheelCurrentAngle = 0;
         this.isWheelSpinning = false;
+
+        // Монетизация & Рекламные элементы
+        this.btnReviveAd = document.getElementById('btn-revive-ad');
+        this.btnClaimOfflineX2 = document.getElementById('btn-claim-offline-x2');
+        this.btnShopAidAd = document.getElementById('btn-shop-aid-ad');
+        this.btnDoPrestigeAd = document.getElementById('btn-do-prestige-ad');
+        this.btnBossFreezeAd = document.getElementById('btn-boss-freeze-ad');
+        this.btnBossNukeAd = document.getElementById('btn-boss-nuke-ad');
 
         // Ранг
         this.rankTitle = document.getElementById('rank-title');
@@ -129,6 +138,10 @@ class UIManager {
         this.btnShakeLabel = document.getElementById('btn-shake-label');
         this.heroQuote = document.getElementById('hero-quote');
         this.soundIcon = document.getElementById('sound-icon');
+        this.bgmIcon = document.getElementById('bgm-icon');
+        this.dailyModBadge = document.getElementById('daily-mod-badge');
+        this.sideRivalStat = document.getElementById('side-rival-stat');
+        this.btnAutoDrop = document.getElementById('btn-toggle-autodrop');
     }
 
     bindEvents() {
@@ -154,69 +167,93 @@ class UIManager {
         // Рулетка Фортуны
         document.getElementById('btn-open-roulette')?.addEventListener('click', () => {
             this.showRoulette();
+            window.YandexBridge?.showBannerAdv();
         });
         document.getElementById('btn-close-roulette')?.addEventListener('click', () => {
             this.hideRoulette();
+            window.YandexBridge?.hideBannerAdv();
         });
         this.btnSpinWheel?.addEventListener('click', () => {
             if (!this.isWheelSpinning) {
                 this.game.spinRoulette();
             }
         });
+        this.btnSpinWheelAd?.addEventListener('click', () => {
+            if (!this.isWheelSpinning) {
+                window.YandexBridge?.showRewardedVideo('roulette_spin', () => {
+                    this.game.freeSpinsAvailable++;
+                    this.game.spinRoulette();
+                });
+            }
+        });
 
         // Открытие окон
         document.getElementById('btn-open-shop')?.addEventListener('click', () => {
             this.openShop();
+            window.YandexBridge?.showBannerAdv();
         });
 
         document.getElementById('btn-close-shop')?.addEventListener('click', () => {
             this.shopOverlay.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
         });
 
         document.getElementById('btn-open-quests')?.addEventListener('click', () => {
             this.openQuests();
+            window.YandexBridge?.showBannerAdv();
         });
 
         document.getElementById('btn-close-quests')?.addEventListener('click', () => {
             this.questsOverlay.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
         });
 
         document.getElementById('btn-open-prestige')?.addEventListener('click', () => {
             this.openPrestige();
+            window.YandexBridge?.showBannerAdv();
         });
 
         document.getElementById('btn-close-prestige')?.addEventListener('click', () => {
             this.prestigeOverlay.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
         });
 
         document.getElementById('btn-open-stats')?.addEventListener('click', () => {
             this.openStats();
+            window.YandexBridge?.showBannerAdv();
         });
 
         document.getElementById('btn-close-stats')?.addEventListener('click', () => {
             this.statsOverlay.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
         });
 
         // Бусты (Рекламные усиления)
         document.getElementById('btn-open-boosts')?.addEventListener('click', () => {
             this.openBoosts();
+            window.YandexBridge?.showBannerAdv();
         });
         document.getElementById('btn-close-boosts')?.addEventListener('click', () => {
             this.boostsOverlay?.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
         });
         document.getElementById('btn-side-boosts')?.addEventListener('click', () => {
             this.openBoosts();
+            window.YandexBridge?.showBannerAdv();
         });
 
         // Таблица лидеров (Яндекс Игры)
         document.getElementById('btn-open-leaderboard')?.addEventListener('click', () => {
             this.openLeaderboard();
+            window.YandexBridge?.showBannerAdv();
         });
         document.getElementById('btn-close-leaderboard')?.addEventListener('click', () => {
             this.leaderboardOverlay?.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
         });
         document.getElementById('btn-side-leaderboard')?.addEventListener('click', () => {
             this.openLeaderboard();
+            window.YandexBridge?.showBannerAdv();
         });
 
         // Боковая панель для ПК
@@ -225,6 +262,7 @@ class UIManager {
         });
         this.btnSideStats?.addEventListener('click', () => {
             this.openStats();
+            window.YandexBridge?.showBannerAdv();
         });
         this.btnResetGame?.addEventListener('click', () => {
             if (this.resetOverlay) {
@@ -256,10 +294,53 @@ class UIManager {
             });
         });
 
+        // Гуманитарная помощь в магазине
+        this.btnShopAidAd?.addEventListener('click', () => {
+            window.YandexBridge?.showRewardedVideo('consumable_pack', () => {
+                this.game.claimShopAid();
+            });
+        });
+
+        // Тактическая помощь при боссе
+        this.btnBossFreezeAd?.addEventListener('click', () => {
+            window.YandexBridge?.showRewardedVideo('boss_freeze', () => {
+                this.game.applyBossFreeze();
+            });
+        });
+
+        this.btnBossNukeAd?.addEventListener('click', () => {
+            window.YandexBridge?.showRewardedVideo('boss_nuke', () => {
+                this.game.applyBossNuke();
+            });
+        });
+
         // Кнопка звука
         document.getElementById('btn-toggle-sound')?.addEventListener('click', () => {
             const muted = AudioCtrl.toggleMute();
             this.soundIcon.textContent = muted ? '🔇' : '🔊';
+        });
+
+        // Кнопка фоновой кибер-музыки (BGM)
+        document.getElementById('btn-toggle-bgm')?.addEventListener('click', () => {
+            const isPlaying = AudioCtrl.toggleBGM();
+            if (this.bgmIcon) {
+                this.bgmIcon.textContent = isPlaying ? '🎵' : '🔇';
+            }
+            this.setQuote(isPlaying ? "🎶 Кибер-Лоуфай включён! Вайб на высоте." : "🔇 Музыка выключена.");
+        });
+
+        // Кнопка авто-сброса мыслей
+        this.btnAutoDrop?.addEventListener('click', () => {
+            if (this.game) {
+                this.game.toggleAutoDrop();
+            }
+        });
+
+        // Клик по бейджу ежедневного модификатора
+        this.dailyModBadge?.addEventListener('click', () => {
+            if (this.game && this.game.activeDailyMod) {
+                this.setQuote(`📅 ${this.game.activeDailyMod.title}: ${this.game.activeDailyMod.desc}`);
+            }
         });
 
         // Кнопка спецэффектов (FX Вкл/Выкл)
@@ -267,20 +348,60 @@ class UIManager {
             this.game.toggleFx();
         });
 
-        // Забрать оффлайн доход
-        document.getElementById('btn-claim-offline')?.addEventListener('click', () => {
-            this.offlineOverlay.classList.remove('active');
+        // Забрать оффлайн доход (1x и 2x за рекламу)
+        this.btnClaimOfflineX2?.addEventListener('click', () => {
+            window.YandexBridge?.showRewardedVideo('offline_x2', () => {
+                this.game.claimOfflineIncome(true);
+                this.offlineOverlay.classList.remove('active');
+                window.YandexBridge?.hideBannerAdv();
+            });
         });
 
-        // Рестарт после поражения
+        document.getElementById('btn-claim-offline')?.addEventListener('click', () => {
+            this.game.claimOfflineIncome(false);
+            this.offlineOverlay.classList.remove('active');
+            window.YandexBridge?.hideBannerAdv();
+        });
+
+        // Второе дыхание (Revive за рекламу)
+        this.btnReviveAd?.addEventListener('click', () => {
+            if (this.game.hasRevivedThisRun) {
+                this.setQuote("«Второе дыхание уже было использовано в этом забеге!»");
+                return;
+            }
+            window.YandexBridge?.showRewardedVideo('revive', () => {
+                this.game.revivePlayer();
+                window.YandexBridge?.hideBannerAdv();
+            });
+        });
+
+        // Рестарт после поражения (с вызовом межстраничной рекламы по кулдауну 180с)
         document.getElementById('btn-retry')?.addEventListener('click', () => {
             this.gameOverOverlay.classList.remove('active');
-            this.game.restart();
+            window.YandexBridge?.hideBannerAdv();
+            window.YandexBridge?.showFullscreenAdv({
+                onClose: () => {
+                    this.game.restart();
+                }
+            });
         });
 
-        // Совершить Престиж
+        // Совершить Престиж (1x и Супер-Бонус за рекламу)
+        this.btnDoPrestigeAd?.addEventListener('click', () => {
+            window.YandexBridge?.showRewardedVideo('prestige_boost', () => {
+                this.game.triggerPrestige(true);
+                this.prestigeOverlay.classList.remove('active');
+                window.YandexBridge?.hideBannerAdv();
+            });
+        });
+
         document.getElementById('btn-do-prestige')?.addEventListener('click', () => {
-            this.game.triggerPrestige();
+            const ok = this.game.triggerPrestige(false);
+            if (ok) {
+                this.prestigeOverlay.classList.remove('active');
+                window.YandexBridge?.hideBannerAdv();
+                window.YandexBridge?.showFullscreenAdv();
+            }
         });
     }
 
@@ -498,6 +619,38 @@ class UIManager {
         }
     }
 
+    updateDailyModifier(mod) {
+        if (this.dailyModBadge && mod) {
+            this.dailyModBadge.textContent = `${mod.icon} ${mod.title}`;
+            this.dailyModBadge.title = mod.desc;
+        }
+    }
+
+    updateRivalGhost(rivalName, scoreDiff) {
+        if (this.sideRivalStat) {
+            if (scoreDiff > 0) {
+                this.sideRivalStat.textContent = `${rivalName} (+${CONFIG.formatNumber(scoreDiff)})`;
+            } else {
+                this.sideRivalStat.textContent = `👑 Топ-1! (${rivalName})`;
+            }
+        }
+    }
+
+    updateAutoDrop(active) {
+        if (this.btnAutoDrop) {
+            if (active) {
+                this.btnAutoDrop.classList.add('active');
+            } else {
+                this.btnAutoDrop.classList.remove('active');
+            }
+        }
+        const autoBadge = document.getElementById('auto-drop-badge');
+        if (autoBadge) {
+            if (active) autoBadge.classList.remove('hidden');
+            else autoBadge.classList.add('hidden');
+        }
+    }
+
     // --- МОДАЛКА МАГАЗИНА ---
     openShop() {
         this.renderUpgrades();
@@ -593,26 +746,51 @@ class UIManager {
                 <div style="font-size: 9px; color: #ffd700; margin-top: 2px;">Награда: +${CONFIG.formatNumber(q.reward)} 🗿 ${q.rewardItem ? `& +1 ${q.rewardItem}` : ''}</div>
             `;
 
-            const btn = document.createElement('button');
-            btn.className = 'quest-claim-btn';
-
             if (isClaimed) {
-                btn.className += ' bought';
+                const btn = document.createElement('button');
+                btn.className = 'quest-claim-btn bought';
                 btn.textContent = 'ЗАБРАНО ✓';
+                card.appendChild(btn);
             } else if (isReady) {
-                btn.textContent = 'ЗАБРАТЬ 🎁';
-                btn.addEventListener('click', () => {
-                    this.game.claimQuest(q.id);
+                const btnGroup = document.createElement('div');
+                btnGroup.style.display = 'flex';
+                btnGroup.style.flexDirection = 'column';
+                btnGroup.style.gap = '4px';
+
+                const btn2x = document.createElement('button');
+                btn2x.className = 'quest-claim-btn';
+                btn2x.style.background = 'linear-gradient(135deg, #eab308, #ca8a04)';
+                btn2x.style.color = '#000';
+                btn2x.style.fontWeight = 'bold';
+                btn2x.textContent = '📺 2X НАГРАДА';
+                btn2x.addEventListener('click', () => {
+                    window.YandexBridge?.showRewardedVideo('quest_2x', () => {
+                        this.game.claimQuest(q.id, true);
+                        this.openQuests();
+                    });
+                });
+
+                const btn1x = document.createElement('button');
+                btn1x.className = 'quest-claim-btn';
+                btn1x.style.opacity = '0.85';
+                btn1x.textContent = 'ЗАБРАТЬ 1X';
+                btn1x.addEventListener('click', () => {
+                    this.game.claimQuest(q.id, false);
                     AudioCtrl.playEndorphinFanfare();
                     this.openQuests();
                 });
+
+                btnGroup.appendChild(btn2x);
+                btnGroup.appendChild(btn1x);
+                card.appendChild(btnGroup);
             } else {
-                btn.className += ' disabled';
+                const btn = document.createElement('button');
+                btn.className = 'quest-claim-btn disabled';
                 btn.textContent = `${CONFIG.formatNumber(progress)}/${CONFIG.formatNumber(q.goal)}`;
+                card.appendChild(btn);
             }
 
             card.appendChild(info);
-            card.appendChild(btn);
             container.appendChild(card);
         });
 
@@ -952,6 +1130,7 @@ class UIManager {
         }
 
         this.offlineOverlay.classList.add('active');
+        window.YandexBridge?.showBannerAdv();
     }
 
     // --- МОДАЛКА ПОРАЖЕНИЯ (С ЗАЩИТОЙ) ---
@@ -962,6 +1141,15 @@ class UIManager {
         const btnRetry = document.getElementById('btn-retry');
         const lockBanner = document.getElementById('gameover-lock-banner');
         const lockText = document.getElementById('gameover-lock-text');
+
+        // Кнопка второго дыхания (Revive)
+        if (this.btnReviveAd) {
+            if (this.game.hasRevivedThisRun) {
+                this.btnReviveAd.style.display = 'none';
+            } else {
+                this.btnReviveAd.style.display = 'flex';
+            }
+        }
 
         if (btnRetry) {
             btnRetry.classList.add('locked-choices');
@@ -981,6 +1169,12 @@ class UIManager {
         }
 
         this.gameOverOverlay.classList.add('active');
+        window.YandexBridge?.showBannerAdv();
+    }
+
+    hideGameOver() {
+        this.gameOverOverlay.classList.remove('active');
+        window.YandexBridge?.hideBannerAdv();
     }
 
     // --- МОДАЛКА ДИЛЕММЫ / СОБЫТИЯ (С ЗАЩИТОЙ ОТ СЛУЧАЙНОГО НАЖАТИЯ) ---
