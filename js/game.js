@@ -114,6 +114,13 @@ class SkufLifeGame {
         this.basementDay = 0;
         this.tapBonusUntil = 0;
         this.cryptoBonusUntil = 0;
+        this.tapBonusTimer = 0;
+        this.cryptoBonusTimer = 0;
+        this.isAiming = false;
+        this.progressResetAt = 0;
+        this.hasRevivedThisRun = false;
+        this.pendingOfflineAmount = 0;
+        this.roomInteractionReadyAt = Object.create(null);
         this.eventPassiveBonusTimer = 0;
         this.eventPassiveBonusAmount = 0;
         this.periodicCheckTimer = 0;
@@ -264,8 +271,28 @@ class SkufLifeGame {
             skipSdk = false
         } = {}
     ) {
+        const wasPaused = this.isPaused;
         this.pauseReasons.add(reason);
         this.isPaused = true;
+
+        if (!wasPaused) {
+            const now = Date.now();
+            if (this.tapBonusUntil && this.tapBonusUntil > now) {
+                this.tapBonusRemaining = this.tapBonusUntil - now;
+            } else if (this.tapBonusTimer > 0) {
+                this.tapBonusRemaining = this.tapBonusTimer * 1000;
+            } else {
+                this.tapBonusRemaining = 0;
+            }
+
+            if (this.cryptoBonusUntil && this.cryptoBonusUntil > now) {
+                this.cryptoBonusRemaining = this.cryptoBonusUntil - now;
+            } else if (this.cryptoBonusTimer > 0) {
+                this.cryptoBonusRemaining = this.cryptoBonusTimer * 1000;
+            } else {
+                this.cryptoBonusRemaining = 0;
+            }
+        }
 
         if (this.rafId !== null) {
             cancelAnimationFrame(
@@ -304,6 +331,18 @@ class SkufLifeGame {
 
         this.isPaused = false;
         this.isRunning = true;
+
+        const now = Date.now();
+        if (this.tapBonusRemaining > 0) {
+            this.tapBonusUntil = now + this.tapBonusRemaining;
+            this.tapBonusTimer = this.tapBonusRemaining / 1000;
+            this.tapBonusRemaining = 0;
+        }
+        if (this.cryptoBonusRemaining > 0) {
+            this.cryptoBonusUntil = now + this.cryptoBonusRemaining;
+            this.cryptoBonusTimer = this.cryptoBonusRemaining / 1000;
+            this.cryptoBonusRemaining = 0;
+        }
 
         this.lastTime =
             performance.now();
@@ -591,7 +630,9 @@ class SkufLifeGame {
 
             pointerStartedInCup = y >= this.roomHeight;
 
-            if (!pointerStartedInCup) {
+            if (pointerStartedInCup) {
+                this.isAiming = true;
+            } else {
                 this.handleRoomInteraction(
                     x,
                     y,
@@ -619,6 +660,7 @@ class SkufLifeGame {
             );
 
             activePointerId = null;
+            this.isAiming = false;
 
             if (!pointerStartedInCup) {
                 return;
@@ -668,7 +710,15 @@ class SkufLifeGame {
         this.canvas.addEventListener('pointercancel', () => {
             activePointerId = null;
             pointerStartedInCup = false;
+            this.isAiming = false;
         });
+
+        const preventContextMenu = (event) => {
+            event.preventDefault();
+        };
+        this.canvas?.addEventListener('contextmenu', preventContextMenu);
+        this.container?.addEventListener('contextmenu', preventContextMenu);
+        document.getElementById('app-viewport')?.addEventListener('contextmenu', preventContextMenu);
 
         // Кнопка Встряски
         const btnShake = document.getElementById('btn-brain-shake');
@@ -866,6 +916,7 @@ class SkufLifeGame {
                         // Блок 2: Реальные тактические баффы от телепередач
                         if (chan) {
                             if (chan.id === 0) { // СПАРТАК
+                                this.tapBonusTimer = 20;
                                 this.tapBonusUntil = Date.now() + 20000;
                                 this.spawnFloatingText(target.x, target.y - 30, "⚽ ТАП-УРОН +50%!", "#22c55e");
                             } else if (chan.id === 1) { // УЛИЦЫ ФОНАРЕЙ
@@ -873,6 +924,7 @@ class SkufLifeGame {
                                 this.dealBossDamage(bossDmg);
                                 this.spawnFloatingText(target.x, target.y - 30, `🚓 ОМОН: -${CONFIG.formatNumber(bossDmg)} HP!`, "#38bdf8");
                             } else if (chan.id === 2) { // КРИПТО-ПАМП
+                                this.cryptoBonusTimer = 25;
                                 this.cryptoBonusUntil = Date.now() + 25000;
                                 this.addMotivation(500);
                                 this.spawnFloatingText(target.x, target.y - 30, "📈 КРИПТО-БУСТ +50%!", "#ffd700");
@@ -1222,7 +1274,7 @@ class SkufLifeGame {
             this.bossDamageMultiplier *
             bossHunterMultiplier;
 
-        if (this.tapBonusUntil && Date.now() < this.tapBonusUntil) {
+        if (this.tapBonusTimer > 0 || (this.tapBonusUntil && Date.now() < this.tapBonusUntil)) {
             damage *= 1.5;
         }
 
@@ -1242,6 +1294,13 @@ class SkufLifeGame {
     ) {
         if (!this.fxEnabled) {
             return;
+        }
+
+        if (this.mergeWaves.length > 24) {
+            this.mergeWaves.splice(
+                0,
+                this.mergeWaves.length - 24
+            );
         }
 
         this.mergeWaves.push({
@@ -1509,7 +1568,11 @@ class SkufLifeGame {
 
     // --- СЛИЯНИЕ МЫСЛЕЙ ---
     handleMerge(bodyA, bodyB) {
-        if (!bodyA || !bodyB || bodyA.isDead || bodyB.isDead) return;
+        if (!bodyA || !bodyB) return;
+        if (bodyA.mergeHandled || bodyB.mergeHandled) return;
+
+        bodyA.mergeHandled = true;
+        bodyB.mergeHandled = true;
         bodyA.isDead = true;
         bodyB.isDead = true;
         const tier = bodyA.tier;
@@ -1891,7 +1954,8 @@ class SkufLifeGame {
             this.motivation -= upg.cost;
             upg.bought = true;
             this.recalculatePassives();
-            this.updateHUD();
+            this.updateHUD(true);
+            this.saveGame({ cloudFlush: true });
             return true;
         }
         return false;
@@ -2227,7 +2291,8 @@ class SkufLifeGame {
             boss,
             this.bossHp,
             1,
-            this.maxDays
+            this.maxDays,
+            this.getBossMaxHp(1)
         );
 
         this.ui.updateRent(
@@ -2266,7 +2331,7 @@ class SkufLifeGame {
 
         this.updateHUD(true);
 
-        this.saveGame();
+        this.saveGame({ cloudFlush: true });
 
         this.ui.setQuote(
             `«САНСАРА! +${CONFIG.formatNumber(gain)} 🛋️»`
@@ -2495,6 +2560,12 @@ class SkufLifeGame {
     // --- ВСПЛЫВАЮЩИЙ ТЕКСТ И ЧАСТИЦЫ ---
     spawnFloatingText(x, y, text, color = "#ffd700") {
         if (!this.fxEnabled && this.floatingTexts.length > 5) return;
+        if (this.floatingTexts.length > 40) {
+            this.floatingTexts.splice(
+                0,
+                this.floatingTexts.length - 40
+            );
+        }
         this.floatingTexts.push({
             x, y, text, color,
             alpha: 1.0,
@@ -2862,8 +2933,14 @@ class SkufLifeGame {
 
             // Пассивный доход
             let currentPassive = this.passiveIncome;
-            if (this.cryptoBonusUntil && wallNow < this.cryptoBonusUntil) {
+            if (this.cryptoBonusTimer > 0 || (this.cryptoBonusUntil && wallNow < this.cryptoBonusUntil)) {
                 currentPassive *= 1.5;
+            }
+            if (this.cryptoBonusTimer > 0) {
+                this.cryptoBonusTimer = Math.max(0, this.cryptoBonusTimer - dt);
+            }
+            if (this.tapBonusTimer > 0) {
+                this.tapBonusTimer = Math.max(0, this.tapBonusTimer - dt);
             }
             if (this.passiveIncome > 0) {
                 this.addMotivation(currentPassive * dt);
@@ -2990,14 +3067,24 @@ class SkufLifeGame {
     }
 
     checkDangerZone(dt) {
-        const bodies = Matter.Composite.allBodies(this.physics.world).filter(b => !b.isStatic);
+        const bodies = Matter.Composite.allBodies(this.physics.world).filter(
+            b => !b.isStatic && !b.isDead
+        );
         let inDanger = false;
         const now = performance.now();
 
         for (const b of bodies) {
-            if (b.isDead) continue;
-            if (b.spawnedAt && (now - b.spawnedAt < 1200)) continue;
-            if (b.position.y - (b.circleRadius || 20) < this.dangerLineY && b.velocity.y < 0.2) {
+            const age = b.spawnedAt ? (now - b.spawnedAt) : 9999;
+            if (age < 900) continue;
+
+            const radius = b.circleRadius || 20;
+            const topY = b.position.y - radius;
+
+            const isSettled =
+                Math.abs(b.velocity.y) < 0.45 &&
+                Math.abs(b.velocity.x) < 1.2;
+
+            if (topY < this.dangerLineY && isSettled) {
                 inDanger = true;
                 break;
             }
@@ -3834,8 +3921,9 @@ class SkufLifeGame {
 
         // 3. Линия прицеливания и текущая мысль
         if (this.dropCooldown <= 0) {
+            const aimAlpha = this.isAiming ? 0.38 : 0.10;
             this.ctx.save();
-            this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.35)';
+            this.ctx.strokeStyle = `rgba(0, 240, 255, ${aimAlpha})`;
             this.ctx.setLineDash([4, 4]);
             this.ctx.beginPath();
             this.ctx.moveTo(this.aimX, this.dropY);
@@ -3861,7 +3949,7 @@ class SkufLifeGame {
 
             this.ctx.save();
 
-            this.ctx.globalAlpha = 0.16;
+            this.ctx.globalAlpha = this.isAiming ? 0.35 : 0.06;
 
             this.ctx.strokeStyle =
                 CONFIG.TIERS[
@@ -3893,7 +3981,7 @@ class SkufLifeGame {
             // Тень на полу
 
             this.ctx.fillStyle =
-                "rgba(0,0,0,0.38)";
+                this.isAiming ? "rgba(0,0,0,0.38)" : "rgba(0,0,0,0.12)";
 
             this.ctx.beginPath();
 
@@ -4062,6 +4150,10 @@ class SkufLifeGame {
 
     // --- ПОЛНЫЙ СБРОС СТАТИСТИКИ И ПРОГРЕССА (СТАРТ С ЧИСТОГО НУЛЯ) ---
     resetGame(manual = true) {
+        this.progressResetAt =
+            window.YandexBridge?.now?.() ??
+            Date.now();
+
         try {
             const keysToRemove = [
                 CONFIG.STORAGE_KEYS.SAVE,
@@ -4082,6 +4174,17 @@ class SkufLifeGame {
         // Обнуление всех числовых и игровых показателей
         this.totalTaps = 0;
         this.totalSpins = 0;
+
+        this.hasRevivedThisRun = false;
+        this.pendingOfflineAmount = 0;
+        this.eventPassiveBonusTimer = 0;
+        this.eventPassiveBonusAmount = 0;
+        this.tapBonusTimer = 0;
+        this.cryptoBonusTimer = 0;
+        this.tapBonusUntil = 0;
+        this.cryptoBonusUntil = 0;
+        this.tapBonusRemaining = 0;
+        this.cryptoBonusRemaining = 0;
 
         this.runMotivationEarned = 0;
         this.runBossesDefeated = 0;
@@ -4173,7 +4276,7 @@ class SkufLifeGame {
         // Обновление всех элементов интерфейса
         const boss = CONFIG.BOSSES[1];
         this.ui.updateMotivation(0, 0);
-        this.ui.updateBoss(boss, boss.hp, 1, this.maxDays);
+        this.ui.updateBoss(boss, boss.hp, 1, this.maxDays, boss.hp);
         this.ui.updateRent(1, this.rentTimeMax, CONFIG.PHASES[1].bgTitle);
         this.ui.updateAutoDropBadge(false);
         this.ui.updateConsumables(this.items);
@@ -4186,7 +4289,7 @@ class SkufLifeGame {
             this.roomRenderer.updateRoomStage(0);
         }
 
-        this.saveGame();
+        this.saveGame({ cloudFlush: true });
 
         if (manual) {
             AudioCtrl.playLevelUp();
@@ -4278,7 +4381,8 @@ class SkufLifeGame {
             boss,
             this.bossHp,
             1,
-            this.maxDays
+            this.maxDays,
+            this.getBossMaxHp(1)
         );
 
         this.ui.updateRent(
@@ -4464,6 +4568,12 @@ class SkufLifeGame {
                     ?.serializeDynamicBodies?.() ||
                 [],
 
+            progressResetAt:
+                this.progressResetAt || 0,
+
+            hasRevivedThisRun:
+                !!this.hasRevivedThisRun,
+
             lastSavedTime:
                 window.YandexBridge
                     ?.now?.() ??
@@ -4640,6 +4750,12 @@ class SkufLifeGame {
 
             this.isExhausted =
                 !!data.isExhausted;
+
+            this.progressResetAt =
+                data.progressResetAt ?? 0;
+
+            this.hasRevivedThisRun =
+                !!data.hasRevivedThisRun;
 
             // --------------------------------------------------
             // PRESTIGE
@@ -4969,7 +5085,8 @@ class SkufLifeGame {
                 boss,
                 this.bossHp,
                 this.day,
-                this.maxDays
+                this.maxDays,
+                this.getBossMaxHp(this.day)
             );
 
             this.ui.updateAutoDropBadge(

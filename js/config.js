@@ -315,7 +315,7 @@ const CONFIG = {
                 title: "Поверить и перевести (+3,500 🗿)",
                 penalty: "В голову падает тяжелый «Кредит 💳»",
                 action: (game) => {
-                    game.motivation += 3500;
+                    game.addMotivation(3500);
                     game.physics.createGarbage(game.canvas.width / 2, game.dropY, CONFIG.GARBAGE_TYPES[0]);
                 }
             },
@@ -337,7 +337,7 @@ const CONFIG = {
             choiceA: {
                 title: "Зафиксировать прибыль (+8,000 🗿)",
                 penalty: "Настроение на высоте!",
-                action: (game) => { game.motivation += 8000; }
+                action: (game) => { game.addMotivation(8000); }
             },
             choiceB: {
                 title: "Купить ящик расходников",
@@ -346,7 +346,8 @@ const CONFIG = {
                     game.items.beer += 2;
                     game.items.script += 2;
                     game.items.energy += 2;
-                    game.updateConsumablesUI();
+                    game.ui.updateConsumables(game.items);
+                    game.saveGame();
                 }
             }
         },
@@ -358,7 +359,7 @@ const CONFIG = {
             choiceA: {
                 title: "Достать заначку (+5,000 🗿)",
                 penalty: "Скуф находит купюру пятилетней давности",
-                action: (game) => { game.motivation += 5000; }
+                action: (game) => { game.addMotivation(5000); }
             },
             choiceB: {
                 title: "Достать старый пульт и батарейку",

@@ -427,7 +427,8 @@ class UIManager {
         boss,
         currentHp,
         day,
-        maxDays = 20
+        maxDays = 20,
+        maxHp = boss.hp
     ) {
         const bossChanged =
             this.lastBossName &&
@@ -447,7 +448,7 @@ class UIManager {
                     100,
                     (
                         currentHp /
-                        boss.hp
+                        Math.max(1, maxHp)
                     ) * 100
                 )
             );
@@ -462,7 +463,7 @@ class UIManager {
                     Math.floor(currentHp)
                 )
             )} / ${CONFIG.formatNumber(
-                boss.hp
+                maxHp
             )} HP`;
 
         this.bossQuoteBubble.textContent =
