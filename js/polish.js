@@ -8,7 +8,7 @@
 (() => {
     'use strict';
 
-    const POLISH_VERSION = '1.0.3';
+    const POLISH_VERSION = '1.0.4';
 
     const BOSS_EFFECTS = {
         1:  { icon: '🏠', title: 'Проверка квартиры', desc: 'Атаки босса происходят на 8% чаще.', attackCooldownMult: 0.92 },
@@ -55,9 +55,7 @@
         if (game.activeDailyMod?.id === 'tuesday_fever') game.passiveIncome *= 1.5;
         if (Number.isFinite(effect.incomeMult)) game.passiveIncome *= effect.incomeMult;
         if (Number.isFinite(effect.staminaRecoveryMult)) game.staminaRecoveryRate *= effect.staminaRecoveryMult;
-        if (Number.isFinite(effect.dropCooldownMult)) {
-            game.baseDropCooldownMs = Math.max(140, Math.round((game.baseDropCooldownMs || 380) * effect.dropCooldownMult));
-        }
+        if (Number.isFinite(effect.dropCooldownMult)) game.baseDropCooldownMs = Math.max(140, Math.round((game.baseDropCooldownMs || 380) * effect.dropCooldownMult));
         game.updateDropCooldownFromState?.();
         game.hudDirty = true;
     }
@@ -68,8 +66,7 @@
         if (!garbageList.length) return;
         const bounds = game.physics.getCupBounds();
         const garbage = garbageList[Math.floor(Math.random() * garbageList.length)];
-        const padding = 32;
-        const x = bounds.leftX + padding + Math.random() * Math.max(1, bounds.width - padding * 2);
+        const x = bounds.leftX + 32 + Math.random() * Math.max(1, bounds.width - 64);
         game.physics.createGarbage(x, game.dropY, garbage);
         game.spawnFloatingText?.(x, game.roomHeight + 38, `⚠️ ${garbage.name}`, garbage.hazardColor || '#f59e0b');
     }
@@ -115,6 +112,7 @@
 
         const originalDealBossDamage = game.dealBossDamage.bind(game);
         game.dealBossDamage = function (amount, ...rest) {
+            if (this.bossBreakTimer > 0) return originalDealBossDamage(amount, ...rest);
             const effect = getBossEffect(this);
             const mult = this.__polishBypassBossResistance ? 1 : (Number.isFinite(effect.bossDamageTakenMult) ? effect.bossDamageTakenMult : 1);
             return originalDealBossDamage(Math.max(0, Number(amount || 0) * mult), ...rest);
@@ -128,7 +126,6 @@
                 finally { this.__polishBypassBossResistance = false; }
             };
         }
-
         const originalApplyBoost = game.applyBoost?.bind(game);
         if (originalApplyBoost) {
             game.applyBoost = function (boostType, ...args) {
@@ -146,14 +143,12 @@
             if (Number.isFinite(effect.attackCooldownMult)) this.bossAttackTimer = Math.max(4.5, this.bossAttackTimer * effect.attackCooldownMult);
             return result;
         };
-
         const originalCheckGarbageSpawn = game.checkGarbageSpawn.bind(game);
         game.checkGarbageSpawn = function (...args) {
             const result = originalCheckGarbageSpawn(...args);
             spawnExtraGarbage(this, getBossEffect(this).extraGarbageChance || 0);
             return result;
         };
-
         const originalHandleSkufTap = game.handleSkufTap.bind(game);
         game.handleSkufTap = function (...args) {
             const before = this.stamina;
@@ -162,21 +157,18 @@
             if (spent > 0) {
                 let staminaMult = getBossEffect(this).tapStaminaMult || 1;
                 if (this.activeDailyMod?.id === 'saturday_chill') staminaMult *= 0.5;
-                const delta = spent * staminaMult - spent;
-                this.stamina = Math.max(0, Math.min(this.maxStamina, this.stamina - delta));
+                this.stamina = Math.max(0, Math.min(this.maxStamina, this.stamina - (spent * staminaMult - spent)));
                 if (this.stamina > 0) this.isExhausted = false;
                 this.ui?.updateStamina?.(this.stamina, this.maxStamina, this.isExhausted);
             }
             return result;
         };
-
         const originalTriggerFeverMode = game.triggerFeverMode.bind(game);
         game.triggerFeverMode = function (durationOverride = null, ...rest) {
             let duration = durationOverride;
             if (this.activeDailyMod?.id === 'friday_hype') duration = (durationOverride ?? this.feverDuration ?? 10) * 2;
             return originalTriggerFeverMode(duration, ...rest);
         };
-
         const originalAddFeverCharge = game.addFeverCharge?.bind(game);
         if (originalAddFeverCharge) {
             game.addFeverCharge = function (amount, ...rest) {
@@ -185,7 +177,6 @@
                 return originalAddFeverCharge(Number(amount || 0) * mult, ...rest);
             };
         }
-
         const originalOnBossDefeated = game.onBossDefeated.bind(game);
         game.onBossDefeated = function (...args) {
             const result = originalOnBossDefeated(...args);
@@ -199,7 +190,6 @@
             }
             return result;
         };
-
         const originalAdvanceDay = game.advanceDay.bind(game);
         game.advanceDay = function (...args) {
             const result = originalAdvanceDay(...args);
@@ -232,7 +222,6 @@
                 return result;
             };
         }
-
         game.recalculatePassives();
         renderBossEffect(game, CONFIG.BOSSES[game.currentBossIndex]);
         game.ui?.updateDailyModifier?.(game.activeDailyMod);
@@ -350,10 +339,6 @@
 
     normalizeDailyModifiers();
     injectStyles();
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => { initHudCollapse(); waitForGame(); });
-    } else {
-        initHudCollapse();
-        waitForGame();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { initHudCollapse(); waitForGame(); });
+    else { initHudCollapse(); waitForGame(); }
 })();
