@@ -115,15 +115,6 @@
                     <span class="hud-btn-caption">Спин</span>
                     <span id="roulette-badge" class="hud-badge-gold">FREE</span>
                 </button>
-                <button id="btn-toggle-sound" class="hud-mini-btn icon-only" title="Вкл/Выкл звук">
-                    <span id="sound-icon" class="hud-emoji">🔊</span>
-                </button>
-                <button id="btn-toggle-bgm" class="hud-mini-btn icon-only" title="Фоновая Кибер-Музыка (BGM)">
-                    <span id="bgm-icon" class="hud-emoji">🎵</span>
-                </button>
-                <button id="btn-toggle-fx" class="hud-mini-btn icon-only" title="Спецэффекты FX">
-                    <span id="fx-icon" class="hud-emoji">✨</span>
-                </button>
             </div>
         </div>
 
@@ -163,58 +154,40 @@
     <div id="boss-bar">
         <div class="mission-top-row">
             <div class="mission-left">
-                <span id="rent-day-label" class="rent-day-tag">ДЕНЬ 1</span>
-                <span id="crisis-badge" class="crisis-tag">Хрущёвка</span>
-                <span id="boss-day-tag" class="day-pill">Босс 1/20</span>
-                <span id="daily-mod-badge" class="daily-mod-tag" title="Ежедневный модификатор дня">📅 Модификатор</span>
+                <span class="rent-day-tag" id="rent-day-label">ДЕНЬ 1</span>
+                <span class="crisis-tag" id="crisis-badge">СТАБИЛЬНОСТЬ</span>
+                <span class="daily-mod-tag" id="daily-mod-badge" title="Ежедневный модификатор">⚡ МОД</span>
             </div>
+
             <div class="mission-right">
                 <span id="auto-drop-badge" class="auto-drop-badge hidden">АВТО</span>
-                <div id="rent-timer-display" class="rent-timer">02:00</div>
+                <span class="rent-timer" id="rent-timer-display">⏳ 02:00</span>
             </div>
         </div>
 
-        <div class="boss-main-row">
-
-            <div
-                id="boss-icon"
-                class="boss-icon"
-            >
-                🏠
+        <div class="boss-info">
+            <div class="boss-title-wrap">
+                <span id="boss-icon">👹</span>
+                <span id="boss-name">АЛКО-ДЕМОН</span>
+                <span class="day-pill" id="boss-day-tag">День 1/20</span>
             </div>
+            <span id="boss-hp-text">1,000 / 1,000 HP</span>
+        </div>
 
-            <div class="boss-content">
+        <div id="boss-hp-bar">
+            <div id="boss-hp-fill"></div>
+        </div>
 
-                <div class="boss-info">
-                    <span id="boss-name">
-                        Хозяйка Тамара
-                    </span>
+        <div id="boss-quote-bubble">«Ты никогда не встанешь с этого дивана...»</div>
 
-                    <span id="boss-hp-text">
-                        3 000 / 3 000 HP
-                    </span>
-                </div>
-
-                <div id="boss-hp-track">
-                    <div id="boss-hp-fill"></div>
-                </div>
-
-                <div id="boss-quote-bubble">
-                    «Аренда сама себя не заплатит, вставай!»
-                </div>
-
-                <!-- Тактическая помощь при боссе (Rewarded Ads) -->
-                <div id="boss-tactical-assist" class="boss-tactical-row">
-                    <button id="btn-boss-freeze-ad" class="tactical-ad-btn" title="Заморозить аренду на +35с за просмотр видео">
-                        <span class="btn-ad-tag">📺</span> ⏳ +35с Аренды
-                    </button>
-                    <button id="btn-boss-nuke-ad" class="tactical-ad-btn" title="Нанести 15% урона боссу за просмотр видео">
-                        <span class="btn-ad-tag">📺</span> 💥 -15% HP Босса
-                    </button>
-                </div>
-
-            </div>
-
+        <!-- Тактическая помощь при боссе (Rewarded Ads) -->
+        <div id="boss-tactical-assist" class="boss-tactical-row">
+            <button id="btn-boss-freeze-ad" class="tactical-ad-btn" title="Заморозить аренду на +35с за просмотр видео">
+                <span class="btn-ad-tag">📺</span> ⏳ +35с Аренды
+            </button>
+            <button id="btn-boss-nuke-ad" class="tactical-ad-btn" title="Нанести 15% урона боссу за просмотр видео">
+                <span class="btn-ad-tag">📺</span> 💥 -15% HP Босса
+            </button>
         </div>
     </div>
 
@@ -226,6 +199,17 @@
 
     <!-- Основной Canvas с Matter.js -->
     <main id="canvas-wrapper">
+        <div class="room-quick-settings">
+            <button id="btn-toggle-sound" class="room-quick-btn" title="Звуки">
+                <span id="sound-icon">🔊</span>
+            </button>
+            <button id="btn-toggle-bgm" class="room-quick-btn" title="Музыка">
+                <span id="bgm-icon">🎵</span>
+            </button>
+            <button id="btn-toggle-fx" class="room-quick-btn" title="Спецэффекты">
+                <span id="fx-icon">✨</span>
+            </button>
+        </div>
         <canvas id="mainCanvas"></canvas>
         <!-- Шкала Хайпа / Fever Mode -->
         <div id="fever-bar">
@@ -301,24 +285,24 @@
         <!-- Боевые характеристики -->
         <div class="sidebar-section metrics-section">
             <div class="side-metric-item">
-                <span class="side-metric-lbl">⚡ Урон тапа:</span>
+                <span class="side-metric-lbl">⚡ Урон тапа</span>
                 <span class="side-metric-val" id="side-tap-power">+15</span>
             </div>
             <div class="side-metric-item">
-                <span class="side-metric-lbl">💰 Доход/сек:</span>
+                <span class="side-metric-lbl">💰 Доход/с</span>
                 <span class="side-metric-val" id="side-passive-inc">+0/с</span>
             </div>
             <div class="side-metric-item">
-                <span class="side-metric-lbl">🔥 Комбо-бонус:</span>
+                <span class="side-metric-lbl">🔥 Комбо</span>
                 <span class="side-metric-val" id="side-combo-stat">x1</span>
             </div>
             <div class="side-metric-item">
-                <span class="side-metric-lbl">🧹 Мусора сбито:</span>
+                <span class="side-metric-lbl">🧹 Мусор</span>
                 <span class="side-metric-val" id="side-trash-stat">0</span>
             </div>
-            <div class="side-metric-item" style="border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 4px; margin-top: 2px;">
-                <span class="side-metric-lbl">🎯 Соперник:</span>
-                <span class="side-metric-val" id="side-rival-stat" style="color: #ffd700; font-size: 11px;">#10 Скуф</span>
+            <div class="side-metric-item side-metric-rival">
+                <span class="side-metric-lbl">🎯 Соперник</span>
+                <span class="side-metric-val" id="side-rival-stat">#10 Скуф</span>
             </div>
         </div>
 

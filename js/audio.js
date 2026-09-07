@@ -1,7 +1,18 @@
 class SoundSystem {
     constructor() {
         this.ctx = null;
-        this.isMuted = false;
+        this.isMuted =
+            localStorage.getItem('skuf_sound_muted') === 'true';
+
+        const savedBgm =
+            localStorage.getItem('skuf_bgm_enabled');
+
+        this.bgmEnabled =
+            savedBgm !== null
+                ? savedBgm === 'true'
+                : false;
+
+        this.bgmPlaying = false;
     }
 
     init() {
@@ -16,8 +27,31 @@ class SoundSystem {
         }
     }
 
+    startBGMIfEnabled() {
+        if (!this.bgmEnabled) return false;
+        if (this.isMuted) return false;
+        if (this.bgmPlaying) return true;
+
+        return this.startBGM();
+    }
+
     toggleMute() {
+        this.init();
         this.isMuted = !this.isMuted;
+
+        localStorage.setItem(
+            'skuf_sound_muted',
+            this.isMuted
+        );
+
+        if (this.isMuted) {
+            if (this.bgmPlaying) {
+                this.stopBGM();
+            }
+        } else if (this.bgmEnabled) {
+            this.startBGM();
+        }
+
         return this.isMuted;
     }
 
@@ -541,9 +575,9 @@ class SoundSystem {
 
     // --- ПРОЦЕДУРНЫЙ BGM (Web Audio API Кибер-Скуф Лоу-Фай Саундтрек) ---
     startBGM() {
-        if (this.bgmPlaying || this.isMuted) return;
+        if (this.bgmPlaying || this.isMuted) return false;
         this.init();
-        if (!this.ctx) return;
+        if (!this.ctx) return false;
 
         this.bgmPlaying = true;
         this.bgmStep = 0;
@@ -556,10 +590,16 @@ class SoundSystem {
             [130.81, 196.00, 246.94, 329.63]  // C
         ];
 
+        if (this.bgmTimer) {
+            clearInterval(this.bgmTimer);
+        }
+
         this.bgmTimer = setInterval(() => {
             if (!this.bgmPlaying || this.isMuted || !this.ctx || this.ctx.state !== 'running') return;
             this.playBGMStep();
         }, 650); // ~92 BPM
+
+        return true;
     }
 
     playBGMStep() {
@@ -636,20 +676,32 @@ class SoundSystem {
     }
 
     resumeBGMForAd() {
-        if (this.wasBGMPlayingBeforeAd && !this.isMuted) {
+        if (this.wasBGMPlayingBeforeAd && !this.isMuted && this.bgmEnabled) {
             this.startBGM();
         }
         this.wasBGMPlayingBeforeAd = false;
     }
 
     toggleBGM() {
+        this.init();
+
         if (this.bgmPlaying) {
             this.stopBGM();
-            return false;
+            this.bgmEnabled = false;
         } else {
-            this.startBGM();
-            return true;
+            this.bgmEnabled = true;
+
+            if (!this.isMuted) {
+                this.startBGM();
+            }
         }
+
+        localStorage.setItem(
+            'skuf_bgm_enabled',
+            this.bgmEnabled
+        );
+
+        return this.bgmPlaying;
     }
 }
 

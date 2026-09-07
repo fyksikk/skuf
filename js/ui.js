@@ -142,6 +142,8 @@ class UIManager {
         this.dailyModBadge = document.getElementById('daily-mod-badge');
         this.sideRivalStat = document.getElementById('side-rival-stat');
         this.btnAutoDrop = document.getElementById('btn-toggle-autodrop');
+
+        this.syncAudioUi();
     }
 
     bindEvents() {
@@ -149,6 +151,8 @@ class UIManager {
         document.getElementById('btn-start-game')?.addEventListener('click', () => {
             this.startMenu.classList.remove('active');
             AudioCtrl.init();
+            AudioCtrl.startBGMIfEnabled();
+            this.syncAudioUi();
             this.game.start();
         });
 
@@ -316,16 +320,14 @@ class UIManager {
 
         // Кнопка звука
         document.getElementById('btn-toggle-sound')?.addEventListener('click', () => {
-            const muted = AudioCtrl.toggleMute();
-            this.soundIcon.textContent = muted ? '🔇' : '🔊';
+            AudioCtrl.toggleMute();
+            this.syncAudioUi();
         });
 
         // Кнопка фоновой кибер-музыки (BGM)
         document.getElementById('btn-toggle-bgm')?.addEventListener('click', () => {
             const isPlaying = AudioCtrl.toggleBGM();
-            if (this.bgmIcon) {
-                this.bgmIcon.textContent = isPlaying ? '🎵' : '🔇';
-            }
+            this.syncAudioUi();
             this.setQuote(isPlaying ? "🎶 Кибер-Лоуфай включён! Вайб на высоте." : "🔇 Музыка выключена.");
         });
 
@@ -346,6 +348,7 @@ class UIManager {
         // Кнопка спецэффектов (FX Вкл/Выкл)
         document.getElementById('btn-toggle-fx')?.addEventListener('click', () => {
             this.game.toggleFx();
+            this.syncAudioUi();
         });
 
         // Забрать оффлайн доход (1x и 2x за рекламу)
@@ -511,12 +514,38 @@ class UIManager {
     }
 
     updateRent(day, timeRemaining, phaseName) {
-        this.rentDayLabel.textContent = `ДЕНЬ ${day}`;
-        this.crisisBadge.textContent = phaseName;
-        
+        if (this.rentDayLabel) {
+            this.rentDayLabel.textContent = `ДЕНЬ ${day}`;
+        }
+
+        if (this.crisisBadge) {
+            this.crisisBadge.textContent = phaseName;
+        }
+
         const m = Math.floor(timeRemaining / 60);
         const s = Math.floor(timeRemaining % 60);
-        this.rentTimerDisplay.textContent = `⏳ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+
+        if (this.rentTimerDisplay) {
+            this.rentTimerDisplay.textContent = `⏳ ${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+    }
+
+    syncAudioUi() {
+        const soundBtn = document.getElementById('btn-toggle-sound');
+        const bgmBtn = document.getElementById('btn-toggle-bgm');
+        const fxBtn = document.getElementById('btn-toggle-fx');
+
+        if (this.soundIcon) {
+            this.soundIcon.textContent = AudioCtrl.isMuted ? '🔇' : '🔊';
+        }
+
+        if (this.bgmIcon) {
+            this.bgmIcon.textContent = '🎵';
+        }
+
+        soundBtn?.classList.toggle('is-off', AudioCtrl.isMuted);
+        bgmBtn?.classList.toggle('is-off', !AudioCtrl.bgmEnabled);
+        fxBtn?.classList.toggle('is-off', !this.game?.fxEnabled);
     }
 
     updateAutoDropBadge(enabled) {
@@ -829,6 +858,10 @@ class UIManager {
                 const card = document.createElement('div');
                 card.className = 'upgrade-card';
 
+                const cost = this.game.getPrestigePerkCost(perk);
+                const isMax = perk.level >= perk.max;
+                const canAfford = this.game.prestigeCouches >= cost;
+
                 const info = document.createElement('div');
                 info.className = 'upg-info';
                 info.innerHTML = `
@@ -837,15 +870,11 @@ class UIManager {
                 `;
 
                 const btn = document.createElement('button');
-                btn.className = 'upg-buy-btn';
-                
-                if (perk.level >= perk.max) {
-                    btn.className += ' bought';
-                    btn.textContent = 'МАКС ✓';
-                } else {
-                    const canAfford = this.game.prestigeCouches >= perk.cost;
-                    if (!canAfford) btn.className += ' disabled';
-                    btn.textContent = `${CONFIG.formatNumber(perk.cost)} 🛋️`;
+                btn.className = `upg-buy-btn btn-prestige-buy ${isMax ? 'bought is-max' : ''} ${!isMax && !canAfford ? 'disabled' : ''}`;
+                btn.disabled = isMax || !canAfford;
+                btn.textContent = isMax ? 'МАКС' : `${CONFIG.formatNumber(cost)} 🛋️`;
+
+                if (!isMax && canAfford) {
                     btn.addEventListener('click', () => {
                         if (this.game.buyPrestigePerk(perk.id)) {
                             AudioCtrl.playUpgrade();

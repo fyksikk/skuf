@@ -525,16 +525,90 @@ class BrainPhysics {
 
     // Блок 1: Землетрясение от активного босса
     triggerEarthquake(intensity = 1.0) {
-        const bodies = Matter.Composite.allBodies(this.world).filter(b => !b.isStatic && !b.isDead);
-        bodies.forEach(b => {
-            Matter.Sleeping.set(b, false);
-            const impulseX = (Math.random() - 0.5) * 0.22 * intensity;
-            const impulseY = (-0.18 - Math.random() * 0.25) * intensity;
-            Matter.Body.applyForce(b, b.position, {
-                x: impulseX,
-                y: impulseY
-            });
-        });
+        if (!this.engine || !this.engine.world) return;
+
+        const safeIntensity =
+            Math.max(
+                0.35,
+                Math.min(
+                    1.4,
+                    intensity
+                )
+            );
+
+        const bodies =
+            Matter.Composite.allBodies(
+                this.engine.world
+            ).filter(
+                b =>
+                    !b.isStatic &&
+                    !b.isSensor
+            );
+
+        for (let i = 0; i < bodies.length; i++) {
+            const body = bodies[i];
+
+            const horizontalJitter =
+                (Math.random() - 0.5) *
+                4.2 *
+                safeIntensity;
+
+            const upwardKick =
+                -(
+                    1.2 +
+                    Math.random() *
+                    2.4
+                ) *
+                safeIntensity;
+
+            const currentVx =
+                Number.isFinite(
+                    body.velocity.x
+                )
+                    ? body.velocity.x
+                    : 0;
+
+            const currentVy =
+                Number.isFinite(
+                    body.velocity.y
+                )
+                    ? body.velocity.y
+                    : 0;
+
+            Matter.Body.setVelocity(
+                body,
+                {
+                    x: Math.max(
+                        -6,
+                        Math.min(
+                            6,
+                            currentVx *
+                            0.45 +
+                            horizontalJitter
+                        )
+                    ),
+                    y: Math.max(
+                        -7,
+                        Math.min(
+                            3,
+                            Math.min(
+                                currentVy,
+                                0
+                            ) *
+                            0.3 +
+                            upwardKick
+                        )
+                    )
+                }
+            );
+
+            Matter.Body.setAngularVelocity(
+                body,
+                (Math.random() - 0.5) *
+                0.12 *
+                safeIntensity
+            );
+        }
     }
 
     // Блок 1: Заражение мыслей / Превращение мыслей в мусор

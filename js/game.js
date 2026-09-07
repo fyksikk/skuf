@@ -7,11 +7,9 @@ class SkufLifeGame {
         this.ui = new UIManager(this);
         this.roomRenderer = new RoomRenderer();
 
-        this.pauseReasons = new Set(['start-menu']);
         this.runMotivationEarned = 0;
         this.mergeWaves = [];
         this.runBossesDefeated = 0;
-        this.uiTickAccumulator = 0;
         // Основное состояние
         this.motivation = 0;
         this.totalMotivationEarned = 0;
@@ -118,8 +116,6 @@ class SkufLifeGame {
         this.cryptoBonusTimer = 0;
         this.isAiming = false;
         this.progressResetAt = 0;
-        this.hasRevivedThisRun = false;
-        this.pendingOfflineAmount = 0;
         this.roomInteractionReadyAt = Object.create(null);
         this.eventPassiveBonusTimer = 0;
         this.eventPassiveBonusAmount = 0;
@@ -169,8 +165,6 @@ class SkufLifeGame {
         this.lastHudUpdate = 0;
         this.hudDirty = true;
 
-        // Кулдауны предметов комнаты
-        this.roomInteractionReadyAt = Object.create(null);
         this.setupInputHandlers();
         this.applyFxState();
         this.resizeCanvas();
@@ -2162,23 +2156,64 @@ class SkufLifeGame {
 
     // --- ПРЕСТИЖ / САНСАРА ---
     calculatePrestigeGain() {
-        // Хотя бы первый босс должен быть побеждён
-        if (this.runBossesDefeated <= 0) {
+        if (
+            this.runBossesDefeated <= 0
+        ) {
             return 0;
         }
 
-        const base = Math.floor(
-            Math.sqrt(
-                this.runMotivationEarned / 40000
-            )
-        );
+        /*
+            Новый баланс:
 
-        const bossBonus =
-            this.runBossesDefeated * 3;
+            1 первый босс:
+            обычно ~1 диван
+
+            несколько боссов:
+            ~3–10
+
+            глубокий забег:
+            ~15–30+
+
+            Больше нет линейного
+            +3 за каждого босса.
+        */
+
+        const bossPart =
+            Math.max(
+                1,
+                Math.floor(
+                    Math.pow(
+                        this.runBossesDefeated,
+                        0.90
+                    )
+                )
+            );
+
+        const motivationPart =
+            Math.max(
+                0,
+                Math.floor(
+                    Math.log10(
+                        1 +
+                        this.runMotivationEarned /
+                        100000
+                    ) * 2
+                )
+            );
+
+        const depthPart =
+            Math.max(
+                0,
+                Math.floor(
+                    (this.day - 1) / 5
+                )
+            );
 
         return Math.max(
-            0,
-            base + bossBonus
+            1,
+            bossPart +
+            motivationPart +
+            depthPart
         );
     }
 
@@ -2342,6 +2377,39 @@ class SkufLifeGame {
         return true;
     }
 
+    getPrestigePerkCost(perk) {
+        if (!perk) return Infinity;
+
+        const level =
+            Math.max(
+                0,
+                Number(perk.level || 0)
+            );
+
+        const baseCost =
+            Math.max(
+                1,
+                Number(perk.cost || 1)
+            );
+
+        const growth =
+            Math.max(
+                1,
+                Number(perk.costGrowth || 1)
+            );
+
+        return Math.max(
+            1,
+            Math.ceil(
+                baseCost *
+                Math.pow(
+                    growth,
+                    level
+                )
+            )
+        );
+    }
+
     buyPrestigePerk(id) {
         const perk =
             CONFIG.PRESTIGE_PERKS.find(
@@ -2355,15 +2423,20 @@ class SkufLifeGame {
             return false;
         }
 
+        const currentCost =
+            this.getPrestigePerkCost(
+                perk
+            );
+
         if (
             this.prestigeCouches <
-            perk.cost
+            currentCost
         ) {
             return false;
         }
 
         this.prestigeCouches -=
-            perk.cost;
+            currentCost;
 
         perk.level++;
 
@@ -2391,7 +2464,9 @@ class SkufLifeGame {
 
         this.updateHUD(true);
 
-        this.saveGame();
+        this.saveGame({
+            cloudFlush: true
+        });
 
         return true;
     }
@@ -2947,10 +3022,31 @@ class SkufLifeGame {
             if (this.passiveIncome > 0) {
                 this.addMotivation(currentPassive * dt);
             }
-            if (this.eventPassiveBonusTimer > 0) {
-                this.eventPassiveBonusTimer -= dt;
-                if (this.eventPassiveBonusAmount > 0) {
-                    this.addMotivation(this.eventPassiveBonusAmount * dt);
+            if (
+                this.eventPassiveBonusTimer > 0
+            ) {
+                this.eventPassiveBonusTimer =
+                    Math.max(
+                        0,
+                        this.eventPassiveBonusTimer -
+                        dt
+                    );
+
+                if (
+                    this.eventPassiveBonusAmount >
+                    0
+                ) {
+                    this.addMotivation(
+                        this.eventPassiveBonusAmount *
+                        dt
+                    );
+                }
+
+                if (
+                    this.eventPassiveBonusTimer <= 0
+                ) {
+                    this.eventPassiveBonusTimer = 0;
+                    this.eventPassiveBonusAmount = 0;
                 }
             }
 
@@ -3149,7 +3245,12 @@ class SkufLifeGame {
         this.ui.triggerScreenShake();
 
         if (attackType === 'earthquake') {
-            const intensity = 1.0 + Math.min(1.5, this.day * 0.05);
+            const intensity =
+                0.75 +
+                Math.min(
+                    0.65,
+                    this.day * 0.025
+                );
             this.physics.triggerEarthquake(intensity);
             this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: ЗЕМЛЕТРЯСЕНИЕ!`, "#ef4444");
             this.ui.setQuote(`«${boss.name} сотрясает реальность! Мысли перемешались!»`);
@@ -3167,7 +3268,7 @@ class SkufLifeGame {
                 this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: ЗАРАЖЕНИЕ МЫСЛИ!`, "#a855f7");
                 this.ui.setQuote(`«${boss.name} осквернил твою светлую мысль!»`);
             } else {
-                this.physics.triggerEarthquake(1.2);
+                this.physics.triggerEarthquake(0.85);
                 this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 40, `⚠️ ${boss.name}: УДАР ПО СТАКАНУ!`, "#ef4444");
             }
         }
