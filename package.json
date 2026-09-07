@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "build": "echo 'Static assets ready'",
+    "build:zip": "zip -r skuf-release.zip index.html css js -x '*.DS_Store'",
     "start": "node server.js"
   },
   "dependencies": {

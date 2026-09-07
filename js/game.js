@@ -1296,10 +1296,10 @@ class SkufLifeGame {
             return;
         }
 
-        if (this.mergeWaves.length > 24) {
+        if (this.mergeWaves.length >= 24) {
             this.mergeWaves.splice(
                 0,
-                this.mergeWaves.length - 24
+                this.mergeWaves.length - 23
             );
         }
 
@@ -1681,12 +1681,7 @@ class SkufLifeGame {
             this.ui.setQuote("🍺 ПИВНОЙ ЩИТ: Весь мусор сожжён!");
         }
 
-        // Трекинг создания мыслей для квестов и ачивок
-        this.tierCreatedCounts[nextTier] = (this.tierCreatedCounts[nextTier] || 0) + 1;
-        if (nextTier === 5) this.trackQuestProgress('tier_5', 1);
-        if (nextTier === 7) this.trackQuestProgress('tier_7', 1);
-        if (nextTier === 8) this.trackQuestProgress('tier_8', 1);
-        if (nextTier === 9) this.trackQuestProgress('tier_9', 1);
+        // Трекинг комбо-квеста
         this.dailyQuests?.forEach(q => {
             if (
                 q.type === 'combo' &&
@@ -1702,6 +1697,12 @@ class SkufLifeGame {
 
         // Создание новой мысли следующего тира
         if (nextTier <= 10) {
+            this.tierCreatedCounts[nextTier] = (this.tierCreatedCounts[nextTier] || 0) + 1;
+            if (nextTier === 5) this.trackQuestProgress('tier_5', 1);
+            if (nextTier === 7) this.trackQuestProgress('tier_7', 1);
+            if (nextTier === 8) this.trackQuestProgress('tier_8', 1);
+            if (nextTier === 9) this.trackQuestProgress('tier_9', 1);
+
             this.physics.createThought(midX, midY, nextTier);
             if (nextTier > (this.highestTierUnlocked || 1)) {
                 this.highestTierUnlocked = nextTier;
@@ -1716,7 +1717,7 @@ class SkufLifeGame {
                 this.spawnFloatingText(midX, midY, "ЯВЛЕНИЕ ГИГАЧАДА! 👑", "#ffd700");
             }
         } else {
-            // Максимальный уровень (Гигачад) дает мега-взрыв
+            // Максимальный уровень (Гигачад + Гигачад): Трансценденция Гигачадов
             AudioCtrl.playEndorphinFanfare();
             const gigachadBonus = 250000;
             const gigachadBossDmg = 500000 * bossHunterBonus;
@@ -1724,7 +1725,8 @@ class SkufLifeGame {
             this.dealBossDamage(gigachadBossDmg);
             this.roomRenderer.triggerEndorphinFlash();
             this.ui.triggerScreenShake();
-            this.spawnFloatingText(midX, midY, `+${CONFIG.formatNumber(gigachadBonus)} БАЗЫ! 🌌`, "#ff2a85");
+            this.ui.setQuote("«ТРАНСЦЕНДЕНЦИЯ ГИГАЧАДОВ: База пробила космос!»");
+            this.spawnFloatingText(midX, midY, `ТРАНСЦЕНДЕНЦИЯ ГИГАЧАДОВ! 🌌 +${CONFIG.formatNumber(gigachadBonus)}`, "#ff2a85");
         }
 
         // Вспышка эндорфинов при высоких тирах
@@ -2470,7 +2472,7 @@ class SkufLifeGame {
         this.resume('gameover');
         this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, "🔥 ВТОРОЕ ДЫХАНИЕ! ЗАБЕГ ПРОДОЛЖАЕТСЯ!", "#00e5ff");
         AudioCtrl.playLevelUp();
-        this.saveGame();
+        this.saveGame({ cloudFlush: true });
     }
 
     claimOfflineIncome(isDouble = false) {
@@ -2484,7 +2486,7 @@ class SkufLifeGame {
             AudioCtrl.playEndorphinFanfare();
         }
         this.pendingOfflineAmount = 0;
-        this.saveGame();
+        this.saveGame({ cloudFlush: true });
     }
 
     claimShopAid() {
@@ -2560,10 +2562,10 @@ class SkufLifeGame {
     // --- ВСПЛЫВАЮЩИЙ ТЕКСТ И ЧАСТИЦЫ ---
     spawnFloatingText(x, y, text, color = "#ffd700") {
         if (!this.fxEnabled && this.floatingTexts.length > 5) return;
-        if (this.floatingTexts.length > 40) {
+        if (this.floatingTexts.length >= 40) {
             this.floatingTexts.splice(
                 0,
-                this.floatingTexts.length - 40
+                this.floatingTexts.length - 39
             );
         }
         this.floatingTexts.push({
@@ -4574,6 +4576,43 @@ class SkufLifeGame {
             hasRevivedThisRun:
                 !!this.hasRevivedThisRun,
 
+            bossAttackTimer:
+                this.bossAttackTimer,
+
+            shakeCooldown:
+                this.shakeCooldown,
+
+            roomInteractionReadyAt: {
+                ...this.roomInteractionReadyAt
+            },
+
+            pendingOfflineAmount:
+                this.pendingOfflineAmount,
+
+            eventPassiveBonusTimer:
+                this.eventPassiveBonusTimer,
+
+            eventPassiveBonusAmount:
+                this.eventPassiveBonusAmount,
+
+            tapBonusTimer:
+                this.tapBonusTimer,
+
+            cryptoBonusTimer:
+                this.cryptoBonusTimer,
+
+            combo:
+                this.combo,
+
+            comboTimer:
+                this.comboTimer,
+
+            isFeverActive:
+                this.isFeverActive,
+
+            feverTimer:
+                this.feverTimer,
+
             lastSavedTime:
                 window.YandexBridge
                     ?.now?.() ??
@@ -4757,6 +4796,122 @@ class SkufLifeGame {
             this.hasRevivedThisRun =
                 !!data.hasRevivedThisRun;
 
+            this.bossAttackTimer =
+                Math.max(
+                    0,
+                    Number(
+                        data.bossAttackTimer ??
+                        14
+                    )
+                );
+
+            this.shakeCooldown =
+                Math.max(
+                    0,
+                    Number(
+                        data.shakeCooldown ??
+                        0
+                    )
+                );
+
+            const savedRoomCooldowns =
+                data.roomInteractionReadyAt;
+
+            this.roomInteractionReadyAt =
+                savedRoomCooldowns &&
+                typeof savedRoomCooldowns === 'object'
+                    ? Object.fromEntries(
+                        Object.entries(
+                            savedRoomCooldowns
+                        ).filter(
+                            ([, readyAt]) =>
+                                Number(readyAt) >
+                                Date.now()
+                        )
+                    )
+                    : Object.create(null);
+
+            this.pendingOfflineAmount =
+                Math.max(
+                    0,
+                    Number(
+                        data.pendingOfflineAmount ??
+                        0
+                    )
+                );
+
+            this.eventPassiveBonusTimer =
+                Math.max(
+                    0,
+                    Number(
+                        data.eventPassiveBonusTimer ??
+                        0
+                    )
+                );
+
+            this.eventPassiveBonusAmount =
+                Math.max(
+                    0,
+                    Number(
+                        data.eventPassiveBonusAmount ??
+                        0
+                    )
+                );
+
+            this.tapBonusTimer =
+                Math.max(
+                    0,
+                    Number(
+                        data.tapBonusTimer ??
+                        0
+                    )
+                );
+
+            this.cryptoBonusTimer =
+                Math.max(
+                    0,
+                    Number(
+                        data.cryptoBonusTimer ??
+                        0
+                    )
+                );
+
+            const wallNow =
+                Date.now();
+
+            this.tapBonusUntil =
+                this.tapBonusTimer > 0
+                    ? wallNow +
+                        this.tapBonusTimer * 1000
+                    : 0;
+
+            this.cryptoBonusUntil =
+                this.cryptoBonusTimer > 0
+                    ? wallNow +
+                        this.cryptoBonusTimer * 1000
+                    : 0;
+
+            this.tapBonusRemaining = 0;
+            this.cryptoBonusRemaining = 0;
+
+            this.combo =
+                Math.max(
+                    0,
+                    Number(
+                        data.combo ??
+                        0
+                    )
+                );
+
+            this.comboTimer =
+                Math.max(
+                    0,
+                    Number(
+                        data.comboTimer ??
+                        0
+                    )
+                );
+
             // --------------------------------------------------
             // PRESTIGE
             // --------------------------------------------------
@@ -4845,10 +5000,34 @@ class SkufLifeGame {
             // --------------------------------------------------
 
             this.feverCharge =
-                data.feverCharge ?? 0;
+                Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        Number(
+                            data.feverCharge ??
+                            0
+                        )
+                    )
+                );
 
-            this.isFeverActive = false;
-            this.feverTimer = 0;
+            this.isFeverActive =
+                !!data.isFeverActive;
+
+            this.feverTimer =
+                Math.max(
+                    0,
+                    Number(
+                        data.feverTimer ??
+                        0
+                    )
+                );
+
+            if (
+                this.feverTimer <= 0
+            ) {
+                this.isFeverActive = false;
+            }
 
             // --------------------------------------------------
             // NEXT THOUGHT
@@ -5017,6 +5196,8 @@ class SkufLifeGame {
             // OFFLINE INCOME
             // --------------------------------------------------
 
+            let offlineDisplaySeconds = 0;
+
             if (data.lastSavedTime) {
                 const now =
                     Date.now();
@@ -5063,12 +5244,19 @@ class SkufLifeGame {
                         offlineRate);
 
                     this.pendingOfflineAmount += offlineEarned;
-
-                    this.ui.showOfflineIncome(
-                        cappedSeconds,
-                        offlineEarned
-                    );
+                    offlineDisplaySeconds =
+                        cappedSeconds;
                 }
+            }
+
+            if (
+                this.pendingOfflineAmount >
+                0
+            ) {
+                this.ui.showOfflineIncome(
+                    offlineDisplaySeconds,
+                    this.pendingOfflineAmount
+                );
             }
 
             // --------------------------------------------------
@@ -5109,8 +5297,8 @@ class SkufLifeGame {
 
             this.ui.updateFever(
                 this.feverCharge,
-                false,
-                0,
+                this.isFeverActive,
+                this.feverTimer,
                 this.getFeverScoreMultiplier()
             );
 

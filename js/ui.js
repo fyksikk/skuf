@@ -1116,11 +1116,22 @@ class UIManager {
 
     // --- МОДАЛКА ОФФЛАЙН ДОХОДА ---
     showOfflineIncome(seconds, amount) {
-        const hrs = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        document.getElementById('offline-desc').textContent = 
-            `Пока вы отсутствовали (${hrs > 0 ? `${hrs} ч ` : ''}${mins} мин), ваши активы принесли пассивный доход:`;
-        document.getElementById('offline-amount').textContent = `+${CONFIG.formatNumber(amount)} 🗿`;
+        const desc = document.getElementById('offline-desc');
+        if (desc) {
+            if (seconds > 0) {
+                const hrs = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                desc.textContent =
+                    `Пока вы отсутствовали (${hrs > 0 ? `${hrs} ч ` : ''}${mins} мин), ваши активы принесли пассивный доход:`;
+            } else {
+                desc.textContent =
+                    'У вас осталась незабранная оффлайн-награда:';
+            }
+        }
+        const amtEl = document.getElementById('offline-amount');
+        if (amtEl) {
+            amtEl.textContent = `+${CONFIG.formatNumber(amount)} 🗿`;
+        }
         
         const claimBtn = document.getElementById('btn-claim-offline');
         if (claimBtn) {
@@ -1236,6 +1247,7 @@ class UIManager {
             btnB.removeEventListener('click', handleB);
             this.eventOverlay.classList.remove('active');
             eventData.choiceA.action(this.game);
+            this.game.saveGame();
         };
 
         const handleB = () => {
@@ -1245,6 +1257,7 @@ class UIManager {
             btnB.removeEventListener('click', handleB);
             this.eventOverlay.classList.remove('active');
             eventData.choiceB.action(this.game);
+            this.game.saveGame();
         };
 
         btnA.addEventListener('click', handleA);
