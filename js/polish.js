@@ -8,7 +8,7 @@
 (() => {
     'use strict';
 
-    const POLISH_VERSION = '1.0.1';
+    const POLISH_VERSION = '1.0.2';
 
     const BOSS_EFFECTS = {
         1:  { icon: '🏠', title: 'Проверка квартиры', desc: 'Атаки босса происходят на 8% чаще.', attackCooldownMult: 0.92 },
@@ -82,12 +82,11 @@
     function applyDerivedModifiers(game) {
         if (!game) return;
 
+        const effect = getBossEffect(game);
+
         if (game.activeDailyMod?.id === 'tuesday_fever') {
             game.passiveIncome *= 1.5;
         }
-
-        const effect = getBossEffect(game);
-
         if (Number.isFinite(effect.incomeMult)) {
             game.passiveIncome *= effect.incomeMult;
         }
@@ -167,13 +166,14 @@
         if (!game || game.__polishPatched) return;
         game.__polishPatched = true;
 
-        // Daily modifier can be normalized after construction because activeDailyMod
-        // points to the same CONFIG object. Refresh HUD text explicitly.
+        // CONFIG уже нормализован до создания игры, но обновляем UI явно.
         game.initDailyModifier?.();
         game.ui?.updateDailyModifier?.(game.activeDailyMod);
 
         const originalRecalculatePassives = game.recalculatePassives.bind(game);
         game.recalculatePassives = function (...args) {
+            // original всегда пересобирает базовые значения с нуля, поэтому модификаторы
+            // не накапливаются при повторных вызовах после покупки/смены босса.
             const result = originalRecalculatePassives(...args);
             applyDerivedModifiers(this);
             return result;
@@ -296,7 +296,6 @@
             return result;
         };
 
-        // Extend UI boss updates without rewriting UIManager.
         if (game.ui && !game.ui.__bossEffectPatched) {
             game.ui.__bossEffectPatched = true;
             const originalUpdateBoss = game.ui.updateBoss.bind(game.ui);
@@ -435,8 +434,6 @@
                     display: none !important;
                 }
 
-                /* Нижние игровые действия оставляем доступными на телефоне:
-                   игрок получает большой стакан, но не теряет Встряску/наклон/автосброс. */
                 #app-viewport.hud-collapsed #action-panel {
                     display: block !important;
                     flex-shrink: 0;
