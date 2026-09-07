@@ -8,7 +8,7 @@
 (() => {
     'use strict';
 
-    const POLISH_VERSION = '1.0.0';
+    const POLISH_VERSION = '1.0.1';
 
     const BOSS_EFFECTS = {
         1:  { icon: '🏠', title: 'Проверка квартиры', desc: 'Атаки босса происходят на 8% чаще.', attackCooldownMult: 0.92 },
@@ -431,9 +431,15 @@
                 #app-viewport.hud-collapsed #status-bar,
                 #app-viewport.hud-collapsed #boss-bar,
                 #app-viewport.hud-collapsed #relics-bar,
-                #app-viewport.hud-collapsed #consumables-bar,
-                #app-viewport.hud-collapsed #action-panel {
+                #app-viewport.hud-collapsed #consumables-bar {
                     display: none !important;
+                }
+
+                /* Нижние игровые действия оставляем доступными на телефоне:
+                   игрок получает большой стакан, но не теряет Встряску/наклон/автосброс. */
+                #app-viewport.hud-collapsed #action-panel {
+                    display: block !important;
+                    flex-shrink: 0;
                 }
 
                 #app-viewport.hud-collapsed #canvas-wrapper {
