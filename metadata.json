@@ -4,6 +4,7 @@
   "entryPoint": "index.html",
   "language": "ru",
   "targetPlatform": "Yandex Games",
+  "ageRating": "12+",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
