@@ -389,6 +389,7 @@ class BrainPhysics {
         body.tier = tier;
         body.isDead = false;
         body.visualScale = 0.72;
+        body.spawnedAt = performance.now();
         Matter.Composite.add(this.world, body);
         return body;
     }
@@ -416,6 +417,7 @@ class BrainPhysics {
         body.garbageIndex = CONFIG.GARBAGE_TYPES.findIndex(g => g.name === garbageData.name || g.id === garbageData.id);
         if (body.garbageIndex === -1) body.garbageIndex = 0;
         body.isDead = false;
+        body.spawnedAt = performance.now();
         
         Matter.Composite.add(this.world, body);
         return body;

@@ -108,7 +108,7 @@ class YandexManager {
             turbo: {
                 id: 'turbo',
                 title: 'Турбо-Хайп',
-                desc: 'Мгновенный вход в Лихорадку (16с) + 100% Дыхалка',
+                desc: 'Мгновенно активирует Лихорадку на 16 сек и восполняет 100% Дыхалки.',
                 cooldown: 45,
                 lastUsed: 0,
                 color: '#ec4899',
@@ -135,7 +135,7 @@ class YandexManager {
             nuke: {
                 id: 'nuke',
                 title: 'Ядерная Петарда',
-                desc: 'Наносит боссу сокрушительный урон: -25% от макс. HP',
+                desc: 'Наносит 28% максимального HP босса',
                 cooldown: 90,
                 lastUsed: 0,
                 color: '#ef4444',
@@ -152,13 +152,11 @@ class YandexManager {
         this.pendingCloudData = null;
         this.cloudSaveTimer = null;
 
-        this.adStateKey =
-            'skuf_yandex_ad_state_v1';
+        this.adStateKey = 'skuf_yandex_ad_state_v1';
 
         this.loadAdState();
 
-        this.readyPromise =
-            this.init();
+        this.readyPromise = this.init();
     }
 
     async whenReady() {
@@ -196,8 +194,7 @@ class YandexManager {
         }
 
         try {
-            this.ysdk =
-                await YaGames.init();
+            this.ysdk = await YaGames.init();
             
             // -----------------------------------------
             // AUTOMATIC LANGUAGE DETECTION
@@ -239,27 +236,21 @@ class YandexManager {
             );
 
             try {
-                this.player =
-                    try {
-                        this.player =
-                            await this.ysdk.getPlayer();
-                    } catch (e) {
-                        console.warn(
-                            'Player init failed:',
-                            e
-                        );
-
-                        this.player = null;
-                    }
+                this.player = await this.ysdk.getPlayer();
             } catch (e) {
-                console.log(
-                    'Гостевой режим Яндекс Игр'
+                console.warn(
+                    'Player init failed:',
+                    e
                 );
+
+                this.player = null;
             }
 
             // Новый API
             this.leaderboards =
                 this.ysdk.leaderboards || null;
+
+            this.bindPlatformEvents();
 
             this.flushGameReady();
 
@@ -273,6 +264,48 @@ class YandexManager {
         }
     }
 
+    bindPlatformEvents() {
+        if (!this.ysdk?.on) {
+            return;
+        }
+
+        this.platformPauseHandler = () => {
+            this.platformPaused = true;
+
+            window.gameInstance?.pause?.(
+                'yandex-platform',
+                {
+                    skipSdk: true
+                }
+            );
+
+            if (typeof AudioCtrl !== 'undefined') {
+                AudioCtrl?.suspend?.();
+            }
+        };
+
+        this.platformResumeHandler = () => {
+            this.platformPaused = false;
+
+            window.gameInstance?.resume?.(
+                'yandex-platform',
+                {
+                    skipSdk: true
+                }
+            );
+        };
+
+        this.ysdk.on(
+            'game_api_pause',
+            this.platformPauseHandler
+        );
+
+        this.ysdk.on(
+            'game_api_resume',
+            this.platformResumeHandler
+        );
+    }
+
     queueCloudSave(
         data,
         {
@@ -283,45 +316,29 @@ class YandexManager {
 
         // saveGame каждый раз создаёт новый object,
         // поэтому ссылку можно безопасно заменить.
-        this.pendingCloudData =
-            data;
+        this.pendingCloudData = data;
 
         if (flush) {
-            return this.flushCloudSave(
-                true
-            );
+            return this.flushCloudSave(true);
         }
 
         if (this.cloudSaveTimer) {
             return;
         }
 
-        // Максимум примерно один cloud write
-        // в 15 секунд.
-        this.cloudSaveTimer =
-            setTimeout(
-                () => {
-                    this.flushCloudSave(
-                        false
-                    );
-                },
-                15000
-            );
+        // Максимум примерно один cloud write в 15 секунд.
+        this.cloudSaveTimer = setTimeout(() => {
+            this.flushCloudSave(false);
+        }, 15000);
     }
 
-    async flushCloudSave(
-        flush = true
-    ) {
+    async flushCloudSave(flush = true) {
         if (this.cloudSaveTimer) {
-            clearTimeout(
-                this.cloudSaveTimer
-            );
-
+            clearTimeout(this.cloudSaveTimer);
             this.cloudSaveTimer = null;
         }
 
-        const data =
-            this.pendingCloudData;
+        const data = this.pendingCloudData;
 
         if (!data) {
             return false;
@@ -330,8 +347,7 @@ class YandexManager {
         if (
             !this.isInitialized ||
             !this.player ||
-            typeof this.player.setData !==
-                'function'
+            typeof this.player.setData !== 'function'
         ) {
             return false;
         }
@@ -341,13 +357,8 @@ class YandexManager {
         try {
             await this.player.setData(
                 {
-                    saveData:
-                        JSON.stringify(
-                            data
-                        ),
-
-                    savedAt:
-                        this.now()
+                    saveData: JSON.stringify(data),
+                    savedAt: this.now()
                 },
                 flush
             );
@@ -356,8 +367,7 @@ class YandexManager {
 
         } catch (e) {
             // Не теряем последнее состояние.
-            this.pendingCloudData =
-                data;
+            this.pendingCloudData = data;
 
             console.warn(
                 'Cloud save failed:',
@@ -369,36 +379,91 @@ class YandexManager {
     }
 
     async loadCloudData() {
-        if (this.isInitialized && this.player && typeof this.player.getData === 'function') {
-            try {
-                const res = await this.player.getData(['saveData', 'savedAt']);
-                if (res && res.saveData) {
-                    const parsed = JSON.parse(res.saveData);
-                    console.log('☁️ Облачное сохранение загружено');
-                    return parsed;
-                }
-            } catch (e) {
-                console.warn('Ошибка загрузки из облака Яндекс:', e);
-            }
+        if (
+            !this.isInitialized ||
+            !this.player ||
+            typeof this.player.getData !== 'function'
+        ) {
+            return null;
         }
-        return null;
+
+        try {
+            const res = await this.player.getData([
+                'saveData',
+                'savedAt'
+            ]);
+
+            if (!res?.saveData) {
+                return null;
+            }
+
+            const parsed = JSON.parse(res.saveData);
+
+            return {
+                data: parsed,
+                savedAt: Number(
+                    res.savedAt ||
+                    parsed.lastSavedTime ||
+                    0
+                )
+            };
+
+        } catch (e) {
+            console.warn(
+                'Cloud load failed:',
+                e
+            );
+
+            return null;
+        }
+    }
+
+    isAuthorized() {
+        try {
+            return !!this.player?.isAuthorized?.();
+        } catch {
+            return false;
+        }
+    }
+
+    async authorize() {
+        if (
+            !this.isInitialized ||
+            !this.ysdk?.auth?.openAuthDialog
+        ) {
+            return false;
+        }
+
+        if (this.isAuthorized()) {
+            return true;
+        }
+
+        try {
+            await this.ysdk.auth.openAuthDialog();
+            this.player = await this.ysdk.getPlayer();
+            return this.isAuthorized();
+        } catch (e) {
+            console.warn(
+                'Authorization cancelled:',
+                e
+            );
+            return false;
+        }
     }
 
     // --- ЛИДЕРБОРД ---
-    async submitScore(
-        score,
-        extraData = ''
-    ) {
-        const numericScore =
-            Math.floor(score);
+    async submitScore(score, extraData = '') {
+        const numericScore = Math.floor(score);
 
         if (numericScore <= 0) {
             return;
         }
 
-        this.updateLocalScore(
-            numericScore
-        );
+        this.updateLocalScore(numericScore);
+
+        if (!this.isAuthorized()) {
+            return;
+        }
 
         if (
             !this.isInitialized ||
@@ -408,29 +473,21 @@ class YandexManager {
         }
 
         try {
-            if (
-                typeof this.ysdk
-                    .isAvailableMethod ===
-                'function'
-            ) {
-                const available =
-                    await this.ysdk
-                        .isAvailableMethod(
-                            'leaderboards.setScore'
-                        );
+            if (typeof this.ysdk.isAvailableMethod === 'function') {
+                const available = await this.ysdk.isAvailableMethod(
+                    'leaderboards.setScore'
+                );
 
                 if (!available) {
                     return;
                 }
             }
 
-            await this.ysdk
-                .leaderboards
-                .setScore(
-                    this.leaderboardName,
-                    numericScore,
-                    extraData
-                );
+            await this.ysdk.leaderboards.setScore(
+                this.leaderboardName,
+                numericScore,
+                extraData
+            );
 
             console.log(
                 `🏆 Score ${numericScore} отправлен`
@@ -444,72 +501,49 @@ class YandexManager {
         }
     }
 
-    async getLeaderboard(
-        quantityTop = 10,
-        quantityAround = 3
-    ) {
+    async getLeaderboard(quantityTop = 10, quantityAround = 3) {
         if (
             this.isInitialized &&
             this.ysdk?.leaderboards
         ) {
             try {
-                const res =
-                    await this.ysdk
-                        .leaderboards
-                        .getEntries(
-                            this.leaderboardName,
-                            {
-                                quantityTop,
-                                includeUser: true,
-                                quantityAround
-                            }
-                        );
+                const res = await this.ysdk.leaderboards.getEntries(
+                    this.leaderboardName,
+                    {
+                        quantityTop,
+                        includeUser: true,
+                        quantityAround
+                    }
+                );
 
                 const playerId =
-                    this.player?.getUniqueID?.() ||
-                    null;
+                    this.player?.getUniqueID?.() || null;
 
-                const entries =
-                    (res.entries || []).map(
-                        entry => {
-                            const isCurrentUser =
-                                entry.player
-                                    ?.uniqueID ===
-                                playerId;
+                const entries = (res.entries || []).map(entry => {
+                    const isCurrentUser =
+                        entry.player?.uniqueID === playerId;
 
-                            return {
-                                rank: entry.rank,
-
-                                name:
-                                    entry.player
-                                        ?.publicName ||
-                                    'Анонимный Гигачад',
-
-                                score:
-                                    entry.score,
-
-                                avatar:
-                                    entry.player
-                                        ?.getAvatarSrc?.(
-                                            'small'
-                                        ) || '',
-
-                                isUser:
-                                    isCurrentUser,
-
-                                isCurrentUser,
-
-                                title:
-                                    entry.extraData ||
-                                    'Кибер-Скуф'
-                            };
-                        }
-                    );
+                    return {
+                        rank: entry.rank,
+                        name:
+                            entry.player?.publicName ||
+                            'Анонимный Гигачад',
+                        score: entry.score,
+                        avatar:
+                            entry.player?.getAvatarSrc?.(
+                                'small'
+                            ) || '',
+                        isUser: isCurrentUser,
+                        isCurrentUser,
+                        title:
+                            entry.extraData ||
+                            'Кибер-Скуф'
+                    };
+                });
 
                 return {
                     entries,
-                    userRank:
-                        res.userRank || 0
+                    userRank: res.userRank || 0
                 };
 
             } catch (err) {
@@ -521,61 +555,9 @@ class YandexManager {
         }
 
         return {
-            entries:
-                this.getLocalEntries(),
-
-            userRank:
-                this.getUserLocalRank()
+            entries: this.getLocalEntries(),
+            userRank: this.getUserLocalRank()
         };
-    }
-
-    async loadCloudData() {
-        if (
-            !this.isInitialized ||
-            !this.player ||
-            typeof this.player.getData !==
-                'function'
-        ) {
-            return null;
-        }
-
-        try {
-            const res =
-                await this.player.getData(
-                    [
-                        'saveData',
-                        'savedAt'
-                    ]
-                );
-
-            if (!res?.saveData) {
-                return null;
-            }
-
-            const parsed =
-                JSON.parse(
-                    res.saveData
-                );
-
-            return {
-                data: parsed,
-
-                savedAt:
-                    Number(
-                        res.savedAt ||
-                        parsed.lastSavedTime ||
-                        0
-                    )
-            };
-
-        } catch (e) {
-            console.warn(
-                'Cloud load failed:',
-                e
-            );
-
-            return null;
-        }
     }
 
     async getLeaderboardEntries(quantity = 15) {
@@ -692,13 +674,49 @@ class YandexManager {
     // МЕХАНИКА 1: ПОЛНОЭКРАННАЯ МЕЖСТРАНИЧНАЯ РЕКЛАМА (INTERSTITIAL)
     // Cooldown 180с между показами. Безопасная пауза игры и звука.
     // =========================================================
+    loadAdState() {
+        try {
+            const raw = localStorage.getItem(this.adStateKey);
+            if (!raw) return;
+
+            const data = JSON.parse(raw);
+            this.lastInterstitialTime = Number(data.lastInterstitialTime || 0);
+            const rewards = data.rewards || {};
+
+            for (const [id, reward] of Object.entries(this.rewardsCatalog)) {
+                reward.lastUsed = Number(rewards[id] || 0);
+            }
+        } catch (e) {
+            console.warn('Ad state load error:', e);
+        }
+    }
+
+    saveAdState() {
+        try {
+            const rewards = {};
+            for (const [id, reward] of Object.entries(this.rewardsCatalog)) {
+                rewards[id] = reward.lastUsed || 0;
+            }
+
+            localStorage.setItem(
+                this.adStateKey,
+                JSON.stringify({
+                    lastInterstitialTime: this.lastInterstitialTime,
+                    rewards
+                })
+            );
+        } catch (e) {
+            console.warn('Ad state save error:', e);
+        }
+    }
+
     canShowInterstitial() {
-        const now = Date.now();
+        const now = this.now();
         return (now - this.lastInterstitialTime) >= this.interstitialCooldown;
     }
 
     getInterstitialCooldownLeft() {
-        const now = Date.now();
+        const now = this.now();
         const elapsed = now - this.lastInterstitialTime;
         return Math.max(0, Math.ceil((this.interstitialCooldown - elapsed) / 1000));
     }
@@ -712,6 +730,26 @@ class YandexManager {
 
         console.log('🎬 Запуск Interstitial рекламы...');
         
+        let finished = false;
+
+        const finish = (wasShown = false) => {
+            if (finished) return;
+            finished = true;
+
+            if (wasShown) {
+                this.lastInterstitialTime = this.now();
+                this.saveAdState();
+            }
+
+            window.gameInstance?.resume?.('interstitial-ad');
+
+            if (typeof AudioCtrl !== 'undefined') {
+                AudioCtrl?.resumeBGMForAd?.();
+            }
+
+            callbacks.onClose?.(wasShown);
+        };
+
         // Пауза игры и музыки
         if (window.gameInstance && typeof window.gameInstance.pause === 'function') {
             window.gameInstance.pause('interstitial-ad');
@@ -720,19 +758,6 @@ class YandexManager {
             AudioCtrl.pauseBGMForAd();
         }
 
-        const resumeEverything = (wasShown = true) => {
-            this.lastInterstitialTime = Date.now();
-            if (window.gameInstance && typeof window.gameInstance.resume === 'function') {
-                window.gameInstance.resume('interstitial-ad');
-            }
-            if (typeof AudioCtrl !== 'undefined' && typeof AudioCtrl.resumeBGMForAd === 'function') {
-                AudioCtrl.resumeBGMForAd();
-            }
-            if (typeof callbacks.onClose === 'function') {
-                callbacks.onClose(wasShown);
-            }
-        };
-
         if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.showFullscreenAdv === 'function') {
             try {
                 this.ysdk.adv.showFullscreenAdv({
@@ -740,56 +765,29 @@ class YandexManager {
                         onOpen: () => {
                             if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
                         },
-                        onClose: (wasShown) => {
-                            resumeEverything(wasShown);
+                        onClose: wasShown => {
+                            finish(wasShown);
                         },
-                        onError: (e) => {
-                            console.warn('Ошибка вызова showFullscreenAdv SDK:', e);
-                            if (typeof callbacks.onError === 'function') callbacks.onError(e);
-                            resumeEverything(false);
+                        onError: error => {
+                            console.warn('Fullscreen ad error:', error);
+                            callbacks.onError?.(error);
+                            finish(false);
                         }
                     }
                 });
                 return;
             } catch (err) {
                 console.warn('Исключение при вызове showFullscreenAdv:', err);
-                resumeEverything(false);
+                callbacks.onError?.(err);
+                finish(false);
                 return;
             }
         }
 
-        // Fallback-режим: быстрая имитация межстраничной плашки
-        this.simulateInterstitialModal(callbacks, resumeEverything);
-    }
-
-    simulateInterstitialModal(callbacks, onComplete) {
-        if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-backdrop active';
-        modal.style.zIndex = '999999';
-        modal.innerHTML = `
-            <div class="modal-box alert glass-panel" style="max-width: 320px; text-align: center; border-color: #ffd700;">
-                <div style="font-size: 38px; margin-bottom: 6px;">📺</div>
-                <h3 style="color: #ffd700; font-size: 16px; margin-bottom: 4px;">РЕКЛАМА ЯНДЕКС ИГР</h3>
-                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">Спонсор кибер-отдыха</p>
-                <div class="lock-progress-track" style="height: 6px; margin-bottom: 10px;">
-                    <div id="inter-sim-bar" class="lock-progress-bar" style="width: 0%; background: #ffd700; transition: width 1.2s linear;"></div>
-                </div>
-                <div id="inter-sim-label" style="font-size: 12px; font-weight: 700; color: #94a3b8;">Загрузка...</div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        setTimeout(() => {
-            const bar = document.getElementById('inter-sim-bar');
-            if (bar) bar.style.width = '100%';
-        }, 50);
-
-        setTimeout(() => {
-            if (modal.parentNode) modal.parentNode.removeChild(modal);
-            onComplete(true);
-        }, 1300);
+        // Production fallback: no fake ad modal
+        const error = new Error('YANDEX_AD_UNAVAILABLE');
+        callbacks.onError?.(error);
+        finish(false);
     }
 
     // =========================================================
@@ -817,7 +815,7 @@ class YandexManager {
             icon: '🎁'
         };
 
-        const now = Date.now();
+        const now = this.now();
         if (reward.cooldown > 0) {
             const elapsed = (now - reward.lastUsed) / 1000;
             if (elapsed < reward.cooldown) {
@@ -838,17 +836,19 @@ class YandexManager {
         }
 
         let userEarnedReward = false;
+        let finished = false;
 
         const cleanupAndResume = () => {
-            if (window.gameInstance && typeof window.gameInstance.resume === 'function') {
-                window.gameInstance.resume('rewarded-ad');
+            if (finished) return;
+            finished = true;
+
+            window.gameInstance?.resume?.('rewarded-ad');
+
+            if (typeof AudioCtrl !== 'undefined') {
+                AudioCtrl?.resumeBGMForAd?.();
             }
-            if (typeof AudioCtrl !== 'undefined' && typeof AudioCtrl.resumeBGMForAd === 'function') {
-                AudioCtrl.resumeBGMForAd();
-            }
-            if (typeof callbacks.onClose === 'function') {
-                callbacks.onClose(userEarnedReward);
-            }
+
+            callbacks.onClose?.(userEarnedReward);
         };
 
         if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.showRewardedVideo === 'function') {
@@ -860,7 +860,8 @@ class YandexManager {
                         },
                         onRewarded: () => {
                             userEarnedReward = true;
-                            reward.lastUsed = Date.now();
+                            reward.lastUsed = this.now();
+                            this.saveAdState();
                             try {
                                 if (typeof callbacks.onRewarded === 'function') {
                                     callbacks.onRewarded(reward.id);
@@ -872,7 +873,7 @@ class YandexManager {
                         onClose: () => {
                             cleanupAndResume();
                         },
-                        onError: (e) => {
+                        onError: e => {
                             console.warn('Ошибка вызова showRewardedVideo SDK:', e);
                             if (typeof callbacks.onError === 'function') callbacks.onError(e);
                             cleanupAndResume();
@@ -882,63 +883,16 @@ class YandexManager {
                 return;
             } catch (err) {
                 console.warn('Исключение при вызове showRewardedVideo:', err);
+                if (typeof callbacks.onError === 'function') callbacks.onError(err);
                 cleanupAndResume();
                 return;
             }
         }
 
-        // Fallback-режим (симуляция просмотра промо 3 секунды)
-        this.simulateRewardedModal(reward, callbacks, () => {
-            userEarnedReward = true;
-            reward.lastUsed = Date.now();
-            try {
-                if (typeof callbacks.onRewarded === 'function') {
-                    callbacks.onRewarded(reward.id);
-                }
-            } catch (rewardErr) {
-                console.error('Ошибка в обработчике onRewarded (fallback):', rewardErr);
-            }
-            cleanupAndResume();
-        });
-    }
-
-    simulateRewardedModal(reward, callbacks, onRewardedComplete) {
-        if (typeof callbacks.onOpen === 'function') callbacks.onOpen();
-        
-        let secondsLeft = 3;
-        const modal = document.createElement('div');
-        modal.className = 'modal-backdrop active';
-        modal.style.zIndex = '999999';
-        modal.innerHTML = `
-            <div class="modal-box alert glass-panel" style="max-width: 320px; text-align: center; border-color: ${reward.color}; box-shadow: 0 0 25px ${reward.color}44;">
-                <div style="font-size: 36px; margin-bottom: 6px;">${reward.icon || '🎬'}</div>
-                <h3 style="color: #ffd700; font-size: 16px; margin-bottom: 4px;">РЕКЛАМА ЯНДЕКС ИГР</h3>
-                <p style="font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">Получение: <b>${reward.title}</b></p>
-                <div class="lock-progress-track" style="height: 8px; margin-bottom: 12px;">
-                    <div id="ad-sim-bar" class="lock-progress-bar" style="width: 0%; background: ${reward.color}; transition: width 3s linear;"></div>
-                </div>
-                <div id="ad-sim-timer" style="font-size: 14px; font-weight: 800; color: #00f0ff;">Просмотр: ${secondsLeft}с</div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        // Запуск прогресс-бара
-        setTimeout(() => {
-            const bar = document.getElementById('ad-sim-bar');
-            if (bar) bar.style.width = '100%';
-        }, 50);
-
-        const interval = setInterval(() => {
-            secondsLeft--;
-            const timerEl = document.getElementById('ad-sim-timer');
-            if (timerEl) timerEl.textContent = `Просмотр: ${secondsLeft}с`;
-
-            if (secondsLeft <= 0) {
-                clearInterval(interval);
-                if (modal.parentNode) modal.parentNode.removeChild(modal);
-                onRewardedComplete();
-            }
-        }, 1000);
+        // Production fallback: no fake modal, no reward
+        const error = new Error('YANDEX_REWARDED_UNAVAILABLE');
+        callbacks.onError?.(error);
+        cleanupAndResume();
     }
 
     // Совместимость со старым методом
@@ -949,7 +903,7 @@ class YandexManager {
     getBoostCooldownLeft(boostId) {
         const reward = this.rewardsCatalog[boostId];
         if (!reward) return 0;
-        const elapsed = (Date.now() - reward.lastUsed) / 1000;
+        const elapsed = (this.now() - reward.lastUsed) / 1000;
         return Math.max(0, Math.ceil(reward.cooldown - elapsed));
     }
 
@@ -959,20 +913,26 @@ class YandexManager {
     // Скрывается во время активного геймплея и боссфайтов.
     // =========================================================
     showBannerAdv() {
-        if (this.ysdk && this.isInitialized && this.ysdk.adv && typeof this.ysdk.adv.showBannerAdv === 'function') {
-            try {
-                this.ysdk.adv.showBannerAdv().then(({ sticky }) => {
-                    this.isBannerVisible = true;
-                    console.log('📌 Баннер показан, sticky:', sticky);
-                }).catch(e => {
-                    console.warn('showBannerAdv warning:', e);
-                });
-            } catch (e) {
-                console.warn('showBannerAdv error:', e);
-            }
-        } else {
-            this.isBannerVisible = true;
+        if (
+            !this.isInitialized ||
+            !this.ysdk?.adv?.showBannerAdv
+        ) {
+            return;
         }
+
+        return this.ysdk.adv.showBannerAdv()
+            .then(result => {
+                this.isBannerVisible = !!result?.stickyAdvIsShowing;
+                console.log(
+                    'Sticky banner:',
+                    result?.stickyAdvIsShowing,
+                    result?.reason || ''
+                );
+                return result;
+            })
+            .catch(e => {
+                console.warn('showBannerAdv error:', e);
+            });
     }
 
     hideBannerAdv() {

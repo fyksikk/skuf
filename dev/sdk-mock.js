@@ -131,10 +131,20 @@
         }
     }
 
+    const eventListeners = {};
+
     const mockInstance = {
         environment: {
             i18n: { lang: 'ru' },
             app: { id: 'cyber-skuf-2026' }
+        },
+        serverTime: () => Date.now(),
+        on: (event, handler) => {
+            if (!eventListeners[event]) eventListeners[event] = [];
+            eventListeners[event].push(handler);
+        },
+        auth: {
+            openAuthDialog: async () => true
         },
         features: {
             LoadingAPI: {
@@ -162,12 +172,12 @@
                 if (opts.callbacks?.onOpen) opts.callbacks.onOpen();
                 setTimeout(() => {
                     if (opts.callbacks?.onRewarded) opts.callbacks.onRewarded();
-                    if (opts.callbacks?.onClose) opts.callbacks.onClose();
+                    if (opts.callbacks?.onClose) opts.callbacks.onClose(true);
                 }, 500);
             },
-            showBannerAdv: async () => ({ sticky: true }),
+            showBannerAdv: async () => ({ stickyAdvIsShowing: true }),
             hideBannerAdv: async () => true,
-            getBannerAdvStatus: async () => ({ sticky: { isAdvState: true } })
+            getBannerAdvStatus: async () => ({ stickyAdvIsShowing: true })
         },
         leaderboards: new MockLeaderboards(),
         getLeaderboards: async function() { return this.leaderboards; },

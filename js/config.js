@@ -323,8 +323,8 @@ const CONFIG = {
                 title: "Послать мошенников",
                 penalty: "Скуф взбодрился (+120 к пассиву на 45 сек)",
                 action: (game) => {
-                    game.passiveIncome += 120;
-                    setTimeout(() => { game.passiveIncome = Math.max(0, game.passiveIncome - 120); }, 45000);
+                    game.eventPassiveBonusTimer = 45;
+                    game.eventPassiveBonusAmount = 120;
                     game.ui.setQuote("«Служба безопасности?.. Не на того напали!»");
                 }
             }

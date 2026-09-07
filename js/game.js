@@ -114,6 +114,9 @@ class SkufLifeGame {
         this.basementDay = 0;
         this.tapBonusUntil = 0;
         this.cryptoBonusUntil = 0;
+        this.eventPassiveBonusTimer = 0;
+        this.eventPassiveBonusAmount = 0;
+        this.periodicCheckTimer = 0;
         this.activeDailyMod = null;
         this.initDailyModifier();
 
@@ -1219,6 +1222,10 @@ class SkufLifeGame {
             this.bossDamageMultiplier *
             bossHunterMultiplier;
 
+        if (this.tapBonusUntil && Date.now() < this.tapBonusUntil) {
+            damage *= 1.5;
+        }
+
         return {
             damage: Math.max(1, Math.floor(damage)),
             isCrit,
@@ -1502,7 +1509,9 @@ class SkufLifeGame {
 
     // --- СЛИЯНИЕ МЫСЛЕЙ ---
     handleMerge(bodyA, bodyB) {
-        if (!bodyA || !bodyB) return;
+        if (!bodyA || !bodyB || bodyA.isDead || bodyB.isDead) return;
+        bodyA.isDead = true;
+        bodyB.isDead = true;
         const tier = bodyA.tier;
         const nextTier = tier + 1;
 
@@ -1670,11 +1679,18 @@ class SkufLifeGame {
         this.spawnFloatingText(x, y, `${name} Уничтожен! ✨`, "#a855f7");
     }
 
+    getBossMaxHp(day = this.day) {
+        const bossIndex = Math.max(1, Math.min(this.maxDays, day));
+        const baseBoss = CONFIG.BOSSES[bossIndex] || CONFIG.BOSSES[1];
+        const hpMultiplier = day > 20 ? Math.pow(1.3, day - 20) : 1.0;
+        return Math.floor(baseBoss.hp * hpMultiplier);
+    }
+
     dealBossDamage(amount) {
         if (this.bossBreakTimer > 0) return; // Во время передышки босс неуязвим/отсутствует
         this.bossHp = Math.max(0, this.bossHp - amount);
         const boss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-        this.ui.updateBoss(boss, this.bossHp, this.day, this.maxDays);
+        this.ui.updateBoss(boss, this.bossHp, this.day, this.maxDays, this.getBossMaxHp(this.day));
 
         if (this.bossHp <= 0) {
             this.onBossDefeated();
@@ -1812,9 +1828,8 @@ class SkufLifeGame {
         this.currentBossIndex = Math.min(this.maxDays, this.day);
         const nextBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[20];
         
-        // Если прошли 20 боссов, включается бесконечный режим с усилением
-        const hpMultiplier = this.day > 20 ? Math.pow(1.3, this.day - 20) : 1.0;
-        this.bossHp = Math.floor(nextBoss.hp * hpMultiplier);
+        const maxHp = this.getBossMaxHp(this.day);
+        this.bossHp = maxHp;
         this.rentTimer = this.rentTimeMax;
 
         // Обновление фазы окружения
@@ -1823,7 +1838,7 @@ class SkufLifeGame {
         this.roomRenderer.updateRoomStage(phase.roomStage);
 
         this.ui.updateRent(this.day, this.rentTimer, phase.bgTitle);
-        this.ui.updateBoss(nextBoss, this.bossHp, this.day, this.maxDays);
+        this.ui.updateBoss(nextBoss, this.bossHp, this.day, this.maxDays, maxHp);
         this.ui.setQuote(`«День ${this.day}. Пришёл новый противник: ${nextBoss.name}»`);
         this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, `⚔️ БОСС: ${nextBoss.name}!`, "#ef4444");
 
@@ -2377,7 +2392,6 @@ class SkufLifeGame {
     revivePlayer() {
         this.hasRevivedThisRun = true;
         this.isGameOver = false;
-        this.pauseReasons.delete('gameover');
         this.dangerTimer = 0;
         this.stamina = Math.max(this.stamina, this.maxStamina * 0.5);
         this.isExhausted = false;
@@ -2388,9 +2402,7 @@ class SkufLifeGame {
         this.physics.removeUpperThoughts(0.35);
         
         this.ui.hideGameOver();
-        if (this.pauseReasons.size === 0) {
-            this.resumeGame();
-        }
+        this.resume('gameover');
         this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, "🔥 ВТОРОЕ ДЫХАНИЕ! ЗАБЕГ ПРОДОЛЖАЕТСЯ!", "#00e5ff");
         AudioCtrl.playLevelUp();
         this.saveGame();
@@ -2429,8 +2441,7 @@ class SkufLifeGame {
     }
 
     applyBossNuke() {
-        const boss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-        const dmg = Math.max(10, Math.floor(boss.hp * 0.15));
+        const dmg = Math.max(10, Math.floor(this.getBossMaxHp(this.day) * 0.15));
         this.damageBoss(dmg);
         this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 35, `💥 ТАКТИЧЕСКИЙ УДАР: -${CONFIG.formatNumber(dmg)} HP!`, "#ef4444");
         AudioCtrl.playBossDamage();
@@ -2675,8 +2686,7 @@ class SkufLifeGame {
                 this.ui.setQuote("«КРИПТО-ДРОП ПРИШЁЛ НА КОШЕЛЁК СКУФА!»");
                 break;
             case 'nuke':
-                const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-                const nukeDamage = Math.max(200, Math.floor(currentBoss.hp * 0.28));
+                const nukeDamage = Math.max(200, Math.floor(this.getBossMaxHp(this.day) * 0.28));
                 this.dealBossDamage(nukeDamage);
                 this.physics.explode(this.canvas.width / 2, this.canvas.height - 100, 160, 0.35);
                 AudioCtrl.playExplosion();
@@ -2851,8 +2861,18 @@ class SkufLifeGame {
             }
 
             // Пассивный доход
+            let currentPassive = this.passiveIncome;
+            if (this.cryptoBonusUntil && wallNow < this.cryptoBonusUntil) {
+                currentPassive *= 1.5;
+            }
             if (this.passiveIncome > 0) {
-                this.addMotivation(this.passiveIncome * dt);
+                this.addMotivation(currentPassive * dt);
+            }
+            if (this.eventPassiveBonusTimer > 0) {
+                this.eventPassiveBonusTimer -= dt;
+                if (this.eventPassiveBonusAmount > 0) {
+                    this.addMotivation(this.eventPassiveBonusAmount * dt);
+                }
             }
 
             // Авто-атака Кибернетической Руки (hero[4])
@@ -2868,8 +2888,7 @@ class SkufLifeGame {
 
             // Пассивная Аура Гигачада (hero[7])
             if (CONFIG.UPGRADES.hero[7]?.bought) {
-                const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-                const auraDmg = Math.max(1, Math.floor(currentBoss.hp * 0.005 * dt));
+                const auraDmg = Math.max(1, Math.floor(this.getBossMaxHp(this.day) * 0.005 * dt));
                 this.dealBossDamage(auraDmg);
             }
 
@@ -2907,8 +2926,10 @@ class SkufLifeGame {
                 }
             }
 
-            // Проверка смены суток по МСК для ежедневных квестов и проверка достижений
-            if (Math.random() < 0.05) {
+            // Периодические проверки (квесты, достижения, соперник) раз в секунду
+            this.periodicCheckTimer = (this.periodicCheckTimer || 0) + dt;
+            if (this.periodicCheckTimer >= 1.0) {
+                this.periodicCheckTimer = 0;
                 this.checkDailyQuestsDate();
                 this.checkAchievements();
                 this.updateRivalGhostSystem();
@@ -2971,8 +2992,11 @@ class SkufLifeGame {
     checkDangerZone(dt) {
         const bodies = Matter.Composite.allBodies(this.physics.world).filter(b => !b.isStatic);
         let inDanger = false;
+        const now = performance.now();
 
         for (const b of bodies) {
+            if (b.isDead) continue;
+            if (b.spawnedAt && (now - b.spawnedAt < 1200)) continue;
             if (b.position.y - (b.circleRadius || 20) < this.dangerLineY && b.velocity.y < 0.2) {
                 inDanger = true;
                 break;
@@ -3026,7 +3050,7 @@ class SkufLifeGame {
         const attackTypes = ['earthquake', 'garbage_drop', 'corrupt_thought'];
         const attackType = attackTypes[Math.floor(Math.random() * attackTypes.length)];
 
-        const bossBar = document.getElementById('boss-progress-bar');
+        const bossBar = document.getElementById('boss-progress-bar') || document.getElementById('boss-bar');
         if (bossBar) {
             bossBar.classList.add('boss-attack-flash');
             setTimeout(() => bossBar.classList.remove('boss-attack-flash'), 1000);
@@ -3077,8 +3101,7 @@ class SkufLifeGame {
         const cleansedCount = this.physics.cleanseAllGarbage();
 
         // Наносим колоссальный сокрушительный урон боссу
-        const currentBoss = CONFIG.BOSSES[this.currentBossIndex] || CONFIG.BOSSES[1];
-        const bossDmg = Math.max(300000, Math.floor(currentBoss.hp * 0.40));
+        const bossDmg = Math.max(300000, Math.floor(this.getBossMaxHp(this.day) * 0.40));
         this.dealBossDamage(bossDmg);
 
         this.spawnFloatingText(this.canvas.width / 2, this.roomHeight + 45, "👑 УЛЬТИМЕЙТ ГИГАЧАДА!", "#ffd700");
@@ -3816,7 +3839,7 @@ class SkufLifeGame {
             this.ctx.setLineDash([4, 4]);
             this.ctx.beginPath();
             this.ctx.moveTo(this.aimX, this.dropY);
-            this.ctx.lineTo(this.aimX, h - 16);
+            this.ctx.lineTo(this.aimX, bounds.bottomY - 6);
             this.ctx.stroke();
             this.ctx.setLineDash([]);
             this.ctx.restore();
@@ -5242,18 +5265,6 @@ async function initGame() {
     // Menu + save + Canvas are now ready.
     window.YandexBridge
         ?.markGameReady?.();
-}
-
-if (
-    document.readyState ===
-    'loading'
-) {
-    document.addEventListener(
-        'DOMContentLoaded',
-        initGame
-    );
-} else {
-    initGame();
 }
 
 if (document.readyState === 'loading') {
