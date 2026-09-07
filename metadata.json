@@ -1,8 +1,9 @@
 {
   "name": "Встань с дивана: Эволюция Скуфа",
-  "description": "Аркадный физический дроп-мердж и симулятор превозмогания бытия.",
+  "description": "Аркадный физический drop-and-merge / clicker / roguelite для браузера и Яндекс Игр.",
+  "entryPoint": "index.html",
+  "language": "ru",
+  "targetPlatform": "Yandex Games",
   "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
+  "majorCapabilities": []
 }
