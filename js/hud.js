@@ -1,13 +1,12 @@
 /*
- * CYBER-SKUF UI focus layer.
- * Keeps the gameplay screen calm: persistent HUD shows only what matters now,
- * secondary navigation lives behind one menu button, and boss ad actions are contextual.
+ * CYBER-SKUF — gameplay-first HUD.
+ * Secondary screens stay available, but the permanent playfield shows only
+ * information/actions the player needs right now.
  */
 (() => {
     'use strict';
 
-    const UI_FOCUS_VERSION = '1.2.0';
-
+    const UI_FOCUS_VERSION = '1.3.0';
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
     function injectStyles() {
@@ -16,18 +15,25 @@
         const style = document.createElement('style');
         style.id = 'skuf-ui-focus-styles';
         style.textContent = `
-            /* ---------------------------------------------------------
-               PRIMARY HUD: only immediate gameplay information stays live
-               --------------------------------------------------------- */
+            /* ---------- Primary HUD ---------- */
             #app-viewport.ui-focus .hud-nav-bar {
                 display: none !important;
+            }
+
+            #app-viewport.ui-focus #status-bar {
+                gap: 4px;
+            }
+
+            #app-viewport.ui-focus .hud-top-row {
+                min-height: 32px;
             }
 
             #app-viewport.ui-focus .hud-quick-actions {
                 gap: 5px;
             }
 
-            #app-viewport.ui-focus .hud-quick-actions .hud-mini-btn {
+            #app-viewport.ui-focus .hud-quick-actions .hud-mini-btn,
+            #btn-open-hub-menu {
                 width: 30px;
                 min-width: 30px;
                 height: 30px;
@@ -39,23 +45,9 @@
                 display: none !important;
             }
 
-            #app-viewport.ui-focus .hud-top-row {
-                min-height: 32px;
-            }
-
-            #app-viewport.ui-focus #status-bar {
-                gap: 4px;
-            }
-
-            /* Main menu trigger */
             #btn-open-hub-menu {
                 position: relative;
-                width: 30px;
-                min-width: 30px;
-                height: 30px;
-                padding: 0;
                 border: 1px solid rgba(255,255,255,.14);
-                border-radius: 9px;
                 background: rgba(255,255,255,.06);
                 color: #e2e8f0;
                 display: inline-flex;
@@ -77,13 +69,11 @@
                 transform: scale(.92);
             }
 
-            /* ---------------------------------------------------------
-               SECONDARY NAVIGATION POPOVER
-               --------------------------------------------------------- */
+            /* ---------- Main menu popover ---------- */
             #hub-menu-popover {
                 position: absolute;
                 z-index: 125;
-                width: min(270px, calc(100% - 16px));
+                width: min(272px, calc(100% - 16px));
                 padding: 8px;
                 border: 1px solid rgba(255,255,255,.11);
                 border-radius: 13px;
@@ -136,7 +126,7 @@
 
             .hub-menu-grid {
                 display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0,1fr));
                 gap: 6px;
             }
 
@@ -169,6 +159,12 @@
                 transform: scale(.97);
             }
 
+            #hub-menu-popover .hub-menu-item.menu-danger {
+                color: #fca5a5;
+                border-color: rgba(239,68,68,.18);
+                background: rgba(127,29,29,.12);
+            }
+
             .hub-menu-icon {
                 font-size: 17px;
                 line-height: 1;
@@ -185,30 +181,53 @@
                 text-align: left;
             }
 
-            /* Hide old desktop duplicates after they have been moved or superseded. */
-            #app-viewport.ui-focus #desktop-sidebar #btn-side-leaderboard,
-            #app-viewport.ui-focus #desktop-sidebar #btn-side-stats,
-            #app-viewport.ui-focus #desktop-sidebar #btn-side-boosts {
+            /* ---------- Room settings: one button until requested ---------- */
+            .room-quick-settings.ui-settings-group {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 3px;
+                border-radius: 10px;
+                background: rgba(5,9,18,.68);
+                border: 1px solid rgba(255,255,255,.07);
+                backdrop-filter: blur(8px);
+                -webkit-backdrop-filter: blur(8px);
+                transition: background .15s ease, border-color .15s ease;
+            }
+
+            .room-quick-settings.ui-settings-group.settings-collapsed {
+                background: rgba(5,9,18,.48);
+                border-color: rgba(255,255,255,.045);
+            }
+
+            .room-quick-settings.ui-settings-group.settings-collapsed .room-quick-btn:not(.room-settings-toggle) {
                 display: none !important;
             }
 
-            #app-viewport.ui-focus #desktop-sidebar .sidebar-actions-grid {
-                grid-template-columns: 1fr !important;
+            .room-settings-toggle {
+                order: -1;
             }
 
-            /* ---------------------------------------------------------
-               BOSS HELP: one contextual entry instead of two permanent ad buttons
-               --------------------------------------------------------- */
+            .room-quick-settings.ui-settings-group .room-quick-btn {
+                width: 28px;
+                min-width: 28px;
+                height: 28px;
+                padding: 0;
+                border-radius: 7px;
+                font-size: 13px;
+            }
+
+            /* ---------- Boss assistance: contextual, not permanent ---------- */
             #btn-toggle-boss-assist {
                 width: 100%;
-                min-height: 24px;
+                min-height: 23px;
                 margin-top: 4px;
                 padding: 3px 8px;
-                border: 1px solid rgba(255,255,255,.08);
+                border: 1px solid rgba(255,255,255,.07);
                 border-radius: 7px;
-                background: rgba(255,255,255,.035);
-                color: #94a3b8;
-                font-size: 8.5px;
+                background: rgba(255,255,255,.028);
+                color: #8f9db2;
+                font-size: 8px;
                 font-weight: 800;
                 cursor: pointer;
                 display: flex;
@@ -220,9 +239,9 @@
 
             #btn-toggle-boss-assist:hover,
             #btn-toggle-boss-assist.open {
-                color: #e2e8f0;
-                background: rgba(255,255,255,.06);
-                border-color: rgba(255,255,255,.13);
+                color: #dbe5f3;
+                background: rgba(255,255,255,.055);
+                border-color: rgba(255,255,255,.12);
             }
 
             #boss-tactical-assist.focus-collapsed {
@@ -236,12 +255,10 @@
 
             @keyframes focusAssistIn {
                 from { opacity: 0; transform: translateY(-3px); }
-                to   { opacity: 1; transform: translateY(0); }
+                to { opacity: 1; transform: translateY(0); }
             }
 
-            /* ---------------------------------------------------------
-               DESKTOP DOSSIER: reduce text density, keep visual evolution
-               --------------------------------------------------------- */
+            /* ---------- Desktop dossier ---------- */
             #app-viewport.ui-focus #desktop-sidebar {
                 gap: 6px;
                 padding: 7px 9px;
@@ -284,13 +301,37 @@
                 text-align: right;
             }
 
-            #app-viewport.ui-focus #desktop-sidebar .evo-section {
-                padding-bottom: 7px;
+            #app-viewport.ui-focus #desktop-sidebar #btn-side-leaderboard,
+            #app-viewport.ui-focus #desktop-sidebar #btn-side-stats,
+            #app-viewport.ui-focus #desktop-sidebar #btn-side-boosts {
+                display: none !important;
             }
 
-            /* ---------------------------------------------------------
-               MODALS: one visual language, lower perceived text density
-               --------------------------------------------------------- */
+            #app-viewport.ui-focus #desktop-sidebar .actions-section {
+                display: none !important;
+            }
+
+            /* ---------- Lower controls ---------- */
+            #app-viewport.ui-focus .quote-strip {
+                display: none !important;
+            }
+
+            #app-viewport.ui-focus #action-panel {
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
+
+            #app-viewport.ui-focus .action-buttons-group {
+                gap: 3px;
+            }
+
+            #app-viewport.ui-focus #btn-tilt-left span:not(.action-icon),
+            #app-viewport.ui-focus #btn-tilt-right span:not(.action-icon),
+            #app-viewport.ui-focus #btn-toggle-gyro span:not(.action-icon) {
+                display: none !important;
+            }
+
+            /* ---------- Modal hierarchy ---------- */
             #app-viewport.ui-focus .modal-box {
                 border-radius: 16px;
                 border-color: rgba(255,255,255,.10);
@@ -332,6 +373,10 @@
                 color: #91a0b6;
                 font-size: 9.5px;
                 line-height: 1.32;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                overflow: hidden;
             }
 
             #app-viewport.ui-focus .tabs-nav {
@@ -347,9 +392,7 @@
                 font-size: 9px;
             }
 
-            /* ---------------------------------------------------------
-               MOBILE
-               --------------------------------------------------------- */
+            /* ---------- Mobile ---------- */
             @media (max-width: 519px),
                    (orientation: portrait) and (max-aspect-ratio: 1.149/1) {
                 #app-viewport.ui-focus #status-bar {
@@ -384,12 +427,12 @@
                 }
 
                 .hub-menu-grid {
-                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    grid-template-columns: repeat(3, minmax(0,1fr));
                     gap: 5px;
                 }
 
                 #hub-menu-popover .hub-menu-item {
-                    min-height: 52px;
+                    min-height: 50px;
                     padding: 6px;
                     align-items: center;
                     text-align: center;
@@ -401,9 +444,9 @@
                 }
 
                 #btn-toggle-boss-assist {
-                    min-height: 22px;
+                    min-height: 21px;
                     margin-top: 3px;
-                    font-size: 8px;
+                    font-size: 7.8px;
                 }
 
                 #app-viewport.ui-focus .modal-backdrop {
@@ -420,15 +463,20 @@
                 #app-viewport.ui-focus .cards-scroll {
                     max-height: 64dvh;
                 }
+
+                .room-quick-settings.ui-settings-group .room-quick-btn {
+                    width: 27px;
+                    min-width: 27px;
+                    height: 27px;
+                }
             }
         `;
 
         document.head.appendChild(style);
     }
 
-    function createMenuItem(button, icon, label) {
+    function setMenuButtonContent(button, icon, label) {
         if (!button) return null;
-
         button.classList.add('hub-menu-item');
         button.innerHTML = `
             <span class="hub-menu-icon" aria-hidden="true">${icon}</span>
@@ -467,31 +515,30 @@
         app.appendChild(popover);
 
         const grid = popover.querySelector('.hub-menu-grid');
-        const sourceNav = document.querySelector('.hud-nav-bar');
-
         const items = [
             [document.getElementById('btn-open-shop'), '🛠️', 'Прокачка'],
             [document.getElementById('btn-open-quests'), '📋', 'Квесты'],
             [document.getElementById('btn-open-prestige'), '🌀', 'Сансара'],
             [document.getElementById('btn-open-stats'), '📊', 'Статистика'],
             [document.getElementById('btn-open-leaderboard'), '🏆', 'Лидерборд'],
-            [document.getElementById('btn-side-guide'), '📖', 'Правила']
+            [document.getElementById('btn-side-guide'), '📖', 'Правила'],
+            [document.getElementById('btn-reset-game'), '🗑️', 'Сброс']
         ];
 
         items.forEach(([button, icon, label]) => {
-            const item = createMenuItem(button, icon, label);
-            if (item) grid?.appendChild(item);
+            const item = setMenuButtonContent(button, icon, label);
+            if (!item) return;
+            if (button.id === 'btn-reset-game') item.classList.add('menu-danger');
+            grid?.appendChild(item);
         });
 
-        if (sourceNav) {
-            sourceNav.setAttribute('aria-hidden', 'true');
-        }
+        const sourceNav = document.querySelector('.hud-nav-bar');
+        if (sourceNav) sourceNav.setAttribute('aria-hidden', 'true');
 
         const placePopover = () => {
             const appRect = app.getBoundingClientRect();
             const buttonRect = menuButton.getBoundingClientRect();
-            const width = Math.min(270, Math.max(210, appRect.width - 16));
-
+            const width = Math.min(272, Math.max(210, appRect.width - 16));
             popover.style.width = `${width}px`;
 
             const left = clamp(
@@ -503,7 +550,7 @@
             const top = clamp(
                 buttonRect.bottom - appRect.top + 6,
                 6,
-                Math.max(6, appRect.height - popover.offsetHeight - 6)
+                Math.max(6, appRect.height - Math.max(150, popover.offsetHeight) - 6)
             );
 
             popover.style.left = `${left}px`;
@@ -532,10 +579,8 @@
         });
 
         popover.querySelector('.hub-menu-close')?.addEventListener('click', closeMenu);
-
         grid?.addEventListener('click', event => {
-            const item = event.target.closest('.hub-menu-item');
-            if (item) closeMenu();
+            if (event.target.closest('.hub-menu-item')) closeMenu();
         });
 
         document.addEventListener('pointerdown', event => {
@@ -551,12 +596,64 @@
         window.addEventListener('resize', () => {
             if (popover.classList.contains('open')) placePopover();
         }, { passive: true });
+
+        /* Collapse/expand and orientation changes alter the anchor position. */
+        const observer = new MutationObserver(() => {
+            if (app.classList.contains('hud-collapsed')) {
+                closeMenu();
+                return;
+            }
+            if (popover.classList.contains('open')) requestAnimationFrame(placePopover);
+        });
+        observer.observe(app, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    function initRoomSettings() {
+        const group = document.querySelector('.room-quick-settings');
+        if (!group || document.getElementById('btn-room-settings-toggle')) return;
+
+        group.classList.add('ui-settings-group', 'settings-collapsed');
+
+        const toggle = document.createElement('button');
+        toggle.id = 'btn-room-settings-toggle';
+        toggle.type = 'button';
+        toggle.className = 'room-quick-btn room-settings-toggle';
+        toggle.textContent = '⚙️';
+        toggle.title = 'Звук и эффекты';
+        toggle.setAttribute('aria-label', 'Открыть настройки звука и эффектов');
+        toggle.setAttribute('aria-expanded', 'false');
+        group.prepend(toggle);
+
+        let closeTimer = null;
+        const setOpen = open => {
+            group.classList.toggle('settings-collapsed', !open);
+            toggle.setAttribute('aria-expanded', String(open));
+            toggle.textContent = open ? '✕' : '⚙️';
+            clearTimeout(closeTimer);
+            if (open) closeTimer = setTimeout(() => setOpen(false), 7000);
+        };
+
+        toggle.addEventListener('click', event => {
+            event.stopPropagation();
+            setOpen(group.classList.contains('settings-collapsed'));
+        });
+
+        group.addEventListener('click', event => {
+            if (event.target.closest('.room-quick-btn:not(.room-settings-toggle)')) {
+                clearTimeout(closeTimer);
+                closeTimer = setTimeout(() => setOpen(false), 1800);
+            }
+        });
+
+        document.addEventListener('pointerdown', event => {
+            if (group.classList.contains('settings-collapsed')) return;
+            if (!group.contains(event.target)) setOpen(false);
+        }, { passive: true });
     }
 
     function initBossAssist() {
-        const bossBar = document.getElementById('boss-bar');
         const tactical = document.getElementById('boss-tactical-assist');
-        if (!bossBar || !tactical || document.getElementById('btn-toggle-boss-assist')) return;
+        if (!tactical || document.getElementById('btn-toggle-boss-assist')) return;
 
         const toggle = document.createElement('button');
         toggle.id = 'btn-toggle-boss-assist';
@@ -564,23 +661,18 @@
         toggle.innerHTML = '<span>🎬 Помощь</span><span aria-hidden="true">⌄</span>';
         toggle.title = 'Тактическая помощь за рекламу';
         toggle.setAttribute('aria-expanded', 'false');
-
         tactical.parentNode.insertBefore(toggle, tactical);
         tactical.classList.add('focus-collapsed');
 
         let autoCloseTimer = null;
-
         const setOpen = open => {
             tactical.classList.toggle('focus-collapsed', !open);
             tactical.classList.toggle('focus-expanded', open);
             toggle.classList.toggle('open', open);
             toggle.setAttribute('aria-expanded', String(open));
             toggle.lastElementChild.textContent = open ? '⌃' : '⌄';
-
             clearTimeout(autoCloseTimer);
-            if (open) {
-                autoCloseTimer = setTimeout(() => setOpen(false), 8000);
-            }
+            if (open) autoCloseTimer = setTimeout(() => setOpen(false), 8000);
         };
 
         toggle.addEventListener('click', () => {
@@ -588,9 +680,7 @@
         });
 
         tactical.addEventListener('click', event => {
-            if (event.target.closest('button')) {
-                setTimeout(() => setOpen(false), 120);
-            }
+            if (event.target.closest('button')) setTimeout(() => setOpen(false), 120);
         });
     }
 
@@ -600,6 +690,7 @@
 
         app.classList.add('ui-focus');
         initHubMenu();
+        initRoomSettings();
         initBossAssist();
 
         console.info(`[UI FOCUS ${UI_FOCUS_VERSION}] enabled`);
