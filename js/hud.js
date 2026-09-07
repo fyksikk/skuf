@@ -1,11 +1,12 @@
 /*
- * CYBER-SKUF — gameplay-first HUD v1.6
- * Readability, compact navigation, rewarded-ad UX guards and input cooldown tuning.
+ * CYBER-SKUF — gameplay-first HUD v1.7
+ * Final presentation layer: readable HUD, one leaderboard entry point,
+ * compact menus, rewarded-ad UX guards and input cooldown tuning.
  */
 (() => {
 'use strict';
 
-const VERSION = '1.6.0';
+const VERSION = '1.7.0';
 const app = () => document.getElementById('app-viewport');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const isLocalDev = () => location.protocol === 'file:' || ['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(location.hostname);
@@ -15,24 +16,23 @@ function injectStyles() {
   const style = document.createElement('style');
   style.id = 'skuf-ui-focus-styles';
   style.textContent = `
-    #app-viewport.ui-focus { font-size: 12px; }
+    #app-viewport.ui-focus { font-size:12px; }
     #app-viewport.ui-focus .hud-nav-bar { display:none!important; }
     #app-viewport.ui-focus #status-bar { gap:5px; padding-top:7px; padding-bottom:7px; }
-    #app-viewport.ui-focus .hud-top-row { min-height:38px; gap:8px; }
+    #app-viewport.ui-focus .hud-top-row { min-height:42px; gap:8px; align-items:center; }
     #app-viewport.ui-focus #motivation-counter { font-size:16px; line-height:1.05; white-space:nowrap; }
     #app-viewport.ui-focus .stamina-box { gap:3px; }
     #app-viewport.ui-focus .stamina-label-row { min-height:12px; line-height:1; }
     #app-viewport.ui-focus .stamina-label-row .label { font-size:9px; opacity:.86; letter-spacing:.2px; }
     #app-viewport.ui-focus #stamina-track { height:6px; }
 
+    /* Leaderboard has one entry point only: inside ☰ menu. */
+    #app-viewport.ui-focus #status-bar #btn-open-leaderboard { display:none!important; }
+
     #app-viewport.ui-focus .hud-quick-actions { gap:5px; flex-shrink:0; align-items:center; }
     #app-viewport.ui-focus .hud-quick-actions .hud-mini-btn,
     #btn-open-hub-menu { min-width:34px; height:34px; padding:0 7px; border-radius:10px; }
     #app-viewport.ui-focus .hud-quick-actions .hud-btn-caption { display:none!important; }
-    #app-viewport.ui-focus #btn-open-leaderboard { width:auto!important; min-width:55px!important; gap:4px; }
-    #app-viewport.ui-focus #btn-open-leaderboard .hud-btn-caption {
-      display:inline!important; font-size:10px; font-weight:900; line-height:1; color:#e5e7eb;
-    }
     #app-viewport.ui-focus .hud-quick-actions .hud-mini-btn,
     #app-viewport.ui-focus .boost-btn-glow,
     #app-viewport.ui-focus .roulette-btn-glow {
@@ -59,21 +59,24 @@ function injectStyles() {
     #app-viewport.ui-focus .slot-count { font-size:10px!important; }
     #app-viewport.ui-focus .action-btn { font-size:11px!important; font-weight:850; }
 
+    /* Economy block is readable on BOTH desktop and phone. */
+    #app-viewport.ui-focus .motivation-box {
+      display:grid; grid-template-columns:auto 1fr; grid-template-areas:"l l" "v p";
+      align-items:baseline; column-gap:8px; row-gap:4px; min-width:0;
+    }
+    #app-viewport.ui-focus .motivation-box .label {
+      display:block!important; grid-area:l; width:max-content; font-size:9px; line-height:1;
+      color:#7dd3fc; opacity:.95; font-weight:900;
+    }
+    #app-viewport.ui-focus #motivation-counter { grid-area:v; }
+    #app-viewport.ui-focus #passive-counter {
+      display:block!important; grid-area:p; margin:0; color:#86efac; font-size:10.5px;
+      font-weight:900; line-height:1; white-space:nowrap;
+    }
+
     @media (orientation:landscape) and (min-width:520px),
            (min-aspect-ratio:1.15/1) and (min-width:520px) {
-      #app-viewport.ui-focus .motivation-box {
-        display:grid; grid-template-columns:auto 1fr; grid-template-areas:"l l" "v p";
-        align-items:baseline; column-gap:8px; row-gap:4px; min-width:0;
-      }
-      #app-viewport.ui-focus .motivation-box .label {
-        display:block!important; grid-area:l; width:max-content; font-size:9px; line-height:1;
-        color:#7dd3fc; opacity:.95; font-weight:900;
-      }
-      #app-viewport.ui-focus #motivation-counter { grid-area:v; font-size:17px; }
-      #app-viewport.ui-focus #passive-counter {
-        display:block!important; grid-area:p; margin:0; color:#86efac; font-size:10.5px;
-        font-weight:900; line-height:1; white-space:nowrap;
-      }
+      #app-viewport.ui-focus #motivation-counter { font-size:17px; }
       #app-viewport.ui-focus:not(.hud-collapsed) {
         --skuf-focus-sidebar:clamp(250px,22vw,278px);
         grid-template-columns:var(--skuf-focus-sidebar) minmax(0,1fr)!important;
@@ -102,9 +105,11 @@ function injectStyles() {
 
     @media (max-width:519px), (orientation:portrait) and (max-aspect-ratio:1.149/1) {
       #app-viewport.ui-focus #status-bar { padding:6px 8px; gap:4px; }
-      #app-viewport.ui-focus .motivation-box .label,
-      #app-viewport.ui-focus #passive-counter { display:none!important; }
+      #app-viewport.ui-focus .hud-top-row { min-height:44px; }
+      #app-viewport.ui-focus .motivation-box { column-gap:6px; row-gap:3px; }
+      #app-viewport.ui-focus .motivation-box .label { font-size:8.5px!important; }
       #app-viewport.ui-focus #motivation-counter { font-size:14.5px; }
+      #app-viewport.ui-focus #passive-counter { font-size:9.5px!important; }
       #app-viewport.ui-focus #rent-day-label,
       #app-viewport.ui-focus .crisis-tag,
       #app-viewport.ui-focus .rent-timer { font-size:9px!important; }
@@ -120,8 +125,6 @@ function injectStyles() {
       #app-viewport.ui-focus #btn-tilt-left,
       #app-viewport.ui-focus #btn-tilt-right,
       #app-viewport.ui-focus #btn-toggle-gyro { padding:0!important; font-size:17px!important; }
-      #app-viewport.ui-focus #btn-open-leaderboard { min-width:51px!important; padding:0 6px; }
-      #app-viewport.ui-focus #btn-open-leaderboard .hud-btn-caption { font-size:9.5px; }
     }
 
     #hub-menu-popover {
@@ -193,9 +196,9 @@ function injectStyles() {
     #compact-play-stamina-fill { background:#19d3c5; }
     #compact-play-boss-fill { background:#ff4d6d; }
     @media(max-width:430px) {
-      #compact-play-hud { width:min(338px,calc(100% - 76px)); gap:5px; }
-      .compact-play-stat { font-size:9px; }
-      .compact-play-stat.passive { display:none; }
+      #compact-play-hud { width:min(345px,calc(100% - 72px)); gap:4px; padding-left:7px; padding-right:7px; }
+      .compact-play-stat { font-size:8.5px; }
+      .compact-play-stat.passive { display:inline!important; }
     }
 
     #app-viewport.ui-focus .roulette-modal { width:min(360px,calc(100% - 16px)); padding:13px; }
@@ -246,6 +249,14 @@ function toast(message, ms = 2600) {
   el.classList.add('visible');
   clearTimeout(el._hideTimer);
   el._hideTimer = setTimeout(() => el.classList.remove('visible'), ms);
+}
+
+function hideDuplicateLeaderboard() {
+  const top = document.getElementById('btn-open-leaderboard');
+  if (!top) return;
+  top.hidden = true;
+  top.tabIndex = -1;
+  top.setAttribute('aria-hidden', 'true');
 }
 
 function createMenu() {
@@ -429,9 +440,18 @@ function compactRouletteText() {
     const free = text.match(/КРУТИТЬ БЕСПЛАТНО!?\s*\(Осталось:\s*(\d+)\)/i);
     const wait = text.match(/Ожидание:\s*(\d+)с/i);
     let next = text;
-    if (free) { next = `КРУТИТЬ • БЕСПЛАТНО ×${free[1]}`; button.title = `Бесплатных вращений: ${free[1]}`; }
-    else if (wait) { next = `СПИН ЧЕРЕЗ ${wait[1]}с`; button.title = 'Или победите босса'; }
-    if (next !== text) { lock = true; button.textContent = next; lock = false; }
+    if (free) {
+      next = `КРУТИТЬ • БЕСПЛАТНО ×${free[1]}`;
+      button.title = `Бесплатных вращений: ${free[1]}`;
+    } else if (wait) {
+      next = `СПИН ЧЕРЕЗ ${wait[1]}с`;
+      button.title = 'Или победите босса';
+    }
+    if (next !== text) {
+      lock = true;
+      button.textContent = next;
+      lock = false;
+    }
   };
   new MutationObserver(fix).observe(button, { childList:true, characterData:true, subtree:true });
   fix();
@@ -517,7 +537,9 @@ function patchRewardedAds() {
             errored = true;
             restore();
             callbacks.onError?.(error);
-            toast(isLocalDev() ? 'Локальная реклама не загрузилась. Запусти игру через npm run dev.' : 'Реклама сейчас недоступна. Попробуйте ещё раз позже.');
+            toast(isLocalDev()
+              ? 'Локальная реклама не загрузилась. Запусти игру через npm run dev.'
+              : 'Реклама сейчас недоступна. Попробуйте ещё раз позже.');
             syncAudioAfterAd();
           },
           onCooldown: left => {
@@ -574,6 +596,8 @@ function patchGameplayCooldowns() {
 
     game.doubleTapCooldownMs = 4000;
     game.doubleTapReadyAt = 0;
+
+    /* Capture phase lets us cancel the original double-tap handler while on cooldown. */
     game.canvas?.addEventListener('pointerup', event => {
       if (game.activeConsumableMode || game.isPaused || game.isGameOver) return;
       const rect = game.canvas.getBoundingClientRect();
@@ -587,21 +611,25 @@ function patchGameplayCooldowns() {
       if (!isDoubleTap) return;
 
       if (now < game.doubleTapReadyAt) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
         const left = Math.max(0.1, (game.doubleTapReadyAt - now) / 1000);
         game.lastTapTime = 0;
         game.spawnFloatingText?.(x, y - 18, `⏳ ПОДБРОС ${left.toFixed(1)}с`, '#94a3b8');
-      } else {
-        game.doubleTapReadyAt = now + game.doubleTapCooldownMs;
+        return;
       }
+
+      game.doubleTapReadyAt = now + game.doubleTapCooldownMs;
     }, true);
   }, 80);
 }
 
 function boot() {
   const A = app();
-  if (!A || A.dataset.uiFocusV16) return;
-  A.dataset.uiFocusV16 = '1';
+  if (!A || A.dataset.uiFocusV17) return;
+  A.dataset.uiFocusV17 = '1';
   A.classList.add('ui-focus');
+  hideDuplicateLeaderboard();
   createMenu();
   createSettingsToggle();
   ensureBossBadge();
