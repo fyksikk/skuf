@@ -1,42 +1,953 @@
 /*
  * CYBER-SKUF runtime polish layer.
- * Adds synchronized daily modifiers, 20 boss passives and collapsible HUD.
+ * Keeps the base architecture intact while reducing HUD clutter,
+ * synchronizing daily modifiers, adding boss passives and responsive collapse.
  */
 (() => {
     'use strict';
-    const POLISH_VERSION='1.0.7';
-    const BOSS_EFFECTS={
-        1:{icon:'🏠',title:'Проверка квартиры',desc:'Атаки босса происходят на 8% чаще.',attackCooldownMult:.92},2:{icon:'💳',title:'Долговая петля',desc:'После сброса мысли есть +6% шанс получить дополнительный мусор.',extraGarbageChance:.06},3:{icon:'📋',title:'Сверхурочные',desc:'Восстановление Дыхалки снижено на 12%.',staminaRecoveryMult:.88},4:{icon:'💔',title:'Эмоциональные качели',desc:'Кулдаун сброса мыслей увеличен на 7%.',dropCooldownMult:1.07},5:{icon:'🍔',title:'Комбо-набор',desc:'Тапы по Скуфу расходуют на 15% больше Дыхалки.',tapStaminaMult:1.15},6:{icon:'🌧️',title:'Апатия',desc:'Пассивный доход снижен на 10%.',incomeMult:.90},7:{icon:'🎓',title:'Продажа воздуха',desc:'Босс получает на 8% меньше урона.',bossDamageTakenMult:.92},8:{icon:'🪙',title:'Рагпул',desc:'Пассивный доход снижен на 12%, но Хайп заряжается на 10% быстрее.',incomeMult:.88,feverChargeMult:1.10},9:{icon:'🎭',title:'Синдром сомнений',desc:'Босс получает на 10% меньше урона.',bossDamageTakenMult:.90},10:{icon:'🏦',title:'Проценты капают',desc:'После сброса мысли есть +7% шанс получить дополнительный мусор.',extraGarbageChance:.07},11:{icon:'🛵',title:'Курьер уже у двери',desc:'Атаки босса происходят на 10% чаще.',attackCooldownMult:.90},12:{icon:'🤖',title:'Автоматизация',desc:'Босс получает на 12% меньше урона, а сброс мыслей медленнее на 5%.',bossDamageTakenMult:.88,dropCooldownMult:1.05},13:{icon:'🔥',title:'Выгорание',desc:'Восстановление Дыхалки снижено на 25%.',staminaRecoveryMult:.75},14:{icon:'🎖️',title:'Внезапный визит',desc:'Атаки босса происходят на 16% чаще.',attackCooldownMult:.84},15:{icon:'🏍️',title:'Кризис среднего возраста',desc:'Тапы расходуют на 20% больше Дыхалки.',tapStaminaMult:1.20},16:{icon:'🗂️',title:'Бумажная волокита',desc:'Кулдаун сброса мыслей увеличен на 15%.',dropCooldownMult:1.15},17:{icon:'🛋️',title:'Чёрная дыра дивана',desc:'Дыхалка восстанавливается на 20% медленнее, тапы дороже на 10%.',staminaRecoveryMult:.80,tapStaminaMult:1.10},18:{icon:'⏳',title:'Тик-так',desc:'Атаки босса происходят на 20% чаще.',attackCooldownMult:.80},19:{icon:'☠️',title:'Последний порог',desc:'Босс получает на 15% меньше урона, +8% шанс дополнительного мусора.',bossDamageTakenMult:.85,extraGarbageChance:.08},20:{icon:'👑',title:'Судьба давит',desc:'Босс получает на 20% меньше урона, атакует на 22% чаще и чаще подкидывает мусор.',bossDamageTakenMult:.80,attackCooldownMult:.78,extraGarbageChance:.08}
+
+    const POLISH_VERSION = '1.1.0';
+
+    const BOSS_EFFECTS = {
+        1:  { icon: '🏠', title: 'Проверка квартиры', desc: 'Атаки босса происходят на 8% чаще.', attackCooldownMult: 0.92 },
+        2:  { icon: '💳', title: 'Долговая петля', desc: 'После сброса мысли есть +6% шанс получить дополнительный мусор.', extraGarbageChance: 0.06 },
+        3:  { icon: '📋', title: 'Сверхурочные', desc: 'Восстановление Дыхалки снижено на 12%.', staminaRecoveryMult: 0.88 },
+        4:  { icon: '💔', title: 'Эмоциональные качели', desc: 'Кулдаун сброса мыслей увеличен на 7%.', dropCooldownMult: 1.07 },
+        5:  { icon: '🍔', title: 'Комбо-набор', desc: 'Тапы по Скуфу расходуют на 15% больше Дыхалки.', tapStaminaMult: 1.15 },
+        6:  { icon: '🌧️', title: 'Апатия', desc: 'Пассивный доход снижен на 10%.', incomeMult: 0.90 },
+        7:  { icon: '🎓', title: 'Продажа воздуха', desc: 'Босс получает на 8% меньше урона.', bossDamageTakenMult: 0.92 },
+        8:  { icon: '🪙', title: 'Рагпул', desc: 'Пассивный доход снижен на 12%, но Хайп заряжается на 10% быстрее.', incomeMult: 0.88, feverChargeMult: 1.10 },
+        9:  { icon: '🎭', title: 'Синдром сомнений', desc: 'Босс получает на 10% меньше урона.', bossDamageTakenMult: 0.90 },
+        10: { icon: '🏦', title: 'Проценты капают', desc: 'После сброса мысли есть +7% шанс получить дополнительный мусор.', extraGarbageChance: 0.07 },
+        11: { icon: '🛵', title: 'Курьер уже у двери', desc: 'Атаки босса происходят на 10% чаще.', attackCooldownMult: 0.90 },
+        12: { icon: '🤖', title: 'Автоматизация', desc: 'Босс получает на 12% меньше урона, а сброс мыслей медленнее на 5%.', bossDamageTakenMult: 0.88, dropCooldownMult: 1.05 },
+        13: { icon: '🔥', title: 'Выгорание', desc: 'Восстановление Дыхалки снижено на 25%.', staminaRecoveryMult: 0.75 },
+        14: { icon: '🎖️', title: 'Внезапный визит', desc: 'Атаки босса происходят на 16% чаще.', attackCooldownMult: 0.84 },
+        15: { icon: '🏍️', title: 'Кризис среднего возраста', desc: 'Тапы расходуют на 20% больше Дыхалки.', tapStaminaMult: 1.20 },
+        16: { icon: '🗂️', title: 'Бумажная волокита', desc: 'Кулдаун сброса мыслей увеличен на 15%.', dropCooldownMult: 1.15 },
+        17: { icon: '🛋️', title: 'Чёрная дыра дивана', desc: 'Дыхалка восстанавливается на 20% медленнее, тапы дороже на 10%.', staminaRecoveryMult: 0.80, tapStaminaMult: 1.10 },
+        18: { icon: '⏳', title: 'Тик-так', desc: 'Атаки босса происходят на 20% чаще.', attackCooldownMult: 0.80 },
+        19: { icon: '☠️', title: 'Последний порог', desc: 'Босс получает на 15% меньше урона, +8% шанс дополнительного мусора.', bossDamageTakenMult: 0.85, extraGarbageChance: 0.08 },
+        20: { icon: '👑', title: 'Судьба давит', desc: 'Босс получает на 20% меньше урона, атакует на 22% чаще и чаще подкидывает мусор.', bossDamageTakenMult: 0.80, attackCooldownMult: 0.78, extraGarbageChance: 0.08 }
     };
-    function normalizeDailyModifiers(){if(typeof CONFIG==='undefined'||!CONFIG.DAILY_MODIFIERS)return;Object.assign(CONFIG.DAILY_MODIFIERS[0],{id:'sunday_beer',title:'Пивной Выходной',desc:'🍺 40% шанс дополнительного расходника после босса, заряд Хайпа +25%'});Object.assign(CONFIG.DAILY_MODIFIERS[1],{id:'monday_grind',title:'Тяжёлый Понедельник',desc:'💼 Награда за слияния x2, боссы атакуют на 25% чаще'});Object.assign(CONFIG.DAILY_MODIFIERS[2],{id:'tuesday_fever',title:'Крипто-Вторник',desc:'📈 Пассивный доход +50%, автосброс ускорен до 0.9с'});Object.assign(CONFIG.DAILY_MODIFIERS[3],{id:'wednesday_cat',title:'День Котика',desc:'🐾 Кулдаун кота 5с; если мусор есть, кот гарантированно убирает 1 штуку'});Object.assign(CONFIG.DAILY_MODIFIERS[4],{id:'thursday_clean',title:'Чистый Четверг',desc:'✨ Радиус очистки мусора от слияний увеличен на 50%'});Object.assign(CONFIG.DAILY_MODIFIERS[5],{id:'friday_hype',title:'Пятничный Хайп',desc:'🎉 Лихорадка / Fever длится в 2 раза дольше'});Object.assign(CONFIG.DAILY_MODIFIERS[6],{id:'saturday_chill',title:'Субботний Чилл',desc:'🎮 Тапы по Скуфу расходуют на 50% меньше Дыхалки'});}
-    const getBossEffect=g=>BOSS_EFFECTS[Math.max(1,Math.min(20,Number(g?.currentBossIndex||g?.day||1)))]||BOSS_EFFECTS[1];
-    function applyDerivedModifiers(g){if(!g)return;const e=getBossEffect(g);if(g.activeDailyMod?.id==='tuesday_fever')g.passiveIncome*=1.5;if(Number.isFinite(e.incomeMult))g.passiveIncome*=e.incomeMult;if(Number.isFinite(e.staminaRecoveryMult))g.staminaRecoveryRate*=e.staminaRecoveryMult;if(Number.isFinite(e.dropCooldownMult))g.baseDropCooldownMs=Math.max(140,Math.round((g.baseDropCooldownMs||380)*e.dropCooldownMult));g.updateDropCooldownFromState?.();g.hudDirty=true;}
-    function spawnExtraGarbage(g,chance){if(!g?.physics||!chance||Math.random()>=chance)return;const list=CONFIG.GARBAGE_TYPES||[];if(!list.length)return;const b=g.physics.getCupBounds(),garbage=list[Math.floor(Math.random()*list.length)],x=b.leftX+32+Math.random()*Math.max(1,b.width-64);g.physics.createGarbage(x,g.dropY,garbage);g.spawnFloatingText?.(x,g.roomHeight+38,`⚠️ ${garbage.name}`,garbage.hazardColor||'#f59e0b');}
-    function renderBossEffect(g,boss=null){const bar=document.getElementById('boss-bar');if(!bar)return;let row=document.getElementById('boss-effect-row');if(!row){row=document.createElement('div');row.id='boss-effect-row';row.className='boss-effect-row';row.innerHTML='<span class="boss-effect-label">ЭФФЕКТ БОССА</span><span id="boss-effect-badge" class="boss-effect-badge"></span>';const daily=bar.querySelector('.mission-effect-row'),info=bar.querySelector('.boss-info');if(daily?.nextSibling)bar.insertBefore(row,daily.nextSibling);else if(info)bar.insertBefore(row,info);else bar.appendChild(row);}const isBreak=boss&&/ПЕРЕДЫШКА/i.test(String(boss.name||boss.title||''));row.classList.toggle('hidden',!!isBreak);if(isBreak)return;const e=getBossEffect(g),badge=document.getElementById('boss-effect-badge');if(!badge)return;badge.textContent=`${e.icon} ${e.title}`;badge.title=e.desc;badge.dataset.desc=e.desc;}
-    function patchGame(g){if(!g||g.__polishPatched)return;g.__polishPatched=true;g.initDailyModifier?.();g.ui?.updateDailyModifier?.(g.activeDailyMod);
-        const recalc=g.recalculatePassives.bind(g);g.recalculatePassives=function(...a){const r=recalc(...a);applyDerivedModifiers(this);return r;};
-        const deal=g.dealBossDamage.bind(g);g.dealBossDamage=function(amount,...rest){if(this.bossBreakTimer>0)return deal(amount,...rest);const e=getBossEffect(this),m=this.__polishBypassBossResistance?1:(Number.isFinite(e.bossDamageTakenMult)?e.bossDamageTakenMult:1);return deal(Math.max(0,Number(amount||0)*m),...rest);};
-        const bn=g.applyBossNuke?.bind(g);if(bn)g.applyBossNuke=function(...a){this.__polishBypassBossResistance=true;try{return bn(...a);}finally{this.__polishBypassBossResistance=false;}};
-        const boost=g.applyBoost?.bind(g);if(boost)g.applyBoost=function(type,...a){const bypass=type==='nuke';if(bypass)this.__polishBypassBossResistance=true;try{return boost(type,...a);}finally{if(bypass)this.__polishBypassBossResistance=false;}};
-        const atk=g.executeBossAttack.bind(g);g.executeBossAttack=function(...a){const r=atk(...a),e=getBossEffect(this);if(Number.isFinite(e.attackCooldownMult))this.bossAttackTimer=Math.max(4.5,this.bossAttackTimer*e.attackCooldownMult);return r;};
-        const garbage=g.checkGarbageSpawn.bind(g);g.checkGarbageSpawn=function(...a){const r=garbage(...a);spawnExtraGarbage(this,getBossEffect(this).extraGarbageChance||0);return r;};
-        const tap=g.handleSkufTap.bind(g);g.handleSkufTap=function(...a){const before=this.stamina,r=tap(...a),spent=Math.max(0,before-this.stamina);if(spent>0){let m=getBossEffect(this).tapStaminaMult||1;if(this.activeDailyMod?.id==='saturday_chill')m*=.5;this.stamina=Math.max(0,Math.min(this.maxStamina,this.stamina-(spent*m-spent)));if(this.stamina>0)this.isExhausted=false;this.ui?.updateStamina?.(this.stamina,this.maxStamina,this.isExhausted);}return r;};
-        const fever=g.triggerFeverMode.bind(g);g.triggerFeverMode=function(d=null,...a){if(this.activeDailyMod?.id==='friday_hype')d=(d??this.feverDuration??10)*2;return fever(d,...a);};
-        const charge=g.addFeverCharge?.bind(g);if(charge)g.addFeverCharge=function(amount,...a){let m=this.activeDailyMod?.id==='sunday_beer'?1.25:1;m*=getBossEffect(this).feverChargeMult||1;return charge(Number(amount||0)*m,...a);};
-        const defeated=g.onBossDefeated.bind(g);g.onBossDefeated=function(...a){const r=defeated(...a);if(this.activeDailyMod?.id==='sunday_beer'&&Math.random()<.40){const pool=['beer','script','energy','bomb','magnet'],item=pool[Math.floor(Math.random()*pool.length)];this.items[item]=(this.items[item]||0)+1;this.ui?.updateConsumables?.(this.items);this.spawnFloatingText?.(this.canvas.width/2,this.roomHeight+68,'🍺 ВЫХОДНОЙ: +1 РАСХОДНИК!','#facc15');this.saveGame?.();}return r;};
-        const advance=g.advanceDay.bind(g);g.advanceDay=function(...a){const r=advance(...a);this.recalculatePassives();renderBossEffect(this,CONFIG.BOSSES[this.currentBossIndex]);return r;};
-        for(const name of ['restart','resetGame','triggerPrestige']){const original=g[name]?.bind(g);if(!original)continue;g[name]=function(...a){const r=original(...a);this.recalculatePassives?.();this.ui?.updateDailyModifier?.(this.activeDailyMod);renderBossEffect(this,CONFIG.BOSSES[this.currentBossIndex]);return r;};}
-        if(g.ui&&!g.ui.__bossEffectPatched){g.ui.__bossEffectPatched=true;const update=g.ui.updateBoss.bind(g.ui);g.ui.updateBoss=(...a)=>{const r=update(...a);renderBossEffect(g,a[0]);return r;};}
-        g.recalculatePassives();renderBossEffect(g,CONFIG.BOSSES[g.currentBossIndex]);g.ui?.updateDailyModifier?.(g.activeDailyMod);console.info(`[POLISH ${POLISH_VERSION}] enabled`);
+
+    function normalizeDailyModifiers() {
+        if (typeof CONFIG === 'undefined' || !CONFIG.DAILY_MODIFIERS) return;
+
+        Object.assign(CONFIG.DAILY_MODIFIERS[0], {
+            id: 'sunday_beer',
+            title: 'Пивной Выходной',
+            desc: '🍺 40% шанс дополнительного расходника после босса, заряд Хайпа +25%'
+        });
+        Object.assign(CONFIG.DAILY_MODIFIERS[1], {
+            id: 'monday_grind',
+            title: 'Тяжёлый Понедельник',
+            desc: '💼 Награда за слияния x2, боссы атакуют на 25% чаще'
+        });
+        Object.assign(CONFIG.DAILY_MODIFIERS[2], {
+            id: 'tuesday_fever',
+            title: 'Крипто-Вторник',
+            desc: '📈 Пассивный доход +50%, автосброс ускорен до 0.9с'
+        });
+        Object.assign(CONFIG.DAILY_MODIFIERS[3], {
+            id: 'wednesday_cat',
+            title: 'День Котика',
+            desc: '🐾 Кулдаун кота 5с; если мусор есть, кот гарантированно убирает 1 штуку'
+        });
+        Object.assign(CONFIG.DAILY_MODIFIERS[4], {
+            id: 'thursday_clean',
+            title: 'Чистый Четверг',
+            desc: '✨ Радиус очистки мусора от слияний увеличен на 50%'
+        });
+        Object.assign(CONFIG.DAILY_MODIFIERS[5], {
+            id: 'friday_hype',
+            title: 'Пятничный Хайп',
+            desc: '🎉 Лихорадка / Fever длится в 2 раза дольше'
+        });
+        Object.assign(CONFIG.DAILY_MODIFIERS[6], {
+            id: 'saturday_chill',
+            title: 'Субботний Чилл',
+            desc: '🎮 Тапы по Скуфу расходуют на 50% меньше Дыхалки'
+        });
     }
-    function injectStyles(){if(document.getElementById('skuf-polish-styles'))return;const s=document.createElement('style');s.id='skuf-polish-styles';s.textContent=`
-    .boss-effect-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:5px;width:100%;margin:0 0 5px}.boss-effect-row.hidden{display:none!important}.boss-effect-label{padding:2px 5px;border-radius:6px;border:1px solid rgba(244,63,94,.30);background:rgba(244,63,94,.09);color:#fda4af;font-size:8px;font-weight:900;line-height:1.25;letter-spacing:.35px;white-space:nowrap}.boss-effect-badge{display:block;min-width:0;padding:2px 6px;border:1px solid rgba(244,63,94,.24);border-radius:6px;background:rgba(73,16,33,.24);color:#fecdd3;font-size:8.5px;font-weight:800;line-height:1.25;white-space:normal;overflow:hidden;cursor:help}.boss-effect-badge::after{content:" — " attr(data-desc);color:#aeb9cc;font-weight:600}
-    #btn-collapse-hud{position:absolute;z-index:85;width:28px;height:42px;padding:0;border:1px solid rgba(0,229,255,.30);border-radius:0 10px 10px 0;background:rgba(5,9,18,.90);color:#67e8f9;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 14px rgba(0,229,255,.12);backdrop-filter:blur(8px);transition:left .22s ease,top .22s ease,transform .12s ease,background .12s ease;touch-action:manipulation}#btn-collapse-hud:hover{background:rgba(0,229,255,.10);border-color:rgba(0,229,255,.55)}
-    @media (orientation:landscape) and (min-width:520px),(min-aspect-ratio:1.15/1) and (min-width:520px){#app-viewport{transition:grid-template-columns .22s ease}#app-viewport.hud-collapsed{grid-template-columns:0 minmax(0,1fr)!important}#app-viewport.hud-collapsed #status-bar,#app-viewport.hud-collapsed #boss-bar,#app-viewport.hud-collapsed #relics-bar,#app-viewport.hud-collapsed #consumables-bar,#app-viewport.hud-collapsed #desktop-sidebar,#app-viewport.hud-collapsed #action-panel{display:none!important}#app-viewport.hud-collapsed #canvas-wrapper{grid-column:1/-1!important;grid-row:1/-1!important;width:100%!important;height:100%!important}}
-    @media (max-width:519px),(orientation:portrait) and (max-aspect-ratio:1.149/1){#btn-collapse-hud{width:46px;height:24px;border-radius:0 0 10px 10px;font-size:15px}#app-viewport.hud-collapsed #status-bar,#app-viewport.hud-collapsed #boss-bar,#app-viewport.hud-collapsed #relics-bar,#app-viewport.hud-collapsed #consumables-bar{display:none!important}#app-viewport.hud-collapsed #action-panel{display:block!important;flex-shrink:0}#app-viewport.hud-collapsed #canvas-wrapper{flex:1 1 auto!important;width:100%!important;height:100%!important;min-height:0!important}.boss-effect-badge::after,#daily-mod-badge.daily-mod-tag::after{display:none}.boss-effect-badge,#daily-mod-badge.daily-mod-tag{white-space:nowrap!important;text-overflow:ellipsis!important}}
-    `;document.head.appendChild(s);}
-    const desktop=()=>window.matchMedia('(orientation: landscape) and (min-width: 520px), (min-aspect-ratio: 1.15/1) and (min-width: 520px)').matches;
-    function initHudCollapse(){const app=document.getElementById('app-viewport');if(!app||document.getElementById('btn-collapse-hud'))return;const b=document.createElement('button');b.id='btn-collapse-hud';b.type='button';app.appendChild(b);const key=()=>desktop()?'skuf_hud_collapsed_desktop_v1':'skuf_hud_collapsed_mobile_v1',stored=()=>{try{return localStorage.getItem(key())==='true'}catch{return false}},save=v=>{try{localStorage.setItem(key(),String(v))}catch{}};const place=()=>{const c=app.classList.contains('hud-collapsed'),ar=app.getBoundingClientRect();if(desktop()){const r=document.getElementById('status-bar')?.getBoundingClientRect(),w=r&&r.width>0?r.width:300;b.style.left=c?'0px':`${Math.max(0,w-1)}px`;b.style.top='50%';b.style.right='auto';b.style.transform='translateY(-50%)';b.style.borderRadius='0 10px 10px 0';b.textContent=c?'›':'‹';b.title=c?'Развернуть левую панель':'Свернуть левую панель';}else{let top=4;if(!c)for(const id of ['relics-bar','boss-bar','status-bar']){const el=document.getElementById(id);if(!el||getComputedStyle(el).display==='none')continue;const r=el.getBoundingClientRect();if(r.height>0){top=Math.max(4,r.bottom-ar.top-12);break;}}b.style.left='50%';b.style.top=`${c?0:top}px`;b.style.right='auto';b.style.transform='translateX(-50%)';b.style.borderRadius='0 0 10px 10px';b.textContent=c?'⌄':'⌃';b.title=c?'Развернуть верхнюю панель':'Свернуть верхнюю панель';}b.setAttribute('aria-expanded',String(!c));b.setAttribute('aria-label',b.title);};const apply=c=>{app.classList.toggle('hud-collapsed',c);save(c);place();const resize=()=>window.gameInstance?.resizeCanvas?.();requestAnimationFrame(resize);setTimeout(resize,40);setTimeout(resize,240)};b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();apply(!app.classList.contains('hud-collapsed'))});let wasDesktop=desktop();apply(stored());window.addEventListener('resize',()=>{const d=desktop();if(d!==wasDesktop){wasDesktop=d;app.classList.toggle('hud-collapsed',stored())}place();window.gameInstance?.resizeCanvas?.()},{passive:true});}
-    function waitForGame(){let n=0;const t=setInterval(()=>{n++;if(window.gameInstance){clearInterval(t);patchGame(window.gameInstance)}else if(n>240){clearInterval(t);console.warn('[POLISH] gameInstance was not created in time')}},50)}
-    normalizeDailyModifiers();injectStyles();if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{initHudCollapse();waitForGame()});else{initHudCollapse();waitForGame()}
+
+    function getBossEffect(game) {
+        const index = Math.max(
+            1,
+            Math.min(20, Number(game?.currentBossIndex || game?.day || 1))
+        );
+        return BOSS_EFFECTS[index] || BOSS_EFFECTS[1];
+    }
+
+    function applyDerivedModifiers(game) {
+        if (!game) return;
+
+        if (game.activeDailyMod?.id === 'tuesday_fever') {
+            game.passiveIncome *= 1.5;
+        }
+
+        const effect = getBossEffect(game);
+
+        if (Number.isFinite(effect.incomeMult)) {
+            game.passiveIncome *= effect.incomeMult;
+        }
+        if (Number.isFinite(effect.staminaRecoveryMult)) {
+            game.staminaRecoveryRate *= effect.staminaRecoveryMult;
+        }
+        if (Number.isFinite(effect.dropCooldownMult)) {
+            game.baseDropCooldownMs = Math.max(
+                140,
+                Math.round((game.baseDropCooldownMs || 380) * effect.dropCooldownMult)
+            );
+        }
+
+        game.updateDropCooldownFromState?.();
+        game.hudDirty = true;
+    }
+
+    function spawnExtraGarbage(game, chance) {
+        if (
+            !game?.physics ||
+            game.bossBreakTimer > 0 ||
+            !chance ||
+            Math.random() >= chance
+        ) {
+            return;
+        }
+
+        const garbageList = CONFIG.GARBAGE_TYPES || [];
+        if (!garbageList.length) return;
+
+        const bounds = game.physics.getCupBounds();
+        const garbage = garbageList[Math.floor(Math.random() * garbageList.length)];
+        const padding = 32;
+        const x = bounds.leftX + padding + Math.random() * Math.max(1, bounds.width - padding * 2);
+
+        game.physics.createGarbage(x, game.dropY, garbage);
+        game.spawnFloatingText?.(
+            x,
+            game.roomHeight + 38,
+            `⚠️ ${garbage.name}`,
+            garbage.hazardColor || '#f59e0b'
+        );
+    }
+
+    function showHudToast(text) {
+        if (!text) return;
+
+        let toast = document.getElementById('polish-hud-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'polish-hud-toast';
+            toast.className = 'polish-hud-toast';
+            document.getElementById('app-viewport')?.appendChild(toast);
+        }
+        if (!toast) return;
+
+        toast.textContent = text;
+        toast.classList.remove('visible');
+        void toast.offsetWidth;
+        toast.classList.add('visible');
+
+        clearTimeout(showHudToast._timer);
+        showHudToast._timer = setTimeout(() => {
+            toast.classList.remove('visible');
+        }, 2800);
+    }
+
+    function ensureEffectStrip() {
+        const bossBar = document.getElementById('boss-bar');
+        if (!bossBar) return null;
+
+        let strip = document.getElementById('effect-chip-strip');
+        if (!strip) {
+            strip = document.createElement('div');
+            strip.id = 'effect-chip-strip';
+            strip.className = 'effect-chip-strip';
+
+            const missionTop = bossBar.querySelector('.mission-top-row');
+            const bossInfo = bossBar.querySelector('.boss-info');
+
+            if (missionTop?.nextSibling) {
+                bossBar.insertBefore(strip, missionTop.nextSibling);
+            } else if (bossInfo) {
+                bossBar.insertBefore(strip, bossInfo);
+            } else {
+                bossBar.prepend(strip);
+            }
+        }
+
+        const dailyBadge = document.getElementById('daily-mod-badge');
+        if (dailyBadge && dailyBadge.parentElement !== strip) {
+            strip.appendChild(dailyBadge);
+        }
+
+        const bossBadge = document.getElementById('boss-effect-badge');
+        if (bossBadge && bossBadge.parentElement !== strip) {
+            strip.appendChild(bossBadge);
+        }
+
+        return strip;
+    }
+
+    function renderBossEffect(game, boss = null) {
+        const bossBar = document.getElementById('boss-bar');
+        if (!bossBar) return;
+
+        let badge = document.getElementById('boss-effect-badge');
+        if (!badge) {
+            badge = document.createElement('button');
+            badge.type = 'button';
+            badge.id = 'boss-effect-badge';
+            badge.className = 'boss-effect-badge';
+            badge.addEventListener('click', () => {
+                const effect = getBossEffect(game);
+                showHudToast(`${effect.icon} ${effect.title}: ${effect.desc}`);
+            });
+        }
+
+        ensureEffectStrip();
+
+        const isBreak = boss && /ПЕРЕДЫШКА/i.test(String(boss.name || boss.title || ''));
+        badge.classList.toggle('hidden', !!isBreak);
+        if (isBreak) return;
+
+        const effect = getBossEffect(game);
+        badge.textContent = `${effect.icon} ${effect.title}`;
+        badge.title = effect.desc;
+        badge.setAttribute('aria-label', `${effect.title}. ${effect.desc}`);
+    }
+
+    function patchGame(game) {
+        if (!game || game.__polishPatched) return;
+        game.__polishPatched = true;
+
+        game.initDailyModifier?.();
+        game.ui?.updateDailyModifier?.(game.activeDailyMod);
+
+        const originalRecalculatePassives = game.recalculatePassives.bind(game);
+        game.recalculatePassives = function (...args) {
+            const result = originalRecalculatePassives(...args);
+            applyDerivedModifiers(this);
+            return result;
+        };
+
+        const originalDealBossDamage = game.dealBossDamage.bind(game);
+        game.dealBossDamage = function (amount, ...rest) {
+            if (this.bossBreakTimer > 0) {
+                return originalDealBossDamage(amount, ...rest);
+            }
+
+            const effect = getBossEffect(this);
+            const multiplier = this.__polishBypassBossResistance
+                ? 1
+                : (Number.isFinite(effect.bossDamageTakenMult) ? effect.bossDamageTakenMult : 1);
+
+            return originalDealBossDamage(
+                Math.max(0, Number(amount || 0) * multiplier),
+                ...rest
+            );
+        };
+
+        const originalApplyBossNuke = game.applyBossNuke?.bind(game);
+        if (originalApplyBossNuke) {
+            game.applyBossNuke = function (...args) {
+                this.__polishBypassBossResistance = true;
+                try {
+                    return originalApplyBossNuke(...args);
+                } finally {
+                    this.__polishBypassBossResistance = false;
+                }
+            };
+        }
+
+        const originalApplyBoost = game.applyBoost?.bind(game);
+        if (originalApplyBoost) {
+            game.applyBoost = function (boostType, ...args) {
+                const bypass = boostType === 'nuke';
+                if (bypass) this.__polishBypassBossResistance = true;
+                try {
+                    return originalApplyBoost(boostType, ...args);
+                } finally {
+                    if (bypass) this.__polishBypassBossResistance = false;
+                }
+            };
+        }
+
+        const originalExecuteBossAttack = game.executeBossAttack.bind(game);
+        game.executeBossAttack = function (...args) {
+            const result = originalExecuteBossAttack(...args);
+            const effect = getBossEffect(this);
+
+            if (Number.isFinite(effect.attackCooldownMult)) {
+                this.bossAttackTimer = Math.max(
+                    4.5,
+                    this.bossAttackTimer * effect.attackCooldownMult
+                );
+            }
+
+            return result;
+        };
+
+        const originalCheckGarbageSpawn = game.checkGarbageSpawn.bind(game);
+        game.checkGarbageSpawn = function (...args) {
+            const result = originalCheckGarbageSpawn(...args);
+            spawnExtraGarbage(this, getBossEffect(this).extraGarbageChance || 0);
+            return result;
+        };
+
+        const originalHandleSkufTap = game.handleSkufTap.bind(game);
+        game.handleSkufTap = function (...args) {
+            const before = this.stamina;
+            const result = originalHandleSkufTap(...args);
+            const spent = Math.max(0, before - this.stamina);
+
+            if (spent > 0) {
+                let multiplier = getBossEffect(this).tapStaminaMult || 1;
+
+                if (this.activeDailyMod?.id === 'saturday_chill') {
+                    multiplier *= 0.5;
+                }
+
+                const desiredSpent = spent * multiplier;
+                this.stamina = Math.max(
+                    0,
+                    Math.min(this.maxStamina, this.stamina - (desiredSpent - spent))
+                );
+
+                if (this.stamina > 0) this.isExhausted = false;
+                this.ui?.updateStamina?.(
+                    this.stamina,
+                    this.maxStamina,
+                    this.isExhausted
+                );
+            }
+
+            return result;
+        };
+
+        const originalTriggerFeverMode = game.triggerFeverMode.bind(game);
+        game.triggerFeverMode = function (durationOverride = null, ...rest) {
+            let duration = durationOverride;
+
+            if (this.activeDailyMod?.id === 'friday_hype') {
+                duration = (durationOverride ?? this.feverDuration ?? 10) * 2;
+            }
+
+            return originalTriggerFeverMode(duration, ...rest);
+        };
+
+        const originalAddFeverCharge = game.addFeverCharge?.bind(game);
+        if (originalAddFeverCharge) {
+            game.addFeverCharge = function (amount, ...rest) {
+                let multiplier = this.activeDailyMod?.id === 'sunday_beer' ? 1.25 : 1;
+                multiplier *= getBossEffect(this).feverChargeMult || 1;
+                return originalAddFeverCharge(Number(amount || 0) * multiplier, ...rest);
+            };
+        }
+
+        const originalOnBossDefeated = game.onBossDefeated.bind(game);
+        game.onBossDefeated = function (...args) {
+            const result = originalOnBossDefeated(...args);
+
+            if (this.activeDailyMod?.id === 'sunday_beer' && Math.random() < 0.40) {
+                const pool = ['beer', 'script', 'energy', 'bomb', 'magnet'];
+                const item = pool[Math.floor(Math.random() * pool.length)];
+
+                this.items[item] = (this.items[item] || 0) + 1;
+                this.ui?.updateConsumables?.(this.items);
+                this.spawnFloatingText?.(
+                    this.canvas.width / 2,
+                    this.roomHeight + 68,
+                    '🍺 ВЫХОДНОЙ: +1 РАСХОДНИК!',
+                    '#facc15'
+                );
+                this.saveGame?.();
+            }
+
+            return result;
+        };
+
+        const originalAdvanceDay = game.advanceDay.bind(game);
+        game.advanceDay = function (...args) {
+            const result = originalAdvanceDay(...args);
+            this.recalculatePassives();
+            renderBossEffect(this, CONFIG.BOSSES[this.currentBossIndex]);
+            return result;
+        };
+
+        for (const methodName of ['restart', 'resetGame', 'triggerPrestige']) {
+            const original = game[methodName]?.bind(game);
+            if (!original) continue;
+
+            game[methodName] = function (...args) {
+                const result = original(...args);
+                this.recalculatePassives?.();
+                this.ui?.updateDailyModifier?.(this.activeDailyMod);
+                renderBossEffect(this, CONFIG.BOSSES[this.currentBossIndex]);
+                return result;
+            };
+        }
+
+        if (game.ui && !game.ui.__bossEffectPatched) {
+            game.ui.__bossEffectPatched = true;
+            const originalUpdateBoss = game.ui.updateBoss.bind(game.ui);
+
+            game.ui.updateBoss = (...args) => {
+                const result = originalUpdateBoss(...args);
+                renderBossEffect(game, args[0]);
+                return result;
+            };
+        }
+
+        game.recalculatePassives();
+        renderBossEffect(game, CONFIG.BOSSES[game.currentBossIndex]);
+        game.ui?.updateDailyModifier?.(game.activeDailyMod);
+        ensureEffectStrip();
+
+        console.info(`[POLISH ${POLISH_VERSION}] enabled`);
+    }
+
+    function simplifyStaticUi() {
+        const app = document.getElementById('app-viewport');
+        if (!app || app.classList.contains('ui-minimal')) return;
+
+        app.classList.add('ui-minimal');
+
+        document.querySelectorAll('.hud-mini-btn, .hud-nav-btn').forEach(button => {
+            const label = button.title || button.textContent.trim();
+            if (label) button.setAttribute('aria-label', label);
+        });
+
+        const freeze = document.getElementById('btn-boss-freeze-ad');
+        if (freeze) {
+            freeze.innerHTML = '<span class="btn-ad-tag">📺</span> ⏳ +35с';
+            freeze.setAttribute('aria-label', 'Реклама: добавить 35 секунд аренды');
+        }
+
+        const nuke = document.getElementById('btn-boss-nuke-ad');
+        if (nuke) {
+            nuke.innerHTML = '<span class="btn-ad-tag">📺</span> 💥 -15% HP';
+            nuke.setAttribute('aria-label', 'Реклама: нанести 15 процентов урона боссу');
+        }
+
+        const resetText = document.querySelector('#btn-reset-game span');
+        if (resetText) resetText.textContent = '🗑️ Сброс';
+
+        const daily = document.getElementById('daily-mod-badge');
+        if (daily && !daily.dataset.polishClickBound) {
+            daily.dataset.polishClickBound = '1';
+            daily.addEventListener('click', () => {
+                const mod = window.gameInstance?.activeDailyMod;
+                if (mod) showHudToast(`📅 ${mod.title}: ${mod.desc}`);
+            });
+        }
+
+        ensureEffectStrip();
+    }
+
+    function injectStyles() {
+        if (document.getElementById('skuf-polish-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'skuf-polish-styles';
+        style.textContent = `
+            .mission-effect-row { display: none !important; }
+
+            .effect-chip-strip {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                width: 100%;
+                min-width: 0;
+                margin: 0 0 4px;
+            }
+
+            #daily-mod-badge.daily-mod-tag,
+            .boss-effect-badge {
+                flex: 1 1 0;
+                min-width: 0;
+                height: 24px;
+                padding: 0 7px;
+                border-radius: 7px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                white-space: nowrap !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-size: 8.5px;
+                font-weight: 800;
+                line-height: 1;
+                cursor: pointer;
+            }
+
+            #daily-mod-badge.daily-mod-tag {
+                border: 1px solid rgba(168,85,247,.24);
+                background: rgba(168,85,247,.08);
+                color: #ddd6fe;
+            }
+
+            .boss-effect-badge {
+                border: 1px solid rgba(244,63,94,.22);
+                background: rgba(73,16,33,.22);
+                color: #fecdd3;
+                font-family: inherit;
+            }
+
+            .boss-effect-badge.hidden { display: none !important; }
+            #daily-mod-badge.daily-mod-tag::after,
+            .boss-effect-badge::after { display: none !important; }
+
+            .polish-hud-toast {
+                position: absolute;
+                z-index: 140;
+                left: 50%;
+                bottom: 58px;
+                transform: translate(-50%, 10px);
+                max-width: min(520px, calc(100% - 24px));
+                padding: 8px 11px;
+                border: 1px solid rgba(255,255,255,.12);
+                border-radius: 10px;
+                background: rgba(5,8,16,.94);
+                color: #e5e7eb;
+                font-size: 10px;
+                font-weight: 700;
+                line-height: 1.35;
+                text-align: center;
+                box-shadow: 0 8px 30px rgba(0,0,0,.42);
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity .16s ease, transform .16s ease;
+            }
+
+            .polish-hud-toast.visible {
+                opacity: 1;
+                transform: translate(-50%, 0);
+            }
+
+            #app-viewport.ui-minimal .hud-mini-btn {
+                width: 30px;
+                min-width: 30px;
+                padding: 0;
+            }
+
+            #app-viewport.ui-minimal .hud-mini-btn .hud-btn-caption,
+            #app-viewport.ui-minimal .hud-nav-btn .btn-text {
+                display: none !important;
+            }
+
+            #app-viewport.ui-minimal .hud-nav-btn {
+                min-height: 28px;
+                padding: 3px 0;
+            }
+
+            #app-viewport.ui-minimal .hud-nav-btn .hud-emoji {
+                font-size: 14px;
+            }
+
+            #app-viewport.ui-minimal #boss-day-tag,
+            #app-viewport.ui-minimal #boss-quote-bubble,
+            #app-viewport.ui-minimal .quote-strip,
+            #app-viewport.ui-minimal .skuf-status-desc {
+                display: none !important;
+            }
+
+            #app-viewport.ui-minimal #boss-bar {
+                padding-top: 4px;
+                padding-bottom: 4px;
+            }
+
+            #app-viewport.ui-minimal .mission-top-row {
+                margin-bottom: 3px;
+            }
+
+            #app-viewport.ui-minimal .boss-info {
+                margin-bottom: 2px;
+            }
+
+            #app-viewport.ui-minimal .boss-tactical-row {
+                gap: 4px;
+                margin-top: 4px;
+            }
+
+            #app-viewport.ui-minimal .tactical-ad-btn {
+                min-height: 26px;
+                padding: 4px 6px;
+                font-size: 8.5px;
+                white-space: nowrap;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar .metrics-section {
+                gap: 4px;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar .side-metric-item {
+                min-height: 34px;
+                padding: 4px 7px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 5px;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar .side-metric-lbl {
+                margin: 0;
+                font-size: 8.5px;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar .side-metric-val {
+                font-size: 11.5px;
+                text-align: right;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar #btn-side-leaderboard,
+            #app-viewport.ui-minimal #desktop-sidebar #btn-side-stats,
+            #app-viewport.ui-minimal #desktop-sidebar #btn-side-boosts {
+                display: none !important;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar .sidebar-actions-grid {
+                grid-template-columns: 1fr;
+                margin-bottom: 4px;
+            }
+
+            #app-viewport.ui-minimal #desktop-sidebar .sidebar-section {
+                padding: 6px 8px;
+            }
+
+            #app-viewport.ui-minimal #action-panel {
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
+
+            #app-viewport.ui-minimal .action-buttons-group {
+                gap: 3px;
+            }
+
+            #app-viewport.ui-minimal .action-btn {
+                min-height: 32px;
+                padding: 4px 6px;
+            }
+
+            #app-viewport.ui-minimal #btn-tilt-left span:not(.action-icon),
+            #app-viewport.ui-minimal #btn-tilt-right span:not(.action-icon),
+            #app-viewport.ui-minimal #btn-toggle-gyro span:not(.action-icon) {
+                display: none !important;
+            }
+
+            #btn-collapse-hud {
+                position: absolute;
+                z-index: 85;
+                width: 28px;
+                height: 42px;
+                padding: 0;
+                border: 1px solid rgba(0,229,255,.30);
+                border-radius: 0 10px 10px 0;
+                background: rgba(5,9,18,.92);
+                color: #67e8f9;
+                font-size: 18px;
+                font-weight: 900;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                box-shadow: 0 0 14px rgba(0,229,255,.12);
+                backdrop-filter: blur(8px);
+                transition: left .22s ease, top .22s ease, transform .12s ease, background .12s ease;
+                touch-action: manipulation;
+            }
+
+            #btn-collapse-hud:hover {
+                background: rgba(0,229,255,.10);
+                border-color: rgba(0,229,255,.55);
+            }
+
+            @media (orientation: landscape) and (min-width: 520px),
+                   (min-aspect-ratio: 1.15/1) and (min-width: 520px) {
+                #app-viewport {
+                    transition: grid-template-columns .22s ease;
+                }
+
+                #app-viewport.hud-collapsed {
+                    grid-template-columns: 0 minmax(0,1fr) !important;
+                }
+
+                #app-viewport.hud-collapsed #status-bar,
+                #app-viewport.hud-collapsed #boss-bar,
+                #app-viewport.hud-collapsed #relics-bar,
+                #app-viewport.hud-collapsed #consumables-bar,
+                #app-viewport.hud-collapsed #desktop-sidebar,
+                #app-viewport.hud-collapsed #action-panel {
+                    display: none !important;
+                }
+
+                #app-viewport.hud-collapsed #canvas-wrapper {
+                    grid-column: 1 / -1 !important;
+                    grid-row: 1 / -1 !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                }
+            }
+
+            @media (max-width: 519px),
+                   (orientation: portrait) and (max-aspect-ratio: 1.149/1) {
+                #btn-collapse-hud {
+                    width: 46px;
+                    height: 24px;
+                    border-radius: 0 0 10px 10px;
+                    font-size: 15px;
+                }
+
+                #app-viewport.ui-minimal #status-bar {
+                    padding: 4px 7px;
+                    gap: 3px;
+                }
+
+                #app-viewport.ui-minimal #boss-bar {
+                    padding: 4px 7px;
+                }
+
+                #app-viewport.ui-minimal #consumables-bar {
+                    padding-top: 4px;
+                    padding-bottom: 4px;
+                }
+
+                #app-viewport.hud-collapsed #status-bar,
+                #app-viewport.hud-collapsed #boss-bar,
+                #app-viewport.hud-collapsed #relics-bar,
+                #app-viewport.hud-collapsed #consumables-bar {
+                    display: none !important;
+                }
+
+                #app-viewport.hud-collapsed #action-panel {
+                    display: block !important;
+                    flex-shrink: 0;
+                }
+
+                #app-viewport.hud-collapsed #canvas-wrapper {
+                    flex: 1 1 auto !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    min-height: 0 !important;
+                }
+
+                #app-viewport.hud-collapsed .room-quick-settings {
+                    top: 6px !important;
+                }
+
+                .effect-chip-strip {
+                    margin-bottom: 3px;
+                }
+
+                #daily-mod-badge.daily-mod-tag,
+                .boss-effect-badge {
+                    height: 22px;
+                    font-size: 8px;
+                    padding: 0 6px;
+                }
+
+                .polish-hud-toast {
+                    bottom: 52px;
+                    font-size: 9.5px;
+                }
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    const isDesktopLayout = () => window.matchMedia(
+        '(orientation: landscape) and (min-width: 520px), (min-aspect-ratio: 1.15/1) and (min-width: 520px)'
+    ).matches;
+
+    function initHudCollapse() {
+        const app = document.getElementById('app-viewport');
+        if (!app || document.getElementById('btn-collapse-hud')) return;
+
+        const button = document.createElement('button');
+        button.id = 'btn-collapse-hud';
+        button.type = 'button';
+        app.appendChild(button);
+
+        const storageKey = () => isDesktopLayout()
+            ? 'skuf_hud_collapsed_desktop_v1'
+            : 'skuf_hud_collapsed_mobile_v1';
+
+        const readStoredState = () => {
+            try {
+                const raw = localStorage.getItem(storageKey());
+                if (raw === null) {
+                    return !isDesktopLayout();
+                }
+                return raw === 'true';
+            } catch {
+                return !isDesktopLayout();
+            }
+        };
+
+        const saveStoredState = value => {
+            try {
+                localStorage.setItem(storageKey(), String(value));
+            } catch {}
+        };
+
+        let lastPanelWidth = 300;
+        try {
+            lastPanelWidth = Math.max(
+                250,
+                Number(localStorage.getItem('skuf_hud_width_desktop_v1')) || 300
+            );
+        } catch {}
+
+        const rememberPanelWidth = () => {
+            if (!isDesktopLayout() || app.classList.contains('hud-collapsed')) {
+                return lastPanelWidth;
+            }
+
+            const rect = document.getElementById('status-bar')?.getBoundingClientRect();
+            if (rect && rect.width > 80) {
+                lastPanelWidth = rect.width;
+                try {
+                    localStorage.setItem(
+                        'skuf_hud_width_desktop_v1',
+                        String(Math.round(lastPanelWidth))
+                    );
+                } catch {}
+            }
+
+            return lastPanelWidth;
+        };
+
+        const placeButton = () => {
+            const collapsed = app.classList.contains('hud-collapsed');
+            const appRect = app.getBoundingClientRect();
+
+            if (isDesktopLayout()) {
+                const width = collapsed ? 0 : rememberPanelWidth();
+
+                button.style.left = collapsed
+                    ? '0px'
+                    : `${Math.max(0, width - 1)}px`;
+                button.style.top = '50%';
+                button.style.right = 'auto';
+                button.style.transform = 'translateY(-50%)';
+                button.style.borderRadius = '0 10px 10px 0';
+                button.textContent = collapsed ? '›' : '‹';
+                button.title = collapsed
+                    ? 'Развернуть левую панель'
+                    : 'Свернуть левую панель';
+            } else {
+                let expandedTop = 4;
+
+                if (!collapsed) {
+                    for (const id of ['relics-bar', 'boss-bar', 'status-bar']) {
+                        const element = document.getElementById(id);
+                        if (!element || getComputedStyle(element).display === 'none') continue;
+
+                        const rect = element.getBoundingClientRect();
+                        if (rect.height > 0) {
+                            expandedTop = Math.max(4, rect.bottom - appRect.top - 12);
+                            break;
+                        }
+                    }
+                }
+
+                button.style.left = '50%';
+                button.style.top = `${collapsed ? 0 : expandedTop}px`;
+                button.style.right = 'auto';
+                button.style.transform = 'translateX(-50%)';
+                button.style.borderRadius = '0 0 10px 10px';
+                button.textContent = collapsed ? '⌄' : '⌃';
+                button.title = collapsed
+                    ? 'Развернуть верхнюю панель'
+                    : 'Свернуть верхнюю панель';
+            }
+
+            button.setAttribute('aria-expanded', String(!collapsed));
+            button.setAttribute('aria-label', button.title);
+        };
+
+        const resizeGame = () => {
+            window.gameInstance?.resizeCanvas?.();
+        };
+
+        const settleLayout = () => {
+            const run = () => {
+                placeButton();
+                resizeGame();
+            };
+
+            requestAnimationFrame(run);
+            [40, 100, 180, 260, 340].forEach(delay => setTimeout(run, delay));
+        };
+
+        const applyState = collapsed => {
+            if (collapsed && isDesktopLayout()) {
+                rememberPanelWidth();
+            }
+
+            app.classList.toggle('hud-collapsed', collapsed);
+            saveStoredState(collapsed);
+            placeButton();
+            settleLayout();
+        };
+
+        button.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            applyState(!app.classList.contains('hud-collapsed'));
+        });
+
+        app.addEventListener('transitionend', event => {
+            if (event.propertyName === 'grid-template-columns') {
+                placeButton();
+                resizeGame();
+            }
+        });
+
+        let wasDesktop = isDesktopLayout();
+        applyState(readStoredState());
+
+        window.addEventListener('resize', () => {
+            const nowDesktop = isDesktopLayout();
+
+            if (nowDesktop !== wasDesktop) {
+                wasDesktop = nowDesktop;
+                app.classList.toggle('hud-collapsed', readStoredState());
+            }
+
+            settleLayout();
+        }, { passive: true });
+    }
+
+    function waitForGame() {
+        let attempts = 0;
+        const timer = setInterval(() => {
+            attempts++;
+
+            if (window.gameInstance) {
+                clearInterval(timer);
+                patchGame(window.gameInstance);
+            } else if (attempts > 240) {
+                clearInterval(timer);
+                console.warn('[POLISH] gameInstance was not created in time');
+            }
+        }, 50);
+    }
+
+    normalizeDailyModifiers();
+    injectStyles();
+
+    const boot = () => {
+        simplifyStaticUi();
+        initHudCollapse();
+        waitForGame();
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
 })();
