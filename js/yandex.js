@@ -8,7 +8,7 @@ class YandexManager {
         this.leaderboards = null;
         this.isInitialized = false;
         this.isFallbackMode = false;
-        this.leaderboardName = 'gigachad_leaderboard';
+        this.leaderboardName = 'gigachadLeaderboard';
         this.pendingScore = 0;
         this.scoreFlushTimer = null;
 
